@@ -1,4 +1,4 @@
-import { Binary } from "@ltonetwork/lto";
+import { Binary } from "eqty-core";
 
 export interface MessageInfo {
   hash: string;
