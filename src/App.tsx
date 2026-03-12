@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Box, Button, CircularProgress, Link, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Link, Typography } from "@mui/material";
+import { ArrowBack } from "@mui/icons-material";
 import PackagesFab from "./components/PackagesFab";
 import { TypedPackage } from "./interfaces/TypedPackage";
 import LoginDialog from "./components/LoginDialog";
@@ -11,6 +12,7 @@ import { HAS_EXAMPLES } from "./services/Package.service";
 import Grid from "@mui/material/Unstable_Grid2";
 import * as React from "react";
 import Ownable from "./components/Ownable";
+import OwnableListItem from "./components/OwnableListItem";
 import { EventChain } from "eqty-core";
 import HelpDrawer from "./components/HelpDrawer";
 import AppToolbar from "./components/AppToolbar";
@@ -40,6 +42,8 @@ export default function App() {
   const [ownables, setOwnables] = useState<
     Array<{ chain: EventChain; package: string; uniqueMessageHash?: string }>
   >([]);
+  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [consuming, setConsuming] = useState<{
     chain: EventChain;
     package: string;
@@ -79,14 +83,17 @@ export default function App() {
   useEffect(() => {
     if (!ownableService) return;
 
-    ownableService
-      .loadAll()
-      .then((ownables) => setOwnables(ownables))
-      .then(() => setLoaded(true));
+    ownableService.loadAll().then((loaded) => {
+      setOwnables(loaded);
+      if (loaded.length > 0) setSelectedChainId(loaded[0].chain.id);
+      setLoaded(true);
+    });
   }, [ownableService]);
 
+  const isE2E = process.env.REACT_APP_E2E === "true";
+
   useEffect(() => {
-    setShowLogin(!isConnected);
+    setShowLogin(!isConnected && !isE2E);
 
     setShowSidebar(false);
     setShowViewMessagesBar(false);
@@ -141,6 +148,7 @@ export default function App() {
       const [ctrl, onProgress] = progress.open({ title: `Forging ${pkg.title}`, steps });
       const result = await ownableService.create(pkg, onProgress);
       setOwnables([...ownables, { chain: result.chain, package: pkg.cid }]);
+      setSelectedChainId(result.chain.id);
       setShowPackages(false);
       ctrl.close();
 
@@ -187,14 +195,19 @@ export default function App() {
         (data: TypedPackage) => data.chain && data.cid
       );
 
-      setOwnables((prevOwnables) => [
-        ...prevOwnables,
-        ...validPackages.map((data: TypedPackage) => ({
-          chain: data.chain,
-          package: data.cid,
-          uniqueMessageHash: data.uniqueMessageHash,
-        })),
-      ]);
+      setOwnables((prevOwnables) => {
+        const next = [
+          ...prevOwnables,
+          ...validPackages.map((data: TypedPackage) => ({
+            chain: data.chain,
+            package: data.cid,
+            uniqueMessageHash: data.uniqueMessageHash,
+          })),
+        ];
+        if (!selectedChainId && next.length > 0)
+          setSelectedChainId(next[0].chain.id);
+        return next;
+      });
 
       enqueueSnackbar(`Ownable successfully loaded`, { variant: "success" });
       await setMessageCount(0);
@@ -421,52 +434,150 @@ export default function App() {
         </Grid>
       </If>
 
-      <Grid
-        container
-        sx={{ maxWidth: 1400, margin: "auto", mt: 2 }}
-        columnSpacing={6}
-        rowSpacing={4}
+      <Box
+        sx={{
+          display: "flex",
+          maxWidth: 1400,
+          margin: "auto",
+          mt: 2,
+          px: 2,
+          gap: 3,
+        }}
       >
-        {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => (
-          <Grid
-            key={chain.id}
-            xs={12}
-            sm={6}
-            md={4}
-            sx={{ position: "relative" }}
+        {/* Left sidebar — ownable list */}
+        <Box
+          component="nav"
+          aria-label="Ownable list"
+          sx={{
+            width: 320,
+            flexShrink: 0,
+            display: { xs: showDetail ? "none" : "block", md: "block" },
+          }}
+        >
+          {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
+            const pkg = packageService?.info(packageCid, uniqueMessageHash);
+            return (
+              <OwnableListItem
+                key={chain.id}
+                chain={chain}
+                packageCid={packageCid}
+                metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
+                isConsumable={!!(pkg?.isConsumable)}
+                isSelected={selectedChainId === chain.id}
+                onClick={() => {
+                  setSelectedChainId(chain.id);
+                  setShowDetail(true);
+                }}
+              />
+            );
+          })}
+
+          {/* Issue an Ownable — dashed border button */}
+          <Box
+            component="button"
+            onClick={() => setShowPackages(true)}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              mt: 1,
+              py: 1.5,
+              border: "2px dashed",
+              borderColor: "divider",
+              borderRadius: 2,
+              cursor: "pointer",
+              background: "none",
+              color: "text.secondary",
+              fontSize: "0.875rem",
+              "&:hover": { borderColor: "primary.main", color: "primary.main" },
+            }}
           >
-            <Ownable
-              chain={chain}
-              packageCid={packageCid}
-              uniqueMessageHash={uniqueMessageHash}
-              selected={consuming?.chain.id === chain.id}
-              onDelete={() => deleteOwnable(chain.id, packageCid)}
-              onRemove={() => removeOwnable(chain.id)}
-              onConsume={(info) =>
-                setConsuming({ chain, package: packageCid, info })
-              }
-              onError={showError}
+            + Issue an Ownable
+          </Box>
+        </Box>
+
+        {/* Right detail panel */}
+        {(() => {
+          const selectedOwnable = ownables.find(
+            ({ chain }) => chain.id === selectedChainId
+          );
+          return (
+            <Box
+              aria-label="Ownable detail"
+              role="region"
+              sx={{
+                flex: 1,
+                minWidth: 0,
+                display: {
+                  xs: showDetail ? "block" : "none",
+                  md: "block",
+                },
+              }}
             >
-              <If condition={consuming?.chain.id === chain.id}>
-                <Overlay zIndex={1000} />
-              </If>
-              <If
-                condition={
-                  consuming !== null && consuming.chain.id !== chain.id
-                }
-              >
-                <Overlay
-                  zIndex={1000}
-                  disabled={canConsume({ chain, package: packageCid }).then(
-                    (can) => !can
-                  )}
-                  onClick={() => consume(chain, consuming!.chain)}
-                />
-              </If>
-            </Ownable>
-          </Grid>
-        ))}
-      </Grid>
+              {/* Back button — mobile only */}
+              <Box sx={{ display: { xs: "block", md: "none" }, mb: 1 }}>
+                <IconButton
+                  aria-label="Back"
+                  onClick={() => setShowDetail(false)}
+                >
+                  <ArrowBack />
+                </IconButton>
+              </Box>
+
+              {selectedOwnable && (
+                <Ownable
+                  key={selectedOwnable.chain.id}
+                  chain={selectedOwnable.chain}
+                  packageCid={selectedOwnable.package}
+                  uniqueMessageHash={selectedOwnable.uniqueMessageHash}
+                  selected={consuming?.chain.id === selectedOwnable.chain.id}
+                  onDelete={() =>
+                    deleteOwnable(
+                      selectedOwnable.chain.id,
+                      selectedOwnable.package
+                    )
+                  }
+                  onRemove={() => removeOwnable(selectedOwnable.chain.id)}
+                  onConsume={(info) =>
+                    setConsuming({
+                      chain: selectedOwnable.chain,
+                      package: selectedOwnable.package,
+                      info,
+                    })
+                  }
+                  onError={showError}
+                >
+                  <If
+                    condition={
+                      consuming?.chain.id === selectedOwnable.chain.id
+                    }
+                  >
+                    <Overlay zIndex={1000} />
+                  </If>
+                  <If
+                    condition={
+                      consuming !== null &&
+                      consuming.chain.id !== selectedOwnable.chain.id
+                    }
+                  >
+                    <Overlay
+                      zIndex={1000}
+                      disabled={canConsume({
+                        chain: selectedOwnable.chain,
+                        package: selectedOwnable.package,
+                      }).then((can) => !can)}
+                      onClick={() =>
+                        consume(selectedOwnable.chain, consuming!.chain)
+                      }
+                    />
+                  </If>
+                </Ownable>
+              )}
+            </Box>
+          );
+        })()}
+      </Box>
 
       <PackagesFab
         open={showPackages}

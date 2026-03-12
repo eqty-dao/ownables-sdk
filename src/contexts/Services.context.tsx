@@ -20,8 +20,10 @@ const ServicesContext = createContext<Ctx>({ container: null });
 export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const chainId = useChainId();
+  const isE2E = process.env.REACT_APP_E2E === "true";
+  const address = isE2E ? "0x0000000000000000000000000000000000000001" : walletAddress;
   const walletClient = useWalletClient();
   const publicClient = usePublicClient();
 

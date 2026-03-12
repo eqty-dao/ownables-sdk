@@ -1,4 +1,4 @@
-import React, {
+import {
   ReactNode,
   useCallback,
   useEffect,
@@ -6,12 +6,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { CircularProgress, Grid, Paper, Tooltip } from "@mui/material";
-import OwnableFrame from "./OwnableFrame";
 import { Cancelled, connect as rpcConnect } from "simple-iframe-rpc";
 import { Binary, EventChain, IMessageMeta } from "eqty-core";
-import OwnableActions from "./OwnableActions";
-import OwnableInfo from "./OwnableInfo";
 import { OwnableRPC, StateDump } from "../services/Ownable.service";
 import {
   TypedMetadata,
@@ -21,13 +17,12 @@ import isObject from "../utils/isObject";
 import ownableErrorMessage from "../utils/ownableErrorMessage";
 import TypedDict from "../interfaces/TypedDict";
 import { TypedPackage } from "../interfaces/TypedPackage";
-import Overlay, { OverlayBanner } from "./Overlay";
-import If from "./If";
 import { enqueueSnackbar } from "notistack";
 import { PACKAGE_TYPE } from "../constants";
 import { useService } from "../hooks/useService";
 import { useAccount } from "wagmi";
 import { useProgress, LogProgress } from "../contexts/Progress.context";
+import OwnableDetail from "./OwnableDetail";
 
 interface OwnableProps {
   chain: EventChain;
@@ -367,66 +362,20 @@ export default function Ownable(props: OwnableProps) {
     return <></>;
 
   return (
-    <Paper
-      elevation={selected ? 8 : 1}
-      sx={{
-        aspectRatio: "1/1",
-        position: "relative",
-        animation: selected ? "bounce .4s ease infinite alternate" : "",
-      }}
+    <OwnableDetail
+      chain={chain}
+      pkg={pkg}
+      metadata={metadata}
+      isConsumable={pkg.isConsumable && !isTransferred}
+      isTransferred={isTransferred}
+      iframeRef={iframeRef}
+      isApplying={isApplying}
+      onLoad={() => onLoad()}
+      onConsume={() => !!info && props.onConsume(info)}
+      onDelete={props.onDelete}
+      onTransfer={(address) => transfer(address)}
     >
-      <OwnableFrame
-        id={chain.id}
-        packageCid={pkg.cid}
-        isDynamic={pkg.isDynamic}
-        iframeRef={iframeRef}
-        onLoad={() => onLoad()}
-      />
-      <OwnableInfo
-        sx={{ position: "absolute", left: 5, top: 5, zIndex: 10 }}
-        chain={chain}
-        metadata={metadata}
-      />
-      <OwnableActions
-        sx={{ position: "absolute", right: 5, top: 5, zIndex: 10 }}
-        title={pkg.title}
-        isConsumable={pkg.isConsumable && !isTransferred}
-        isTransferable={pkg.isTransferable && !isTransferred}
-        onDelete={props.onDelete}
-        chain={chain}
-        onConsume={() => !!info && props.onConsume(info)}
-        onTransfer={(address) => transfer(address)}
-      />
       {children}
-
-      <If condition={isApplying}>
-        <Overlay>
-          <Grid
-            container
-            justifyContent="center"
-            alignItems="center"
-            height="100%"
-            width="100%"
-            overflow="hidden"
-            padding={0}
-            margin={0}
-          >
-            <Grid width="100%" padding={0} textAlign="center">
-              <CircularProgress color="primary" size={80} />
-            </Grid>
-          </Grid>
-        </Overlay>
-      </If>
-      <If condition={isTransferred}>
-        <Tooltip
-          title="You're unable to interact with this Ownable, because it has been transferred to a different account."
-          followCursor
-        >
-          <Overlay sx={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
-            <OverlayBanner>Transferred</OverlayBanner>
-          </Overlay>
-        </Tooltip>
-      </If>
-    </Paper>
+    </OwnableDetail>
   );
 }

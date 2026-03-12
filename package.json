@@ -51,6 +51,7 @@
     "start": "npm run build:ownable.js && craco start",
     "build": "npm run build:ownable.js && craco build",
     "test": "craco test",
+    "test:e2e": "cucumber-js",
     "build:ownable.js": "webpack --config ownable-js.webpack.js --no-stats",
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
     "ownables:build": "if test -f ./ownables/$npm_config_package/Cargo.toml; then rm -rf ./ownables/$npm_config_package/pkg/ && wasm-pack build --out-name ownable --target web ./ownables/$npm_config_package/ && cd ./ownables/$npm_config_package/ && cargo schema && cd ../../ && zip -r -j ./ownables/$npm_config_package.zip ./ownables/$npm_config_package/assets/ ./ownables/$npm_config_package/pkg/*.js ./ownables/$npm_config_package/pkg/*.wasm ./ownables/$npm_config_package/pkg/package.json ./ownables/$npm_config_package/schema/*.json; else zip -r -j ./ownables/$npm_config_package.zip ./ownables/$npm_config_package/*; fi",
@@ -88,8 +89,8 @@
   },
   "devDependencies": {
     "@cucumber/cucumber": "^12.7.0",
-    "@letsrunit/bdd": "^0.3.10",
-    "@letsrunit/cli": "^0.3.10",
+    "@letsrunit/bdd": "^0.4.0",
+    "@letsrunit/cli": "^0.4.0",
     "ajv": "^8.17.1",
     "ajv-keywords": "^5.1.0"
   }

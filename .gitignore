@@ -34,9 +34,10 @@ yarn-error.log*
 # Text file backups
 **/*.rs.bk
 
-# IDEs
+# IDEs & AI Agents
 *.iml
 .idea
+.claude
 
 # Local
 /public/ownables
