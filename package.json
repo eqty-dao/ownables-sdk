@@ -16,6 +16,8 @@
     "axios": "^1.13.6",
     "blockstore-core": "^6.1.2",
     "buffer": "^6.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "eqty-core": "^1.0.2",
     "ipfs-unixfs-importer": "^16.1.4",
     "jszip": "^3.10.1",
@@ -26,6 +28,7 @@
     "react-dom": "^19.2.4",
     "react-json-view": "^1.21.3",
     "simple-iframe-rpc": "^0.1.16",
+    "tailwind-merge": "^3.5.0",
     "typescript": "^5.9.3",
     "util": "^0.12.5",
     "viem": "^2.47.2",
@@ -81,10 +84,14 @@
     "@cucumber/cucumber": "^12.7.0",
     "@letsrunit/bdd": "^0.6.0",
     "@letsrunit/cli": "^0.6.0",
+    "@tailwindcss/postcss": "^4.2.1",
     "@vitejs/plugin-react": "^6.0.1",
     "ajv": "^8.18.0",
     "ajv-keywords": "^5.1.0",
+    "autoprefixer": "^10.4.27",
     "babel-loader": "^10.1.1",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
     "vite": "^8.0.0"
   }
 }
