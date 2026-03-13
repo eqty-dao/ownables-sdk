@@ -8,8 +8,8 @@ export interface UploadOptions {
 }
 
 export default class BuilderService {
-  public static URL: string = process.env.REACT_APP_OBUILDER ?? "";
-  public static SECRET?: string = process.env.REACT_APP_OBUILDER_API_SECRET_KEY;
+  public static URL: string = import.meta.env.VITE_OBUILDER ?? "";
+  public static SECRET?: string = import.meta.env.VITE_OBUILDER_API_SECRET_KEY;
 
   // Base mainnet = 8453, Base Sepolia = 84532
   private static readonly BASE_MAINNET_CHAIN_ID = 8453;

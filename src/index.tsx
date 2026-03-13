@@ -48,12 +48,12 @@ const { chains, publicClient } = configureChains(
 
 // Use RainbowKit's default wallet connectors to populate the wallet list (WalletConnect, MetaMask, Coinbase, Ledger, etc.)
 const walletConnectProjectId = (
-  process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || ""
+  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || ""
 ).trim();
 if (!walletConnectProjectId) {
   // eslint-disable-next-line no-console
   console.warn(
-    "RainbowKit: REACT_APP_WALLETCONNECT_PROJECT_ID is not set. WalletConnect may be unavailable."
+    "RainbowKit: VITE_WALLETCONNECT_PROJECT_ID is not set. WalletConnect may be unavailable."
   );
 }
 const connectors = connectorsForWallets([

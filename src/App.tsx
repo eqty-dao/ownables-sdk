@@ -90,7 +90,7 @@ export default function App() {
     });
   }, [ownableService]);
 
-  const isE2E = process.env.REACT_APP_E2E === "true";
+  const isE2E = import.meta.env.VITE_E2E === "true";
 
   useEffect(() => {
     setShowLogin(!isConnected && !isE2E);

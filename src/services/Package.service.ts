@@ -18,7 +18,7 @@ import { MessageExt } from "../interfaces/MessageInfo";
 const getMimeType = (filename: string): string | null | undefined =>
   (mime as any)?.getType?.(filename);
 
-const exampleUrl = process.env.REACT_APP_OWNABLE_EXAMPLES_URL;
+const exampleUrl = import.meta.env.VITE_OWNABLE_EXAMPLES_URL;
 const examples: TypedPackageStub[] = exampleUrl
   ? [
       {

@@ -9,8 +9,7 @@ import { TypedPackage } from "../interfaces/TypedPackage";
 import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
 import EventChainService from "./EventChain.service";
 
-// @ts-ignore - Loaded as string, see `craco.config.js`
-import workerJsSource from "../assets/worker.js";
+import workerJsSource from "../assets/worker.js?raw";
 import { LogProgress, withProgress } from "../contexts/Progress.context";
 
 export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;

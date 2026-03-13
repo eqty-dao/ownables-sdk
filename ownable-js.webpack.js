@@ -1,8 +1,8 @@
 // This configuration is to build `ownable.js`, which is the js file that's
 // loaded in each Ownable iframe.
 //
-// Webpack for the React App is controlled by the `react-script` library. To
-// customize it, see `craco.config.js`.
+// Webpack for the React app shell is handled by Vite. This config is only for
+// building public/ownable.js.
 //
 
 const path = require("path");

@@ -30,7 +30,7 @@ interface ViewMessagesBarProps {
   >;
 }
 
-export const network = process.env.REACT_APP_LTO_NETWORK_ID;
+export const network = import.meta.env.VITE_LTO_NETWORK_ID;
 
 const SkeletonMessageItem = () => (
   <ListItem
