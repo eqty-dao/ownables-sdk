@@ -4,7 +4,6 @@ import {
   Drawer,
   FormControlLabel,
   FormGroup,
-  Hidden,
   IconButton,
   Link,
   Switch, Typography,
@@ -41,11 +40,11 @@ export default function Sidebar(props: SidebarProps) {
       <Drawer anchor="right" open={open} onClose={onClose}>
         <Box sx={{ width: 350, p: 2 }} role="presentation">
           <Box component="div">
-            <Hidden smUp>
+            <Box sx={{ display: { xs: "inline-flex", sm: "none" } }}>
               <IconButton onClick={onClose} size="small" sx={{ mr: 2 }}>
                 <ArrowBack />
               </IconButton>
-            </Hidden>
+            </Box>
             <Link href="https://ltonetwork.com" target="_blank">
               <img
                 src={ltoLogo}

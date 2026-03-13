@@ -1,5 +1,5 @@
 import {Box, BoxProps} from "@mui/material";
-import Grid from "@mui/material/Unstable_Grid2";
+import Grid from "@mui/material/Grid";
 import {forwardRef, Ref, useEffect, useState} from "react";
 
 interface OverlayProps extends BoxProps {

@@ -10,22 +10,12 @@ import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { createTheme, ThemeProvider } from "@mui/material";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import {
-  RainbowKitProvider,
-  connectorsForWallets,
-} from "@rainbow-me/rainbowkit";
-import {
-  metaMaskWallet,
-  walletConnectWallet,
-  coinbaseWallet,
-  ledgerWallet,
-  safeWallet,
-} from "@rainbow-me/rainbowkit/wallets";
-import { WagmiConfig, configureChains, createConfig } from "wagmi";
+import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { WagmiProvider, http } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
-import { publicProvider } from "wagmi/providers/public";
 import { ServicesProvider } from "./contexts/Services.context";
 import { ProgressProvider } from "./contexts/Progress.context";
 
@@ -41,10 +31,8 @@ const theme = createTheme({
   },
 });
 
-const { chains, publicClient } = configureChains(
-  [baseSepolia, base],
-  [publicProvider()]
-);
+const chains = [baseSepolia, base] as const;
+const queryClient = new QueryClient();
 
 // Use RainbowKit's default wallet connectors to populate the wallet list (WalletConnect, MetaMask, Coinbase, Ledger, etc.)
 const walletConnectProjectId = (
@@ -56,23 +44,14 @@ if (!walletConnectProjectId) {
     "RainbowKit: VITE_WALLETCONNECT_PROJECT_ID is not set. WalletConnect may be unavailable."
   );
 }
-const connectors = connectorsForWallets([
-  {
-    groupName: "Popular",
-    wallets: [
-      metaMaskWallet({ projectId: walletConnectProjectId, chains }),
-      walletConnectWallet({ projectId: walletConnectProjectId, chains }),
-      coinbaseWallet({ appName: "Ownable SDK", chains }),
-      ledgerWallet({ projectId: walletConnectProjectId, chains }),
-      safeWallet({ chains }),
-    ],
+const wagmiConfig = getDefaultConfig({
+  appName: "Ownable SDK",
+  projectId: walletConnectProjectId,
+  chains,
+  transports: {
+    [baseSepolia.id]: http(),
+    [base.id]: http(),
   },
-]);
-
-const wagmiConfig = createConfig({
-  autoConnect: true,
-  connectors,
-  publicClient,
 });
 
 const root = ReactDOM.createRoot(
@@ -80,17 +59,19 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <WagmiConfig config={wagmiConfig}>
-      <RainbowKitProvider chains={chains}>
-        <ServicesProvider>
-          <ThemeProvider theme={theme}>
-            <ProgressProvider>
-              <App />
-            </ProgressProvider>
-          </ThemeProvider>
-        </ServicesProvider>
-      </RainbowKitProvider>
-    </WagmiConfig>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          <ServicesProvider>
+            <ThemeProvider theme={theme}>
+              <ProgressProvider>
+                <App />
+              </ProgressProvider>
+            </ThemeProvider>
+          </ServicesProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   </React.StrictMode>
 );
 

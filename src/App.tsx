@@ -9,7 +9,7 @@ import Sidebar from "./components/Sidebar";
 import { ViewMessagesBar } from "./components/ViewMessagesBar";
 import If from "./components/If";
 import { HAS_EXAMPLES } from "./services/Package.service";
-import Grid from "@mui/material/Unstable_Grid2";
+import Grid from "@mui/material/Grid";
 import * as React from "react";
 import Ownable from "./components/Ownable";
 import OwnableListItem from "./components/OwnableListItem";
