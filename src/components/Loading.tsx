@@ -1,4 +1,4 @@
-import {Backdrop, CircularProgress} from "@mui/material";
+import {Backdrop, CircularProgress} from "@ui/mui";
 import React from "react";
 
 export default function Loading(props: {show: boolean}) {

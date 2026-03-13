@@ -1,6 +1,6 @@
-import { Button, Typography } from '@mui/material';
-import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
-import CachedIcon from '@mui/icons-material/Cached';
+import { Button, Typography } from '@ui/mui';
+import InfoOutlineIcon from '@ui/icons/InfoOutlined';
+import CachedIcon from '@ui/icons/Cached';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
 import { PropsWithChildren } from "react"

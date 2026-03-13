@@ -1,9 +1,9 @@
 import React from "react";
-import { AppBar, Box, IconButton, Toolbar, Badge, Alert, Chip } from "@mui/material";
+import { AppBar, Box, IconButton, Toolbar, Badge, Alert, Chip } from "@ui/mui";
 import logo from "../assets/logo.svg";
-import MenuIcon from "@mui/icons-material/Menu";
-import MailOutlinedIcon from "@mui/icons-material/MailOutlined";
-import WarningIcon from "@mui/icons-material/Warning";
+import MenuIcon from "@ui/icons/Menu";
+import MailOutlinedIcon from "@ui/icons/MailOutlined";
+import WarningIcon from "@ui/icons/Warning";
 
 interface AppToolbarProps {
   onMenuClick: () => void;

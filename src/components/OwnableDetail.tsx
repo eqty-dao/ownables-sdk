@@ -7,8 +7,8 @@ import {
   Link,
   Tooltip,
   Typography,
-} from "@mui/material";
-import { BoltOutlined, ImageNotSupported, OpenInNew } from "@mui/icons-material";
+} from "@ui/mui";
+import { BoltOutlined, ImageNotSupported, OpenInNew } from "@ui/icons";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
 import { TypedPackage } from "../interfaces/TypedPackage";

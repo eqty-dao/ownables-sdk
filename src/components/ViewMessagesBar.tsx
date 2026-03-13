@@ -10,8 +10,8 @@ import {
   Button,
   Badge,
   Skeleton,
-} from "@mui/material";
-import { ArrowBack } from "@mui/icons-material";
+} from "@ui/mui";
+import { ArrowBack } from "@ui/icons";
 import { EventChain } from "eqty-core";
 import { enqueueSnackbar } from "notistack";
 import placeholderImage from "../assets/cube.png";

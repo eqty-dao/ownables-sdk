@@ -7,9 +7,9 @@ import {
   IconButton,
   Link,
   Switch, Typography,
-} from "@mui/material";
+} from "@ui/mui";
 import { useEffect, useState } from "react";
-import { ArrowBack } from "@mui/icons-material";
+import { ArrowBack } from "@ui/icons";
 import ltoLogo from "../assets/ltonetwork.png";
 import EventChainService from "../services/EventChain.service";
 import WalletConnectControls from "./WalletConnectControls";

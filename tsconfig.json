@@ -11,6 +11,13 @@
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
     "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@ui/mui": ["src/ui/mui/index.tsx"],
+      "@ui/mui/*": ["src/ui/mui/*"],
+      "@ui/icons": ["src/ui/icons/index.tsx"],
+      "@ui/icons/*": ["src/ui/icons/*"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,

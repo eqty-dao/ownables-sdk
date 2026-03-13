@@ -1,4 +1,4 @@
-import {Drawer} from "@mui/material";
+import {Drawer} from "@ui/mui";
 import {ReactNode} from "react";
 
 interface HelpDrawerProps {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Box, ButtonBase, Chip, Paper } from "@mui/material";
-import { BoltOutlined, ImageNotSupported } from "@mui/icons-material";
+import { Box, ButtonBase, Chip, Paper } from "@ui/mui";
+import { BoltOutlined, ImageNotSupported } from "@ui/icons";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
 

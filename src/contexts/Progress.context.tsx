@@ -11,11 +11,11 @@ import {
   ListItemIcon,
   ListItemText,
   Typography
-} from '@mui/material';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import CircularProgress from '@mui/material/CircularProgress';
+} from '@ui/mui';
+import CheckCircleOutlineIcon from '@ui/icons/CheckCircleOutline';
+import ErrorOutlineIcon from '@ui/icons/ErrorOutline';
+import RadioButtonUncheckedIcon from '@ui/icons/RadioButtonUnchecked';
+import CircularProgress from '@ui/mui/CircularProgress';
 
 export type ProgressStepStatus = 'pending' | 'active' | 'done' | 'error';
 

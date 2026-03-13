@@ -1,8 +1,8 @@
-import { Menu, MenuItem, IconButton, SxProps, Theme } from "@mui/material";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import MoreVert from "@mui/icons-material/MoreVert";
+import { Menu, MenuItem, IconButton, SxProps, Theme } from "@ui/mui";
+import ListItemIcon from "@ui/mui/ListItemIcon";
+import MoreVert from "@ui/icons/MoreVert";
 import { useState, MouseEvent } from "react";
-import { Delete, PrecisionManufacturing, SwapHoriz } from "@mui/icons-material";
+import { Delete, PrecisionManufacturing, SwapHoriz } from "@ui/icons";
 import PromptDialog from "./PromptDialog";
 import { useAccount } from "wagmi";
 

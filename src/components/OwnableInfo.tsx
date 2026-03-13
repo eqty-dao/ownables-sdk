@@ -6,11 +6,11 @@ import {
   SxProps,
   Theme,
   Typography,
-} from "@mui/material";
+} from "@ui/mui";
 import { useCallback, useEffect, useState } from "react";
-import { Fingerprint, InfoOutlined } from "@mui/icons-material";
+import { Fingerprint, InfoOutlined } from "@ui/icons";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
-import Dialog from "@mui/material/Dialog";
+import Dialog from "@ui/mui/Dialog";
 import { EventChain } from "eqty-core";
 import EventCard from "./EventCard";
 import shortId from "../utils/shortId";

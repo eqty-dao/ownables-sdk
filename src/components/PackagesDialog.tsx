@@ -1,5 +1,5 @@
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
-import ListItem from "@mui/material/ListItem";
+import ListItem from "@ui/mui/ListItem";
 import {
   Box,
   Divider,
@@ -7,16 +7,16 @@ import {
   ListItemIcon,
   Skeleton,
   Typography,
-} from "@mui/material";
-import Dialog from "@mui/material/Dialog";
-import CloseIcon from "@mui/icons-material/Close";
-import List from "@mui/material/List";
+} from "@ui/mui";
+import Dialog from "@ui/mui/Dialog";
+import CloseIcon from "@ui/icons/Close";
+import List from "@ui/mui/List";
 import Tooltip from "./Tooltip";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
+import ListItemButton from "@ui/mui/ListItemButton";
+import ListItemText from "@ui/mui/ListItemText";
 import If from "./If";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
+import AutoAwesomeIcon from "@ui/icons/AutoAwesome";
+import DriveFolderUploadIcon from "@ui/icons/DriveFolderUpload";
 import { useService } from "../hooks/useService";
 
 function SkeletonPackageItem() {

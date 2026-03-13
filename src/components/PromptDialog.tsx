@@ -8,10 +8,10 @@ import {
   TextFieldProps,
   IconButton,
   InputAdornment,
-} from "@mui/material";
+} from "@ui/mui";
 import { useState } from "react";
-import { AlertColor } from "@mui/material/Alert/Alert";
-import Paste from "@mui/icons-material/ContentPasteOutlined";
+import { AlertColor } from "@ui/mui/Alert/Alert";
+import Paste from "@ui/icons/ContentPasteOutlined";
 
 interface PromptDialogProps {
   open: boolean;

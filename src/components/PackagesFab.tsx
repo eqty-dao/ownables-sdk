@@ -1,5 +1,5 @@
-import { Fab, } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+import { Fab, } from "@ui/mui";
+import AddIcon from "@ui/icons/Add";
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
 import selectFile from "../utils/selectFile";
 import Loading from "./Loading";
