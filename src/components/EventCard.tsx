@@ -1,10 +1,10 @@
 import { Event } from "eqty-core";
-import { Box, Card, CardContent, Link, Paper, styled } from "@ui/mui";
+import { Box, Card, CardContent, Link, Paper, styled } from "@/components/ui/primitives";
 import AntSwitch from "./AntSwitch";
 import { useState } from "react";
 import If from "./If";
 import ReactJson from "react-json-view";
-import { Cancel, CheckCircle } from "@ui/icons";
+import { CircleX as Cancel, CircleCheck as CheckCircle } from "lucide-react";
 import shortId from "../utils/shortId";
 import { useChainId } from "wagmi";
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Box, Button, CircularProgress, IconButton, Link, Typography } from "@ui/mui";
-import { ArrowBack } from "@ui/icons";
+import { Box, Button, CircularProgress, IconButton, Link, Typography } from "@/components/ui/primitives";
+import { ArrowLeft as ArrowBack } from "lucide-react";
 import PackagesFab from "./components/PackagesFab";
 import { TypedPackage } from "./interfaces/TypedPackage";
 import LoginDialog from "./components/LoginDialog";
@@ -9,7 +9,7 @@ import Sidebar from "./components/Sidebar";
 import { ViewMessagesBar } from "./components/ViewMessagesBar";
 import If from "./components/If";
 import { HAS_EXAMPLES } from "./services/Package.service";
-import Grid from "@ui/mui/Grid";
+import Grid from "@/components/ui/primitives/Grid";
 import * as React from "react";
 import Ownable from "./components/Ownable";
 import OwnableListItem from "./components/OwnableListItem";
@@ -17,7 +17,7 @@ import { EventChain } from "eqty-core";
 import HelpDrawer from "./components/HelpDrawer";
 import AppToolbar from "./components/AppToolbar";
 import AlertDialog from "./components/AlertDialog";
-import { AlertColor } from "@ui/mui/Alert/Alert";
+import { AlertColor } from "@/components/ui/primitives/Alert/Alert";
 import ownableErrorMessage from "./utils/ownableErrorMessage";
 import Overlay from "./components/Overlay";
 import ConfirmDialog from "./components/ConfirmDialog";
@@ -30,6 +30,35 @@ import { useService } from "./hooks/useService";
 import LocalStorageService from "./services/LocalStorage.service";
 import CreateOwnableDialog from "./components/CreateOwnableDialog";
 import { useProgress } from "./contexts/Progress.context";
+import { cva } from "class-variance-authority";
+import { cn } from "./components/ui/lib/cn";
+
+const listPane = cva(
+  "w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-[360px]",
+  {
+    variants: {
+      hiddenOnMobile: {
+        true: "hidden md:block",
+        false: "block",
+      },
+    },
+    defaultVariants: {
+      hiddenOnMobile: false,
+    },
+  }
+);
+
+const detailPane = cva("min-w-0 flex-1", {
+  variants: {
+    showOnMobile: {
+      true: "block",
+      false: "hidden",
+    },
+  },
+  defaultVariants: {
+    showOnMobile: false,
+  },
+});
 
 export default function App() {
   const [loaded, setLoaded] = useState(false);
@@ -362,12 +391,7 @@ export default function App() {
   // Show loading state while connecting
   if (isConnecting) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
+      <Box className="flex min-h-screen items-center justify-center">
         <CircularProgress />
       </Box>
     );
@@ -385,33 +409,23 @@ export default function App() {
       <If condition={ownables.length === 0}>
         <Grid
           container
-          spacing={0}
-          direction="column"
-          alignItems="center"
-          justifyContent="center"
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: -1,
-          }}
+          className="pointer-events-none absolute inset-0 -z-10 place-items-center px-4"
         >
-          <Grid xs={10}>
-            <Typography variant="h3" color="text.primary" textAlign="center">
+          <Grid className="max-w-2xl text-center">
+            <Typography
+              component="h1"
+              className="text-4xl font-semibold text-slate-900 sm:text-5xl"
+            >
               Let's get started!
             </Typography>
             <Typography
-              variant="subtitle1"
-              color="text.secondary"
-              textAlign="center"
-              sx={{ mt: 2 }}
+              className="mt-4 text-base text-slate-600 sm:text-2xl"
             >
               Read{" "}
               <Link
                 href="https://docs.ltonetwork.com/ownables/what-are-ownables"
                 target="_blank"
+                className="pointer-events-auto text-indigo-600 underline"
               >
                 the documentation
               </Link>{" "}
@@ -422,7 +436,7 @@ export default function App() {
                 <Link
                   component="button"
                   onClick={() => setShowPackages(true)}
-                  style={{ fontSize: "inherit" }}
+                  className="pointer-events-auto text-indigo-600 underline"
                 >
                   the examples
                 </Link>
@@ -435,66 +449,42 @@ export default function App() {
       </If>
 
       <Box
-        sx={{
-          display: "flex",
-          maxWidth: 1400,
-          margin: "auto",
-          mt: 2,
-          px: 2,
-          gap: 3,
-        }}
+        className="mx-auto mt-4 flex max-w-[1320px] gap-4 px-3 pb-6 md:px-4"
       >
         {/* Left sidebar — ownable list */}
         <Box
           component="nav"
           aria-label="Ownable list"
-          sx={{
-            width: 320,
-            flexShrink: 0,
-            display: { xs: showDetail ? "none" : "block", md: "block" },
-          }}
+          className={cn(listPane({ hiddenOnMobile: showDetail }))}
         >
-          {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
-            const pkg = packageService?.info(packageCid, uniqueMessageHash);
-            return (
-              <OwnableListItem
-                key={chain.id}
-                chain={chain}
-                packageCid={packageCid}
-                metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
-                isConsumable={!!(pkg?.isConsumable)}
-                isSelected={selectedChainId === chain.id}
-                onClick={() => {
-                  setSelectedChainId(chain.id);
-                  setShowDetail(true);
-                }}
-              />
-            );
-          })}
+          <Box className="space-y-2">
+            {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
+              const pkg = packageService?.info(packageCid, uniqueMessageHash);
+              return (
+                <OwnableListItem
+                  key={chain.id}
+                  chain={chain}
+                  packageCid={packageCid}
+                  metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
+                  isConsumable={!!(pkg?.isConsumable)}
+                  isSelected={selectedChainId === chain.id}
+                  onClick={() => {
+                    setSelectedChainId(chain.id);
+                    setShowDetail(true);
+                  }}
+                />
+              );
+            })}
+          </Box>
 
           {/* Issue an Ownable — dashed border button */}
-          <Box
-            component="button"
+          <button
+            type="button"
             onClick={() => setShowPackages(true)}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              mt: 1,
-              py: 1.5,
-              border: "2px dashed",
-              borderColor: "divider",
-              borderRadius: 2,
-              cursor: "pointer",
-              background: "none",
-              color: "text.secondary",
-              fontSize: "0.875rem",
-              "&:hover": { borderColor: "primary.main", color: "primary.main" },
-            }}
+            className="mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
           >
             + Issue an Ownable
-          </Box>
+          </button>
         </Box>
 
         {/* Right detail panel */}
@@ -506,17 +496,10 @@ export default function App() {
             <Box
               aria-label="Ownable detail"
               role="region"
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                display: {
-                  xs: showDetail ? "block" : "none",
-                  md: "block",
-                },
-              }}
+              className={cn(detailPane({ showOnMobile: showDetail }), "md:block")}
             >
               {/* Back button — mobile only */}
-              <Box sx={{ display: { xs: "block", md: "none" }, mb: 1 }}>
+              <Box className="mb-1 block md:hidden">
                 <IconButton
                   aria-label="Back"
                   onClick={() => setShowDetail(false)}

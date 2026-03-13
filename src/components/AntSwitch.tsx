@@ -1,4 +1,4 @@
-import {styled, Switch} from "@ui/mui";
+import {styled, Switch} from "@/components/ui/primitives";
 
 const AntSwitch = styled(Switch)(({ theme }) => ({
   width: 28,

@@ -6,13 +6,14 @@ import LocalStorageService from "./LocalStorage.service";
 import { PollingService } from "./Polling.service";
 import { RelayService } from "./Relay.service";
 import EQTYService from "./EQTY.service";
+import MockEQTYService from "./MockEQTY.service";
 import BuilderService from "./Builder.service";
 import type { PublicClient, WalletClient } from "viem";
 
 export interface ServiceMap {
   relay: RelayService;
   localStorage: LocalStorageService;
-  eqty: EQTYService;
+  eqty: EQTYService | MockEQTYService;
   idb: IDBService;
   eventChains: EventChainService;
   packages: PackageService;
@@ -35,10 +36,15 @@ export default class ServiceContainer {
     public readonly walletClient?: WalletClient,
     public readonly publicClient?: PublicClient
   ) {
+    const isE2E = import.meta.env.VITE_E2E === "true";
+    const hasEthereumProvider = typeof window !== "undefined" && Boolean((window as any).ethereum);
+
     this.register(
       "eqty",
       async (c) =>
-        new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient)
+        isE2E && !hasEthereumProvider
+          ? new MockEQTYService(c.address!, c.chainId!)
+          : new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient)
     );
 
     this.register("idb", async (c) =>

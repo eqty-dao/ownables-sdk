@@ -13,10 +13,7 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "@ui/mui": ["src/ui/mui/index.tsx"],
-      "@ui/mui/*": ["src/ui/mui/*"],
-      "@ui/icons": ["src/ui/icons/index.tsx"],
-      "@ui/icons/*": ["src/ui/icons/*"]
+      "@/*": ["src/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

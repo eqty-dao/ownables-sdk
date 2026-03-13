@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Select as BaseSelect } from "@base-ui/react/select";
-import { cn } from "../lib/cn";
+import { cn } from "./lib/cn";
 
 export function SelectRoot<Value>(props: BaseSelect.Root.Props<Value>) {
   return <BaseSelect.Root {...props} />;

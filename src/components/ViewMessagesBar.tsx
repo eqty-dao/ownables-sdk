@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
-  Drawer,
   Box,
   Typography,
   IconButton,
@@ -10,8 +9,9 @@ import {
   Button,
   Badge,
   Skeleton,
-} from "@ui/mui";
-import { ArrowBack } from "@ui/icons";
+} from "@/components/ui/primitives";
+import { ArrowLeft as ArrowBack } from "lucide-react";
+import { Drawer } from "./ui/drawer";
 import { EventChain } from "eqty-core";
 import { enqueueSnackbar } from "notistack";
 import placeholderImage from "../assets/cube.png";

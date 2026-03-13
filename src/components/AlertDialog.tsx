@@ -4,9 +4,9 @@ import {
   Button,
   Dialog,
   DialogActions,
-} from "@ui/mui";
+} from "@/components/ui/primitives";
 import {ReactNode} from "react";
-import {AlertColor} from "@ui/mui/Alert/Alert";
+import {AlertColor} from "@/components/ui/primitives/Alert/Alert";
 
 interface AlertDialogProps {
   open: boolean;

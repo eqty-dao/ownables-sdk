@@ -55,6 +55,63 @@ function mergeStyle(style: any, sx: any): React.CSSProperties {
   return { ...(style || {}), ...sxToStyle(sx) };
 }
 
+function spacingValue(value: any): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "number") return `${value * 8}px`;
+  return String(value);
+}
+
+function pickStyleProps(props: AnyProps): { style: React.CSSProperties; rest: AnyProps } {
+  const rest = { ...props };
+  const style: Record<string, any> = {};
+  const styleKeys = [
+    "display",
+    "justifyContent",
+    "alignItems",
+    "minHeight",
+    "minWidth",
+    "height",
+    "width",
+    "maxWidth",
+    "maxHeight",
+    "overflow",
+    "overflowX",
+    "overflowY",
+    "padding",
+    "paddingTop",
+    "paddingBottom",
+    "paddingLeft",
+    "paddingRight",
+    "margin",
+    "marginTop",
+    "marginBottom",
+    "marginLeft",
+    "marginRight",
+    "textAlign",
+    "fontSize",
+    "fontWeight",
+    "lineHeight",
+    "color",
+    "backgroundColor",
+    "border",
+    "borderRadius",
+    "flex",
+    "flexGrow",
+    "flexShrink",
+    "flexBasis",
+    "gap",
+  ];
+
+  for (const key of styleKeys) {
+    if (rest[key] !== undefined) {
+      style[key] = rest[key];
+      delete rest[key];
+    }
+  }
+
+  return { style: style as React.CSSProperties, rest };
+}
+
 function asElement(component: any, fallback: any) {
   return component || fallback;
 }
@@ -74,28 +131,74 @@ export function styled(Component: any) {
 }
 
 export const Box = forwardRef<any, AnyProps>(function Box({ component, sx, style, ...rest }, ref) {
+  const extracted = pickStyleProps(rest);
   const Component = asElement(component, "div");
-  return <Component ref={ref} {...rest} style={mergeStyle(style, sx)} />;
+  return <Component ref={ref} {...extracted.rest} style={mergeStyle({ ...style, ...extracted.style }, sx)} />;
 });
 
 export const Stack = forwardRef<any, AnyProps>(function Stack({ component, sx, style, ...rest }, ref) {
+  const extracted = pickStyleProps(rest);
   const Component = asElement(component, "div");
-  return <Component ref={ref} {...rest} style={mergeStyle(style, sx)} />;
+  return <Component ref={ref} {...extracted.rest} style={mergeStyle({ ...style, ...extracted.style }, sx)} />;
 });
 
-export const Grid = forwardRef<any, AnyProps>(function Grid({ component, sx, style, ...rest }, ref) {
+export const Grid = forwardRef<any, AnyProps>(function Grid(
+  {
+    component,
+    sx,
+    style,
+    container,
+    item,
+    spacing,
+    direction,
+    xs,
+    sm,
+    md,
+    lg,
+    xl,
+    rowSpacing,
+    columnSpacing,
+    ...rest
+  },
+  ref
+) {
+  const extracted = pickStyleProps(rest);
+  const gridStyle: React.CSSProperties = {
+    ...extracted.style,
+  };
+
+  if (container) {
+    gridStyle.display = "flex";
+    gridStyle.flexWrap = "wrap";
+    if (direction) gridStyle.flexDirection = direction;
+    if (spacing !== undefined) gridStyle.gap = spacingValue(spacing);
+    if (rowSpacing !== undefined) gridStyle.rowGap = spacingValue(rowSpacing);
+    if (columnSpacing !== undefined) gridStyle.columnGap = spacingValue(columnSpacing);
+  }
+
+  if (item) {
+    const span = xs ?? sm ?? md ?? lg ?? xl;
+    if (typeof span === "number" && span > 0) {
+      const widthPct = `${(span / 12) * 100}%`;
+      gridStyle.width = widthPct;
+      gridStyle.flexBasis = widthPct;
+      gridStyle.maxWidth = widthPct;
+    }
+  }
+
   const Component = asElement(component, "div");
-  return <Component ref={ref} {...rest} style={mergeStyle(style, sx)} />;
+  return <Component ref={ref} {...extracted.rest} style={mergeStyle({ ...style, ...gridStyle }, sx)} />;
 });
 
 export const Typography = forwardRef<any, AnyProps>(function Typography(
   { component, variant, sx, style, children, ...rest },
   ref
 ) {
+  const extracted = pickStyleProps(rest);
   const fallback = variant && String(variant).startsWith("h") ? variant : "span";
   const Component = asElement(component, fallback);
   return (
-    <Component ref={ref} {...rest} style={mergeStyle(style, sx)}>
+    <Component ref={ref} {...extracted.rest} style={mergeStyle({ ...style, ...extracted.style }, sx)}>
       {children}
     </Component>
   );
@@ -105,8 +208,59 @@ export const Link = forwardRef<any, AnyProps>(function Link({ sx, style, ...rest
   return <a ref={ref} {...rest} style={mergeStyle(style, sx)} />;
 });
 
-export const Button = forwardRef<any, AnyProps>(function Button({ sx, style, type = "button", ...rest }, ref) {
-  return <button ref={ref} type={type} {...rest} style={mergeStyle(style, sx)} />;
+export const Button = forwardRef<any, AnyProps>(function Button(
+  { sx, style, type = "button", fullWidth, variant, color, size, ...rest },
+  ref
+) {
+  const extracted = pickStyleProps(rest);
+  if (fullWidth) extracted.style.width = "100%";
+  const variantName = variant || "text";
+  const colorName = color || "primary";
+  const baseStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: size === "small" ? "6px 10px" : size === "large" ? "12px 18px" : "8px 14px",
+    borderRadius: 10,
+    border: "1px solid transparent",
+    cursor: "pointer",
+    fontWeight: 600,
+    lineHeight: 1.2,
+  };
+
+  const primaryStyles: Record<string, React.CSSProperties> = {
+    text: { color: "#0f172a", background: "transparent" },
+    outlined: { color: "#0f172a", background: "#ffffff", borderColor: "#cbd5e1" },
+    contained: { color: "#ffffff", background: "#0f172a" },
+  };
+  const secondaryStyles: Record<string, React.CSSProperties> = {
+    text: { color: "#334155", background: "transparent" },
+    outlined: { color: "#334155", background: "#ffffff", borderColor: "#cbd5e1" },
+    contained: { color: "#ffffff", background: "#475569" },
+  };
+  const warningStyles: Record<string, React.CSSProperties> = {
+    text: { color: "#92400e", background: "transparent" },
+    outlined: { color: "#92400e", background: "#ffffff", borderColor: "#fbbf24" },
+    contained: { color: "#ffffff", background: "#d97706" },
+  };
+  const errorStyles: Record<string, React.CSSProperties> = {
+    text: { color: "#b91c1c", background: "transparent" },
+    outlined: { color: "#b91c1c", background: "#ffffff", borderColor: "#fca5a5" },
+    contained: { color: "#ffffff", background: "#dc2626" },
+  };
+  const palette =
+    colorName === "error" ? errorStyles : colorName === "warning" ? warningStyles : colorName === "secondary" ? secondaryStyles : primaryStyles;
+  const variantStyle = palette[variantName] || primaryStyles.text;
+
+  return (
+    <button
+      ref={ref}
+      type={type}
+      {...extracted.rest}
+      style={mergeStyle({ ...baseStyle, ...variantStyle, ...style, ...extracted.style }, sx)}
+    />
+  );
 });
 
 export const IconButton = forwardRef<any, AnyProps>(function IconButton(props, ref) {
@@ -255,11 +409,55 @@ export const MenuItem = ({ children, onClick, ...rest }: AnyProps) => (
   </button>
 );
 
-export const Dialog = ({ open, onClose, children, ...rest }: AnyProps) => (
+const modalBackdropStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.4)",
+  zIndex: 1300,
+};
+
+const dialogPopupStyle: React.CSSProperties = {
+  position: "fixed",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  zIndex: 1400,
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 14,
+  boxShadow: "0 18px 45px rgba(15, 23, 42, 0.22)",
+  padding: 16,
+  maxWidth: "min(640px, calc(100vw - 32px))",
+  maxHeight: "calc(100vh - 32px)",
+  overflow: "auto",
+};
+
+function drawerPopupStyle(anchor: string | undefined): React.CSSProperties {
+  const side = anchor || "left";
+  const base: React.CSSProperties = {
+    position: "fixed",
+    zIndex: 1400,
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 18px 45px rgba(15, 23, 42, 0.22)",
+    overflow: "auto",
+    maxWidth: "100vw",
+    maxHeight: "100vh",
+  };
+
+  if (side === "right") return { ...base, top: 0, right: 0, bottom: 0 };
+  if (side === "top") return { ...base, top: 0, left: 0, right: 0 };
+  if (side === "bottom") return { ...base, left: 0, right: 0, bottom: 0 };
+  return { ...base, top: 0, left: 0, bottom: 0 };
+}
+
+export const Dialog = ({ open, onClose, children, style, sx, ...rest }: AnyProps) => (
   <BaseDialog.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
     <BaseDialog.Portal>
-      <BaseDialog.Backdrop />
-      <BaseDialog.Popup {...rest}>{children}</BaseDialog.Popup>
+      <BaseDialog.Backdrop style={modalBackdropStyle} />
+      <BaseDialog.Popup {...rest} style={mergeStyle({ ...dialogPopupStyle, ...style }, sx)}>
+        {children}
+      </BaseDialog.Popup>
     </BaseDialog.Portal>
   </BaseDialog.Root>
 );
@@ -269,11 +467,13 @@ export const DialogContent = ({ children, ...rest }: AnyProps) => <div {...rest}
 export const DialogContentText = ({ children, ...rest }: AnyProps) => <p {...rest}>{children}</p>;
 export const DialogActions = ({ children, ...rest }: AnyProps) => <div {...rest}>{children}</div>;
 
-export const Drawer = ({ open, onClose, children, hideBackdrop, ...rest }: AnyProps) => (
+export const Drawer = ({ open, onClose, children, hideBackdrop, anchor, style, sx, ...rest }: AnyProps) => (
   <BaseDrawer.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
     <BaseDrawer.Portal>
-      {!hideBackdrop ? <BaseDrawer.Backdrop /> : null}
-      <BaseDrawer.Popup {...rest}>{children}</BaseDrawer.Popup>
+      {!hideBackdrop ? <BaseDrawer.Backdrop style={modalBackdropStyle} /> : null}
+      <BaseDrawer.Popup {...rest} style={mergeStyle({ ...drawerPopupStyle(anchor), ...style }, sx)}>
+        {children}
+      </BaseDrawer.Popup>
     </BaseDrawer.Portal>
   </BaseDrawer.Root>
 );

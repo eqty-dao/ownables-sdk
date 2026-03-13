@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Stack, TextField, Chip } from "@ui/mui";
+import { Stack, TextField, Chip } from "@/components/ui/primitives";
 
 interface TagInputFieldProps {
   onTagsChange: (tags: string[]) => void;

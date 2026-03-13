@@ -1,15 +1,15 @@
 import {
   Box,
   Button,
-  Drawer,
   FormControlLabel,
   FormGroup,
   IconButton,
   Link,
   Switch, Typography,
-} from "@ui/mui";
+} from "@/components/ui/primitives";
 import { useEffect, useState } from "react";
-import { ArrowBack } from "@ui/icons";
+import { ArrowLeft as ArrowBack } from "lucide-react";
+import { Drawer } from "./ui/drawer";
 import ltoLogo from "../assets/ltonetwork.png";
 import EventChainService from "../services/EventChain.service";
 import WalletConnectControls from "./WalletConnectControls";

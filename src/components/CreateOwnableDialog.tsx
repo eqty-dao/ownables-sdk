@@ -10,7 +10,7 @@ import {
   Typography,
   CircularProgress,
   Alert,
-} from "@ui/mui";
+} from "@/components/ui/primitives";
 import { enqueueSnackbar } from "notistack";
 import { useService } from "../hooks/useService";
 import { useAccount, useChainId } from "wagmi";

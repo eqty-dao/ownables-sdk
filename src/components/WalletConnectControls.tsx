@@ -1,6 +1,5 @@
-import { Button, Typography } from '@ui/mui';
-import InfoOutlineIcon from '@ui/icons/InfoOutlined';
-import CachedIcon from '@ui/icons/Cached';
+import { Button, Typography } from '@/components/ui/primitives';
+import { Info as InfoOutlineIcon, RefreshCcw as CachedIcon } from "lucide-react";
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
 import { PropsWithChildren } from "react"

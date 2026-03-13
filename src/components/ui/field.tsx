@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Field as BaseField } from "@base-ui/react/field";
 import { Input } from "@base-ui/react/input";
-import { cn } from "../lib/cn";
+import { cn } from "./lib/cn";
 
 export function Field(props: BaseField.Root.Props) {
   return <BaseField.Root {...props} />;

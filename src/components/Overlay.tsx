@@ -1,5 +1,5 @@
-import {Box, BoxProps} from "@ui/mui";
-import Grid from "@ui/mui/Grid";
+import {Box, BoxProps} from "@/components/ui/primitives";
+import Grid from "@/components/ui/primitives/Grid";
 import {forwardRef, Ref, useEffect, useState} from "react";
 
 interface OverlayProps extends BoxProps {

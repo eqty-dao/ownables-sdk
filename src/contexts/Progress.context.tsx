@@ -11,11 +11,9 @@ import {
   ListItemIcon,
   ListItemText,
   Typography
-} from '@ui/mui';
-import CheckCircleOutlineIcon from '@ui/icons/CheckCircleOutline';
-import ErrorOutlineIcon from '@ui/icons/ErrorOutline';
-import RadioButtonUncheckedIcon from '@ui/icons/RadioButtonUnchecked';
-import CircularProgress from '@ui/mui/CircularProgress';
+} from '@/components/ui/primitives';
+import { CircleCheck as CheckCircleOutlineIcon, AlertCircle as ErrorOutlineIcon, Circle as RadioButtonUncheckedIcon } from "lucide-react";
+import CircularProgress from '@/components/ui/primitives/CircularProgress';
 
 export type ProgressStepStatus = 'pending' | 'active' | 'done' | 'error';
 

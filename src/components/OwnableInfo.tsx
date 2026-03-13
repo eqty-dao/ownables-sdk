@@ -6,11 +6,11 @@ import {
   SxProps,
   Theme,
   Typography,
-} from "@ui/mui";
+} from "@/components/ui/primitives";
 import { useCallback, useEffect, useState } from "react";
-import { Fingerprint, InfoOutlined } from "@ui/icons";
+import { Fingerprint, Info as InfoOutlined } from "lucide-react";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
-import Dialog from "@ui/mui/Dialog";
+import Dialog from "@/components/ui/primitives/Dialog";
 import { EventChain } from "eqty-core";
 import EventCard from "./EventCard";
 import shortId from "../utils/shortId";

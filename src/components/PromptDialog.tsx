@@ -8,10 +8,10 @@ import {
   TextFieldProps,
   IconButton,
   InputAdornment,
-} from "@ui/mui";
+} from "@/components/ui/primitives";
 import { useState } from "react";
-import { AlertColor } from "@ui/mui/Alert/Alert";
-import Paste from "@ui/icons/ContentPasteOutlined";
+import { AlertColor } from "@/components/ui/primitives/Alert/Alert";
+import { ClipboardPaste as Paste } from "lucide-react";
 
 interface PromptDialogProps {
   open: boolean;

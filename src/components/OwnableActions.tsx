@@ -1,8 +1,7 @@
-import { Menu, MenuItem, IconButton, SxProps, Theme } from "@ui/mui";
-import ListItemIcon from "@ui/mui/ListItemIcon";
-import MoreVert from "@ui/icons/MoreVert";
+import { Menu, MenuItem, IconButton, SxProps, Theme } from "@/components/ui/primitives";
+import ListItemIcon from "@/components/ui/primitives/ListItemIcon";
+import { EllipsisVertical as MoreVert, Trash2 as Delete, Wrench as PrecisionManufacturing, ArrowLeftRight as SwapHoriz } from "lucide-react";
 import { useState, MouseEvent } from "react";
-import { Delete, PrecisionManufacturing, SwapHoriz } from "@ui/icons";
 import PromptDialog from "./PromptDialog";
 import { useAccount } from "wagmi";
 

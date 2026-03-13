@@ -6,7 +6,7 @@ import {
   CardMedia,
   Grid,
   Box,
-} from "@ui/mui";
+} from "@/components/ui/primitives";
 import bgImage from "../assets/login-bg.jpg";
 import WalletConnectControls from './WalletConnectControls';
 

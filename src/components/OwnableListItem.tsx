@@ -1,8 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
-import { Box, ButtonBase, Chip, Paper } from "@ui/mui";
-import { BoltOutlined, ImageNotSupported } from "@ui/icons";
+import { Box } from "@/components/ui/primitives";
+import { Zap as BoltOutlined, ImageOff as ImageNotSupported } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
+import { cva } from "class-variance-authority";
+import { cn } from "./ui/lib/cn";
+
+const itemCard = cva(
+  "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+  {
+    variants: {
+      selected: {
+        true: "border-indigo-500 bg-indigo-50 shadow-md",
+        false: "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
+      },
+    },
+    defaultVariants: {
+      selected: false,
+    },
+  }
+);
 
 interface OwnableListItemProps {
   chain: EventChain;
@@ -43,76 +60,44 @@ export default function OwnableListItem(props: OwnableListItemProps) {
   }, [loadThumbnail]);
 
   return (
-    <ButtonBase
+    <button
+      type="button"
       onClick={onClick}
-      sx={{ display: "block", width: "100%", textAlign: "left" }}
+      className={cn(itemCard({ selected: isSelected }))}
     >
-      <Paper
-        elevation={isSelected ? 3 : 0}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          px: 2,
-          py: 1.5,
-          borderRadius: 2,
-          border: isSelected ? "2px solid" : "2px solid transparent",
-          borderColor: isSelected ? "primary.main" : "transparent",
-          "&:hover": { backgroundColor: "action.hover" },
-        }}
-      >
+      <div className="flex items-start gap-3">
         {/* Thumbnail */}
         <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: 1,
-            flexShrink: 0,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "grey.100",
-          }}
+          className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100"
         >
           {thumbnailUrl ? (
             <Box
               component="img"
               src={thumbnailUrl}
               alt={metadata.name}
-              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+              className="h-full w-full object-cover"
             />
           ) : (
             <ImageNotSupported
               aria-label="No image"
-              sx={{ color: "grey.400", fontSize: 24 }}
+              className="text-slate-400"
             />
           )}
         </Box>
 
         {/* Name + consumable chip */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box
-            sx={{
-              fontWeight: 500,
-              fontSize: "0.9rem",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+        <Box className="min-w-0 flex-1">
+          <Box className="mb-0.5 truncate text-sm font-semibold text-slate-900">
             {metadata.name}
           </Box>
           {isConsumable && (
-            <Chip
-              icon={<BoltOutlined sx={{ fontSize: "14px !important" }} />}
-              label="Consumable"
-              size="small"
-              sx={{ mt: 0.5, height: 20, fontSize: "0.7rem" }}
-            />
+            <Box className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+              <BoltOutlined className="h-3.5 w-3.5" />
+              Consumable
+            </Box>
           )}
         </Box>
-      </Paper>
-    </ButtonBase>
+      </div>
+    </button>
   );
 }

@@ -1,6 +1,6 @@
-import {Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle} from "@ui/mui";
+import {Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle} from "@/components/ui/primitives";
 import {ReactNode} from "react";
-import {AlertColor} from "@ui/mui/Alert/Alert";
+import {AlertColor} from "@/components/ui/primitives/Alert/Alert";
 
 interface ConfirmDialogProps {
   open: boolean;

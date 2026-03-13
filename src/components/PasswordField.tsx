@@ -1,5 +1,5 @@
-import {IconButton, InputAdornment, TextField, TextFieldProps} from "@ui/mui";
-import {Visibility, VisibilityOff} from "@ui/icons";
+import {IconButton, InputAdornment, TextField, TextFieldProps} from "@/components/ui/primitives";
+import { Eye as Visibility, EyeOff as VisibilityOff } from "lucide-react";
 import {useState} from "react";
 
 export default function PasswordField(props: TextFieldProps) {

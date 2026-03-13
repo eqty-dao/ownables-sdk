@@ -1,5 +1,5 @@
-import { Fab, } from "@ui/mui";
-import AddIcon from "@ui/icons/Add";
+import { Fab, } from "@/components/ui/primitives";
+import { Plus as AddIcon } from "lucide-react";
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
 import selectFile from "../utils/selectFile";
 import Loading from "./Loading";
