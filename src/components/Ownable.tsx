@@ -370,6 +370,7 @@ export default function Ownable(props: OwnableProps) {
       chain={chain}
       pkg={pkg}
       metadata={metadata}
+      issuer={info?.issuer}
       isConsumable={pkg.isConsumable && !isTransferred}
       isTransferred={isTransferred}
       iframeRef={iframeRef}
