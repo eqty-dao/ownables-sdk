@@ -1,55 +1,35 @@
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
-import ListItem from "@/components/ui/primitives/ListItem";
-import {
-  Box,
-  Divider,
-  IconButton,
-  ListItemIcon,
-  Skeleton,
-  Typography,
-} from "@/components/ui/primitives";
-import Dialog from "@/components/ui/primitives/Dialog";
-import { X as CloseIcon, Sparkles as AutoAwesomeIcon, FolderUp as DriveFolderUploadIcon } from "lucide-react";
-import List from "@/components/ui/primitives/List";
-import Tooltip from "./Tooltip";
-import ListItemButton from "@/components/ui/primitives/ListItemButton";
-import ListItemText from "@/components/ui/primitives/ListItemText";
-import If from "./If";
+import { Box, Button, IconButton, Skeleton, Typography } from "@/components/ui/primitives";
+import { Dialog } from "./ui/dialog";
+import { ChevronRight, FolderUp, Sparkles, X as CloseIcon } from "lucide-react";
 import { useService } from "../hooks/useService";
+import { cva } from "class-variance-authority";
+import { cn } from "./ui/lib/cn";
 
-function SkeletonPackageItem() {
-  return (
-    <ListItem
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-start",
-        mb: 2,
-        borderBottom: "1px solid #ddd",
-        pb: 2,
-      }}
-    >
-      <Box
-        sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}
-      >
-        <Skeleton
-          variant="rectangular"
-          width={35}
-          height={35}
-          sx={{ borderRadius: "10%" }}
-        />
-        <Box sx={{ flex: 1 }}>
-          <Skeleton variant="text" width="80%" height={16} />
-          <Skeleton variant="text" width="60%" height={14} />
-        </Box>
-      </Box>
-    </ListItem>
-  );
-}
+const topActionButton = cva(
+  "inline-flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
+  {
+    variants: {
+      emphasis: {
+        primary: "border-slate-300 bg-white text-slate-800 hover:bg-slate-50",
+        secondary: "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200",
+      },
+      disabled: {
+        true: "cursor-not-allowed opacity-50",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      emphasis: "primary",
+      disabled: false,
+    },
+  }
+);
 
 interface PackagesDialogProps {
   packages: Array<TypedPackage | TypedPackageStub>;
   open: boolean;
+  inline?: boolean;
   onClose: () => void;
   onSelect: (pkg: TypedPackage | TypedPackageStub) => void;
   onImport: () => void;
@@ -60,93 +40,89 @@ interface PackagesDialogProps {
 }
 
 export function PackagesDialog(props: PackagesDialogProps) {
-  const { onClose, onSelect, onImport, onCreate, open, isLoading } = props;
+  const { onClose, onSelect, onImport, onCreate, open, isLoading, inline } = props;
   const filteredPackages = props.packages.filter((pkg) => !pkg.isNotLocal);
   const builderService = useService("builder");
   const hasBuilder = !!builderService;
 
-  return (
-    <Dialog onClose={onClose} open={open} maxWidth="sm" fullWidth>
-      <Box sx={{ p: 2 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6" component="div">
-            Packages
+  const content = (
+    <Box className={inline ? "w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" : ""}>
+      <Box component="div" sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 2 }}>
+        <IconButton onClick={onClose} aria-label="Close issue ownable modal">
+          <CloseIcon size={18} />
+        </IconButton>
+        <Box component="div">
+          <Typography component="h2" sx={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>
+            Issue an Ownable
           </Typography>
-          <IconButton onClick={onClose}>
-            <CloseIcon />
-          </IconButton>
+          <Typography component="p" sx={{ mt: 0.5, color: "#64748b", fontSize: 14 }}>
+            Select a package or create a new one
+          </Typography>
         </Box>
-        <List sx={{ pt: 2 }} disablePadding>
-          {isLoading ? (
-            <>
-              <SkeletonPackageItem />
-              <SkeletonPackageItem />
-              <SkeletonPackageItem />
-            </>
-          ) : (
-            filteredPackages.map((pkg) => (
-              <ListItem disablePadding disableGutters key={pkg.title}>
-                <Tooltip
-                  condition={"stub" in pkg}
-                  title={`Import ${pkg.title} example`}
-                  placement="right"
-                  arrow
-                >
-                  <ListItemButton
-                    onClick={() => onSelect(pkg)}
-                    style={{
-                      textAlign: "center",
-                      color: "stub" in pkg ? "#666" : undefined,
-                    }}
-                  >
-                    <ListItemText
-                      primary={pkg.title}
-                      secondary={pkg.description}
-                      secondaryTypographyProps={{
-                        color:
-                          "stub" in pkg
-                            ? "rgba(0, 0, 0, 0.3)"
-                            : "rgba(0, 0, 0, 0.6)",
-                        fontSize: "0.75em",
-                      }}
-                    />
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            ))
-          )}
-        </List>
-        <If condition={props.packages.length > 0}>
-          <Divider />
-        </If>
-        <List sx={{ pt: 0 }} disablePadding>
-          <ListItem disablePadding disableGutters key="create-ownable">
-            <ListItemButton
-              autoFocus
-              onClick={onCreate}
-              style={{ textAlign: "center" }}
-              disabled={!hasBuilder}
-            >
-              <ListItemIcon>
-                <AutoAwesomeIcon />
-              </ListItemIcon>
-              <ListItemText primary="Create ownable" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding disableGutters key="add-local">
-            <ListItemButton
-              autoFocus
-              onClick={onImport}
-              style={{ textAlign: "center" }}
-            >
-              <ListItemIcon>
-                <DriveFolderUploadIcon />
-              </ListItemIcon>
-              <ListItemText primary="Import package" />
-            </ListItemButton>
-          </ListItem>
-        </List>
       </Box>
+
+      <div className="mb-4 flex items-center gap-2">
+        <button type="button" className={cn(topActionButton({ emphasis: "primary" }))} onClick={onImport}>
+          <FolderUp size={16} />
+          Upload
+        </button>
+        <button
+          type="button"
+          className={cn(topActionButton({ emphasis: "secondary", disabled: !hasBuilder }))}
+          onClick={onCreate}
+          disabled={!hasBuilder}
+        >
+          <Sparkles size={16} />
+          Builder
+        </button>
+      </div>
+
+      <Typography component="h3" sx={{ fontSize: 13, letterSpacing: "0.08em", color: "#64748b", mb: 1, textTransform: "uppercase" }}>
+        Available Packages
+      </Typography>
+
+      <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+        {isLoading ? (
+          <>
+            <Skeleton variant="rectangular" height={62} sx={{ borderRadius: "12px" }} />
+            <Skeleton variant="rectangular" height={62} sx={{ borderRadius: "12px" }} />
+            <Skeleton variant="rectangular" height={62} sx={{ borderRadius: "12px" }} />
+          </>
+        ) : filteredPackages.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+            No packages available yet.
+          </div>
+        ) : (
+          filteredPackages.map((pkg) => (
+            <button
+              key={pkg.title}
+              type="button"
+              onClick={() => onSelect(pkg)}
+              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition-colors hover:bg-slate-50"
+            >
+              <div>
+                <div className="text-sm font-semibold text-slate-900">{pkg.title}</div>
+                <div className="text-xs text-slate-500">{pkg.description}</div>
+              </div>
+              <ChevronRight size={16} className="text-slate-400" />
+            </button>
+          ))
+        )}
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </Box>
+  );
+
+  if (inline) return open ? content : null;
+
+  return (
+    <Dialog open={open} onClose={onClose} className="w-[min(560px,calc(100vw-32px))] p-5">
+      {content}
     </Dialog>
   );
 }

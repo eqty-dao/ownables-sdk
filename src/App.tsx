@@ -480,7 +480,10 @@ export default function App() {
           {/* Issue an Ownable — dashed border button */}
           <button
             type="button"
-            onClick={() => setShowPackages(true)}
+            onClick={() => {
+              setShowPackages(true);
+              setShowDetail(true);
+            }}
             className="mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
           >
             + Issue an Ownable
@@ -502,13 +505,30 @@ export default function App() {
               <Box className="mb-1 block md:hidden">
                 <IconButton
                   aria-label="Back"
-                  onClick={() => setShowDetail(false)}
+                  onClick={() => {
+                    setShowPackages(false);
+                    setShowDetail(false);
+                  }}
                 >
                   <ArrowBack />
                 </IconButton>
               </Box>
 
-              {selectedOwnable && (
+              {showPackages && (
+                <PackagesFab
+                  inline
+                  open={showPackages}
+                  onOpen={() => setShowPackages(true)}
+                  onClose={() => setShowPackages(false)}
+                  onSelect={forge}
+                  onImportFR={relayImport}
+                  onError={showError}
+                  onCreate={() => setShowCreateOwnable(true)}
+                  message={message}
+                />
+              )}
+
+              {!showPackages && selectedOwnable && (
                 <Ownable
                   key={selectedOwnable.chain.id}
                   chain={selectedOwnable.chain}
@@ -561,17 +581,6 @@ export default function App() {
           );
         })()}
       </Box>
-
-      <PackagesFab
-        open={showPackages}
-        onOpen={() => setShowPackages(true)}
-        onClose={() => setShowPackages(false)}
-        onSelect={forge}
-        onImportFR={relayImport}
-        onError={showError}
-        onCreate={() => setShowCreateOwnable(true)}
-        message={message}
-      />
 
       <Sidebar
         open={showSidebar}

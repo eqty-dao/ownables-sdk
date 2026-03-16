@@ -9,6 +9,7 @@ import { PackagesDialog } from "./PackagesDialog"
 
 interface PackagesFabProps {
   open: boolean;
+  inline?: boolean;
   onOpen: () => void;
   onClose: () => void;
   onSelect: (pkg: TypedPackage) => void;
@@ -26,7 +27,7 @@ export default function PackagesFab(props: PackagesFabProps) {
     right: 20,
   };
 
-  const { open, onOpen, onClose, onSelect, onImportFR, onError, message } = props;
+  const { open, inline, onOpen, onClose, onSelect, onImportFR, onError, message } = props;
   const { packages, isLoading, importPackages, importInbox, downloadExample } =
     usePackageManager();
 
@@ -87,6 +88,26 @@ export default function PackagesFab(props: PackagesFabProps) {
       onSelect(pkg);
     }
   };
+
+  if (inline) {
+    return (
+      <>
+        <PackagesDialog
+          inline
+          packages={packages}
+          open={open}
+          onClose={onClose}
+          onSelect={selectPackage}
+          onImport={importAll}
+          fetchPkgFromRelay={importPackagesFromRelay}
+          onCreate={props.onCreate}
+          message={message}
+          isLoading={isLoading}
+        />
+        <Loading show={isLoading} />
+      </>
+    );
+  }
 
   return (
     <>
