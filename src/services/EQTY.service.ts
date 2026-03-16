@@ -12,6 +12,7 @@ import {
   createWalletClient,
   custom,
   getAddress,
+  http,
   parseAbiItem,
 } from "viem";
 import { base, baseSepolia } from "viem/chains";
@@ -45,24 +46,26 @@ export default class EQTYService {
     walletClient?: WalletClient,
     publicClient?: PublicClient
   ) {
-    const eth = EQTYService.ethereum;
-    if (!eth) throw new Error("No Ethereum provider found. Connect a wallet.");
-
     const chain = this.getChain();
+    const eth = EQTYService.ethereum;
 
     this.walletClient =
       walletClient ||
-      (createWalletClient({
-        account: getAddress(address),
-        chain,
-        transport: custom(eth),
-      }) as WalletClient);
+      (() => {
+        if (!eth)
+          throw new Error("No Ethereum provider found. Connect a wallet.");
+        return createWalletClient({
+          account: getAddress(address),
+          chain,
+          transport: custom(eth),
+        }) as WalletClient;
+      })();
 
     this.publicClient =
       publicClient ||
       (createPublicClient({
         chain,
-        transport: custom(eth),
+        transport: eth ? custom(eth) : http(chain.rpcUrls.default.http[0]),
       }) as PublicClient);
 
     const contract = new ViemContract(

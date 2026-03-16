@@ -131,7 +131,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
       {/* Widget area */}
       <Box
-        className="relative h-[420px] overflow-hidden rounded-2xl border border-slate-300"
+        className="relative mx-auto w-full max-w-[500px] aspect-[3/4] overflow-hidden rounded-2xl border border-slate-300"
       >
         <OwnableFrame
           id={chain.id}

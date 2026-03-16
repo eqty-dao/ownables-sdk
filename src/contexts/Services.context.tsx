@@ -13,6 +13,7 @@ import {
   useWalletClient,
   usePublicClient,
 } from "wagmi";
+import { getE2EAccount } from "../services/E2EWallet";
 
 type Ctx = { container: ServiceContainer | null };
 const ServicesContext = createContext<Ctx>({ container: null });
@@ -23,7 +24,7 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
   const { address: walletAddress } = useAccount();
   const chainId = useChainId();
   const isE2E = import.meta.env.VITE_E2E === "true";
-  const address = isE2E ? "0x0000000000000000000000000000000000000001" : walletAddress;
+  const address = isE2E ? getE2EAccount().address : walletAddress;
   const walletClient = useWalletClient();
   const publicClient = usePublicClient();
 

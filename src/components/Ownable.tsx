@@ -44,8 +44,8 @@ export default function Ownable(props: OwnableProps) {
   const idb = useService("idb");
   const eventChains = useService("eventChains");
   const relay = useService("relay");
+  const eqty = useService("eqty");
   const { address: liveAddress } = useAccount();
-  const [address] = useState(liveAddress);
   const progress = useProgress();
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -76,8 +76,12 @@ export default function Ownable(props: OwnableProps) {
     }
   }, [pkg]);
 
+  const effectiveAddress = (eqty?.address || liveAddress || "").toLowerCase();
+  const ownerAddress = (info?.owner || "").toLowerCase();
   const isTransferred =
-    !!info && info.owner !== address && info.owner !== undefined;
+    ownerAddress !== "" &&
+    effectiveAddress !== "" &&
+    ownerAddress !== effectiveAddress;
 
   const resizeToThumbnail = useCallback(async (file: File): Promise<Blob> => {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
