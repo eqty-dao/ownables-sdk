@@ -1,6 +1,11 @@
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-export function FormControlLabel({ control, label, ...rest }: AnyProps) {
+type FormControlLabelProps = Omit<ComponentPropsWithoutRef<"label">, "children"> & {
+  control?: ReactNode;
+  label?: ReactNode;
+};
+
+export function FormControlLabel({ control, label, ...rest }: FormControlLabelProps) {
   return (
     <label {...rest}>
       {control}

@@ -13,7 +13,7 @@ import EventCard from "./EventCard";
 import shortId from "../utils/shortId";
 import Tooltip from "./Tooltip";
 import backgroundImage from "../assets/background.svg";
-import useInterval from "../utils/useInterval";
+import useInterval from "../hooks/useInterval";
 import { useService } from "../hooks/useService"
 
 interface OwnableInfoProps {

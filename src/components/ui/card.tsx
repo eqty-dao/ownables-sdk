@@ -1,7 +1,8 @@
-import { forwardRef, type ImgHTMLAttributes } from "react";
-import type { AnyProps } from "./types";
+import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
-export const Card = forwardRef<HTMLDivElement, AnyProps>(function Card({ children, ...rest }, ref) {
+type CardBlockProps = ComponentPropsWithoutRef<"div">;
+
+export const Card = forwardRef<HTMLDivElement, CardBlockProps>(function Card({ children, ...rest }, ref) {
   return (
     <div ref={ref} {...rest}>
       {children}
@@ -9,7 +10,7 @@ export const Card = forwardRef<HTMLDivElement, AnyProps>(function Card({ childre
   );
 });
 
-export const CardContent = forwardRef<HTMLDivElement, AnyProps>(function CardContent({ children, ...rest }, ref) {
+export const CardContent = forwardRef<HTMLDivElement, CardBlockProps>(function CardContent({ children, ...rest }, ref) {
   return (
     <div ref={ref} {...rest}>
       {children}
@@ -17,7 +18,7 @@ export const CardContent = forwardRef<HTMLDivElement, AnyProps>(function CardCon
   );
 });
 
-export const CardActions = forwardRef<HTMLDivElement, AnyProps>(function CardActions({ children, ...rest }, ref) {
+export const CardActions = forwardRef<HTMLDivElement, CardBlockProps>(function CardActions({ children, ...rest }, ref) {
   return (
     <div ref={ref} {...rest}>
       {children}
@@ -25,7 +26,7 @@ export const CardActions = forwardRef<HTMLDivElement, AnyProps>(function CardAct
   );
 });
 
-type CardMediaProps = ImgHTMLAttributes<HTMLImageElement> & {
+type CardMediaProps = ComponentPropsWithoutRef<"img"> & {
   image?: string;
 };
 

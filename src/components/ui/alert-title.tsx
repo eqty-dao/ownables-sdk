@@ -1,5 +1,7 @@
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef } from "react";
 
-export function AlertTitle({ children, ...rest }: AnyProps) {
+type AlertTitleProps = ComponentPropsWithoutRef<"strong">;
+
+export function AlertTitle({ children, ...rest }: AlertTitleProps) {
   return <strong {...rest}>{children}</strong>;
 }

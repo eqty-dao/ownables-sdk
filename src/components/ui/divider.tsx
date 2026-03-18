@@ -1,5 +1,7 @@
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef } from "react";
 
-export function Divider(props: AnyProps) {
+type DividerProps = ComponentPropsWithoutRef<"hr">;
+
+export function Divider(props: DividerProps) {
   return <hr {...props} />;
 }

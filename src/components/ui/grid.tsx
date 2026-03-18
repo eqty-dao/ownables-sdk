@@ -1,7 +1,8 @@
-import { forwardRef } from "react";
-import type { AnyProps } from "./types";
+import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
-export const Grid = forwardRef<HTMLDivElement, AnyProps>(function Grid({ children, ...rest }, ref) {
+type GridProps = ComponentPropsWithoutRef<"div">;
+
+export const Grid = forwardRef<HTMLDivElement, GridProps>(function Grid({ children, ...rest }, ref) {
   return (
     <div ref={ref} {...rest}>
       {children}

@@ -1,9 +1,8 @@
 import { Dialog as BaseDialog } from "@base-ui/react";
-import type React from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "@/utils/cn";
-import type { AnyProps } from "./types";
 
-export interface DialogProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClose"> {
+export interface DialogProps extends Omit<ComponentPropsWithoutRef<"div">, "onClose"> {
   open?: boolean;
   onClose?: () => void;
 }
@@ -27,18 +26,23 @@ export function Dialog({ open, onClose, className, children, ...rest }: DialogPr
   );
 }
 
-export function DialogTitle({ children, ...rest }: AnyProps) {
+type DialogTitleProps = ComponentPropsWithoutRef<"h2">;
+type DialogContentProps = ComponentPropsWithoutRef<"div">;
+type DialogContentTextProps = ComponentPropsWithoutRef<"p">;
+type DialogActionsProps = ComponentPropsWithoutRef<"div">;
+
+export function DialogTitle({ children, ...rest }: DialogTitleProps) {
   return <h2 {...rest}>{children}</h2>;
 }
 
-export function DialogContent({ children, ...rest }: AnyProps) {
+export function DialogContent({ children, ...rest }: DialogContentProps) {
   return <div {...rest}>{children}</div>;
 }
 
-export function DialogContentText({ children, ...rest }: AnyProps) {
+export function DialogContentText({ children, ...rest }: DialogContentTextProps) {
   return <p {...rest}>{children}</p>;
 }
 
-export function DialogActions({ children, ...rest }: AnyProps) {
+export function DialogActions({ children, ...rest }: DialogActionsProps) {
   return <div {...rest}>{children}</div>;
 }

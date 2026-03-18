@@ -1,7 +1,8 @@
-import { forwardRef } from "react";
-import type { AnyProps } from "./types";
+import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
-export const Stack = forwardRef<HTMLDivElement, AnyProps>(function Stack({ children, ...rest }, ref) {
+type StackProps = ComponentPropsWithoutRef<"div">;
+
+export const Stack = forwardRef<HTMLDivElement, StackProps>(function Stack({ children, ...rest }, ref) {
   return (
     <div ref={ref} {...rest}>
       {children}

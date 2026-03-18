@@ -1,7 +1,11 @@
-import type React from "react";
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-export function Chip({ label, icon, children, ...rest }: AnyProps & { label?: React.ReactNode; icon?: React.ReactNode }) {
+type ChipProps = ComponentPropsWithoutRef<"span"> & {
+  label?: ReactNode;
+  icon?: ReactNode;
+};
+
+export function Chip({ label, icon, children, ...rest }: ChipProps) {
   return (
     <span {...rest}>
       {icon}

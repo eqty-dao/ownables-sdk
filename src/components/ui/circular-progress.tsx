@@ -1,5 +1,7 @@
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef } from "react";
 
-export function CircularProgress(props: AnyProps) {
+type CircularProgressProps = ComponentPropsWithoutRef<"span">;
+
+export function CircularProgress(props: CircularProgressProps) {
   return <span role="progressbar" {...props} />;
 }

@@ -1,9 +1,8 @@
-import { forwardRef } from "react";
-import type { AnyProps } from "./types";
+import { forwardRef, type ComponentPropsWithoutRef } from "react";
 
-export type BoxProps = AnyProps;
+export type BoxProps = ComponentPropsWithoutRef<"div">;
 
-export const Box = forwardRef<HTMLDivElement, AnyProps>(function Box({ children, ...rest }, ref) {
+export const Box = forwardRef<HTMLDivElement, BoxProps>(function Box({ children, ...rest }, ref) {
   return (
     <div ref={ref} {...rest}>
       {children}

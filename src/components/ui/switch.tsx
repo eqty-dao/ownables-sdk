@@ -1,8 +1,21 @@
-import { forwardRef } from "react";
+import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import { Switch as BaseSwitch } from "@base-ui/react";
-import type { AnyProps } from "./types";
 
-export const Switch = forwardRef<any, AnyProps>(function Switch({ checked, onChange, style, ...rest }, ref) {
+type SwitchChangeEvent = {
+  target: {
+    checked: boolean;
+  };
+};
+
+type SwitchProps = Omit<ComponentPropsWithoutRef<"button">, "onChange" | "children"> & {
+  checked?: boolean;
+  onChange?: (event: SwitchChangeEvent) => void;
+};
+
+export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch(
+  { checked, onChange, style, ...rest },
+  ref
+) {
   return (
     <BaseSwitch.Root
       ref={ref}

@@ -1,5 +1,7 @@
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef } from "react";
 
-export function InputAdornment({ children, ...rest }: AnyProps) {
+type InputAdornmentProps = ComponentPropsWithoutRef<"span">;
+
+export function InputAdornment({ children, ...rest }: InputAdornmentProps) {
   return <span {...rest}>{children}</span>;
 }

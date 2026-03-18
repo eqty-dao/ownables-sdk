@@ -1,7 +1,11 @@
-import type React from "react";
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-export function Badge({ children, badgeContent, variant, ...rest }: AnyProps & { badgeContent?: React.ReactNode; variant?: string }) {
+type BadgeProps = ComponentPropsWithoutRef<"span"> & {
+  badgeContent?: ReactNode;
+  variant?: string;
+};
+
+export function Badge({ children, badgeContent, variant, ...rest }: BadgeProps) {
   return (
     <span {...rest}>
       {children}

@@ -1,6 +1,12 @@
-import type { AnyProps } from "./types";
+import type { ComponentPropsWithoutRef } from "react";
 
-export function Menu({ open, children, onClose, ...rest }: AnyProps) {
+type MenuProps = Omit<ComponentPropsWithoutRef<"div">, "onClose"> & {
+  open?: boolean;
+  onClose?: () => void;
+};
+type MenuItemProps = ComponentPropsWithoutRef<"button">;
+
+export function Menu({ open, children, onClose, ...rest }: MenuProps) {
   if (!open) return null;
   return (
     <div {...rest}>
@@ -10,7 +16,7 @@ export function Menu({ open, children, onClose, ...rest }: AnyProps) {
   );
 }
 
-export function MenuItem({ children, onClick, ...rest }: AnyProps) {
+export function MenuItem({ children, onClick, ...rest }: MenuItemProps) {
   return (
     <button type="button" {...rest} onClick={onClick}>
       {children}
