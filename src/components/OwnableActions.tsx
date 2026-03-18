@@ -39,7 +39,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
         open={!!anchorEl}
         onClose={close}
         onClick={close}
-        className="mt-1.5 min-w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+        className="min-w-40"
       >
         <MenuItem
           disabled={!isConsumable}
