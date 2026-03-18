@@ -43,7 +43,7 @@ interface OwnableDetailProps {
 
 const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
 const issuerLink = cva("link-primary hover:underline");
-const widgetShell = cva("surface-widget", {
+const widgetShell = cva("relative overflow-hidden rounded-2xl", {
   variants: {
     layout: {
       mobile: "mx-4 w-auto",
