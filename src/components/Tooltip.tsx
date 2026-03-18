@@ -1,4 +1,4 @@
-import {Tooltip as BaseTooltip, TooltipProps as BaseTooltipProps} from "@/components/ui/primitives";
+import {Tooltip as BaseTooltip, TooltipProps as BaseTooltipProps} from "@/components/ui";
 
 interface TooltipProps extends BaseTooltipProps {
   condition?: boolean;

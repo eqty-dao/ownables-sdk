@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Box } from "@/components/ui/primitives";
+import { Box, Tag, Tile } from "@/components/ui";
 import { Zap as BoltOutlined, ImageOff as ImageNotSupported } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
 import { cva } from "class-variance-authority";
-import { cn } from "./ui/lib/cn";
+import { cn } from "../utils/cn";
 
 const itemCard = cva(
   "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
@@ -67,23 +67,16 @@ export default function OwnableListItem(props: OwnableListItemProps) {
     >
       <div className="flex items-start gap-3">
         {/* Thumbnail */}
-        <Box
-          className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100"
+        <Tile
+          size="lg"
+          variant="brand"
+          className="flex-shrink-0 overflow-hidden"
+          icon={<ImageNotSupported aria-label="No image" className="text-slate-400" />}
         >
           {thumbnailUrl ? (
-            <Box
-              component="img"
-              src={thumbnailUrl}
-              alt={metadata.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <ImageNotSupported
-              aria-label="No image"
-              className="text-slate-400"
-            />
-          )}
-        </Box>
+            <img src={thumbnailUrl} alt={metadata.name} className="h-full w-full object-cover" />
+          ) : null}
+        </Tile>
 
         {/* Name + consumable chip */}
         <Box className="min-w-0 flex-1">
@@ -91,10 +84,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
             {metadata.name}
           </Box>
           {isConsumable && (
-            <Box className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-              <BoltOutlined className="h-3.5 w-3.5" />
-              Consumable
-            </Box>
+            <Tag icon={<BoltOutlined className="h-3.5 w-3.5" />} value="Consumable" variant="consumable" />
           )}
         </Box>
       </div>

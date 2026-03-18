@@ -1,4 +1,4 @@
-import { Drawer } from "./ui/drawer";
+import { Drawer } from "@/components/ui";
 import {ReactNode} from "react";
 
 interface HelpDrawerProps {

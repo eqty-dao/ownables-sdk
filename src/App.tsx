@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Box, Button, CircularProgress, IconButton, Link, Typography } from "@/components/ui/primitives";
+import { AlertColor, Box, Button, CircularProgress, Grid, IconButton, Link, Typography } from "@/components/ui";
 import { ArrowLeft as ArrowBack } from "lucide-react";
-import PackagesFab from "./components/PackagesFab";
+import PackagesPanel from "./components/PackagesPanel";
 import { TypedPackage } from "./interfaces/TypedPackage";
 import LoginDialog from "./components/LoginDialog";
 import Loading from "./components/Loading";
@@ -9,7 +9,6 @@ import Sidebar from "./components/Sidebar";
 import { ViewMessagesBar } from "./components/ViewMessagesBar";
 import If from "./components/If";
 import { HAS_EXAMPLES } from "./services/Package.service";
-import Grid from "@/components/ui/primitives/Grid";
 import * as React from "react";
 import Ownable from "./components/Ownable";
 import OwnableListItem from "./components/OwnableListItem";
@@ -17,7 +16,6 @@ import { EventChain } from "eqty-core";
 import HelpDrawer from "./components/HelpDrawer";
 import AppToolbar from "./components/AppToolbar";
 import AlertDialog from "./components/AlertDialog";
-import { AlertColor } from "@/components/ui/primitives/Alert/Alert";
 import ownableErrorMessage from "./utils/ownableErrorMessage";
 import Overlay from "./components/Overlay";
 import ConfirmDialog from "./components/ConfirmDialog";
@@ -31,7 +29,7 @@ import LocalStorageService from "./services/LocalStorage.service";
 import CreateOwnableDialog from "./components/CreateOwnableDialog";
 import { useProgress } from "./contexts/Progress.context";
 import { cva } from "class-variance-authority";
-import { cn } from "./components/ui/lib/cn";
+import { cn } from "./utils/cn";
 
 const listPane = cva(
   "w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-[360px]",
@@ -192,7 +190,7 @@ export default function App() {
             variant: "success",
             action: (
               <Button
-                color="inherit"
+                className="text-white hover:bg-white/20"
                 size="small"
                 onClick={() => window.open(explorerUrl, "_blank")}
               >
@@ -412,10 +410,7 @@ export default function App() {
           className="pointer-events-none absolute inset-0 -z-10 place-items-center px-4"
         >
           <Grid className="max-w-2xl text-center">
-            <Typography
-              component="h1"
-              className="text-4xl font-semibold text-slate-900 sm:text-5xl"
-            >
+            <Typography className="text-4xl font-semibold text-slate-900 sm:text-5xl">
               Let's get started!
             </Typography>
             <Typography
@@ -434,8 +429,8 @@ export default function App() {
                 <br />
                 or try one of{" "}
                 <Link
-                  component="button"
-                  onClick={() => setShowPackages(true)}
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setShowPackages(true); }}
                   className="pointer-events-auto text-indigo-600 underline"
                 >
                   the examples
@@ -452,11 +447,7 @@ export default function App() {
         className="mx-auto mt-4 flex max-w-[1320px] gap-4 px-3 pb-6 md:px-4"
       >
         {/* Left sidebar — ownable list */}
-        <Box
-          component="nav"
-          aria-label="Ownable list"
-          className={cn(listPane({ hiddenOnMobile: showDetail }))}
-        >
+        <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile: showDetail }))}>
           <Box className="space-y-2">
             {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
               const pkg = packageService?.info(packageCid, uniqueMessageHash);
@@ -515,10 +506,9 @@ export default function App() {
               </Box>
 
               {showPackages && (
-                <PackagesFab
+                <PackagesPanel
                   inline
                   open={showPackages}
-                  onOpen={() => setShowPackages(true)}
                   onClose={() => setShowPackages(false)}
                   onSelect={forge}
                   onImportFR={relayImport}
@@ -608,7 +598,7 @@ export default function App() {
       <LoginDialog key={address} open={showLogin} />
 
       <HelpDrawer open={consuming !== null}>
-        <Typography component="span" sx={{ fontWeight: 700 }}>
+        <Typography className="font-bold">
           Select which Ownable should consume this{" "}
           <em>
             {consuming && packageService
@@ -617,10 +607,7 @@ export default function App() {
           </em>
         </Typography>
         <Box>
-          <Button
-            sx={(theme) => ({ color: theme.palette.primary.contrastText })}
-            onClick={() => setConsuming(null)}
-          >
+          <Button className="text-white" onClick={() => setConsuming(null)}>
             Cancel
           </Button>
         </Box>

@@ -1,6 +1,6 @@
-import {Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle} from "@/components/ui/primitives";
+import {Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle} from "@/components/ui";
 import {ReactNode} from "react";
-import {AlertColor} from "@/components/ui/primitives/Alert/Alert";
+import { AlertColor } from "@/components/ui";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -24,12 +24,11 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
       </DialogContentText>
     </DialogContent>
     <DialogActions>
-      <Button onClick={onClose} color="secondary">{props.cancel || 'Cancel'}</Button>
+      <Button onClick={onClose}>{props.cancel || 'Cancel'}</Button>
       <Button
         onClick={() => { onConfirm(); onClose();}}
         autoFocus
-        color={props.severity}
-        variant="contained"
+        className={props.severity === "error" ? "bg-red-600 text-white hover:bg-red-700" : "bg-slate-900 text-white hover:bg-slate-800"}
       >{props.ok || 'Ok'}</Button>
     </DialogActions>
   </Dialog>

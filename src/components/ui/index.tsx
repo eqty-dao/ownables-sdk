@@ -1,12 +1,12 @@
 import React, { forwardRef } from "react";
 import { Dialog as BaseDialog, Drawer as BaseDrawer, Switch as BaseSwitch } from "@base-ui/react";
+export { Tag, type TagProps } from "./tag";
+export { Tile, type TileProps } from "./tile";
 
 type AnyProps = Record<string, any>;
 
 export type AlertColor = "success" | "info" | "warning" | "error" | "primary" | "secondary";
 export type BoxProps = AnyProps;
-export type SxProps<T = unknown> = any;
-export type Theme = any;
 export type TextFieldProps = AnyProps;
 export type TooltipProps = AnyProps;
 
@@ -118,17 +118,6 @@ function asElement(component: any, fallback: any) {
 
 export const ThemeProvider = ({ children }: AnyProps) => <>{children}</>;
 export const createTheme = (theme: AnyProps) => ({ ...fakeTheme, ...theme });
-
-export function styled(Component: any) {
-  return (styles: any) => {
-    const Styled = forwardRef<any, AnyProps>((props, ref) => {
-      const styleObj = typeof styles === "function" ? styles({ theme: fakeTheme }) : styles;
-      return <Component ref={ref} {...props} style={mergeStyle(props.style, styleObj)} />;
-    });
-    Styled.displayName = `Styled(${Component.displayName || Component.name || "Component"})`;
-    return Styled;
-  };
-}
 
 export const Box = forwardRef<any, AnyProps>(function Box({ component, sx, style, ...rest }, ref) {
   const extracted = pickStyleProps(rest);
@@ -268,10 +257,6 @@ export const IconButton = forwardRef<any, AnyProps>(function IconButton(props, r
 });
 
 export const ButtonBase = forwardRef<any, AnyProps>(function ButtonBase(props, ref) {
-  return <Button ref={ref} {...props} />;
-});
-
-export const Fab = forwardRef<any, AnyProps>(function Fab(props, ref) {
   return <Button ref={ref} {...props} />;
 });
 

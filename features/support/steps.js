@@ -1,4 +1,5 @@
 import { Given } from '@letsrunit/bdd';
+import { Then } from '@cucumber/cucumber';
 import { EventChain } from 'eqty-core';
 
 const E2E_ADDRESS = '0x0000000000000000000000000000000000000001';
@@ -118,4 +119,10 @@ Given('there are example Ownables', async function () {
 
   // Reload so the app picks up the seeded data
   await this.page.reload({ waitUntil: 'networkidle' });
+});
+
+Then('The page does not contain button {string}', async function (name) {
+  const matches = this.page.getByRole('button', { name });
+  const count = await matches.count();
+  if (count > 0) throw new Error(`Expected no button named "${name}", found ${count}`);
 });

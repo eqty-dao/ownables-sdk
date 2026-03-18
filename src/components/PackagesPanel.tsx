@@ -1,5 +1,3 @@
-import { Fab, } from "@/components/ui/primitives";
-import { Plus as AddIcon } from "lucide-react";
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
 import selectFile from "../utils/selectFile";
 import Loading from "./Loading";
@@ -7,10 +5,9 @@ import { enqueueSnackbar } from "notistack";
 import { usePackageManager } from "../hooks/usePackageManager";
 import { PackagesDialog } from "./PackagesDialog"
 
-interface PackagesFabProps {
+interface PackagesPanelProps {
   open: boolean;
   inline?: boolean;
-  onOpen: () => void;
   onClose: () => void;
   onSelect: (pkg: TypedPackage) => void;
   onImportFR: (pkg: TypedPackage[], triggerRefresh: boolean) => void;
@@ -19,15 +16,8 @@ interface PackagesFabProps {
   message: number;
 }
 
-export default function PackagesFab(props: PackagesFabProps) {
-  const fabStyle = {
-    position: "fixed",
-    bgcolor: "common.white",
-    bottom: 20,
-    right: 20,
-  };
-
-  const { open, inline, onOpen, onClose, onSelect, onImportFR, onError, message } = props;
+export default function PackagesPanel(props: PackagesPanelProps) {
+  const { open, inline, onClose, onSelect, onImportFR, onError, message } = props;
   const { packages, isLoading, importPackages, importInbox, downloadExample } =
     usePackageManager();
 
@@ -89,33 +79,10 @@ export default function PackagesFab(props: PackagesFabProps) {
     }
   };
 
-  if (inline) {
-    return (
-      <>
-        <PackagesDialog
-          inline
-          packages={packages}
-          open={open}
-          onClose={onClose}
-          onSelect={selectPackage}
-          onImport={importAll}
-          fetchPkgFromRelay={importPackagesFromRelay}
-          onCreate={props.onCreate}
-          message={message}
-          isLoading={isLoading}
-        />
-        <Loading show={isLoading} />
-      </>
-    );
-  }
-
   return (
     <>
-      <Fab sx={fabStyle} aria-label="add" size="large" onClick={onOpen}>
-        <AddIcon fontSize="large" />
-      </Fab>
-
       <PackagesDialog
+        inline={inline}
         packages={packages}
         open={open}
         onClose={onClose}

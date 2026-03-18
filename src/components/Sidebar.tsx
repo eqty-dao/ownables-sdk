@@ -4,17 +4,17 @@ import {
   IconButton,
   Link,
   Switch, Typography,
-} from "@/components/ui/primitives";
+} from "@/components/ui";
 import { useEffect, useState } from "react";
-import { ArrowLeft as ArrowBack } from "lucide-react";
-import { Drawer } from "./ui/drawer";
+import { ArrowLeft as ArrowBack, X as CloseIcon } from "lucide-react";
+import { Drawer } from "@/components/ui";
 import ltoLogo from "../assets/ltonetwork.png";
 import EventChainService from "../services/EventChain.service";
 import WalletConnectControls from "./WalletConnectControls";
 import { useAccount, useBalance } from "wagmi"
 import useEqtyToken from "../hooks/useEqtyToken"
 import { cva } from "class-variance-authority";
-import { cn } from "./ui/lib/cn";
+import { cn } from "../utils/cn";
 
 interface SidebarProps {
   open: boolean;
@@ -81,10 +81,10 @@ export default function Sidebar(props: SidebarProps) {
   return (
     <>
       <Drawer anchor="right" open={open} onClose={onClose}>
-        <Box sx={{ width: 350, p: 2 }} role="presentation">
-          <Box component="div">
-            <Box sx={{ display: { xs: "inline-flex", sm: "none" } }}>
-              <IconButton onClick={onClose} size="small" sx={{ mr: 2 }}>
+        <Box className="w-[350px] p-2" role="presentation">
+          <Box className="flex items-start justify-between">
+            <Box className="inline-flex sm:hidden">
+              <IconButton onClick={onClose} size="small" className="mr-2">
                 <ArrowBack />
               </IconButton>
             </Box>
@@ -95,41 +95,35 @@ export default function Sidebar(props: SidebarProps) {
                 style={{ width: 150, maxWidth: "100%", verticalAlign: -5 }}
               />
             </Link>
+            <IconButton onClick={onClose} size="small" className="ml-2">
+              <CloseIcon className="h-4 w-4" />
+            </IconButton>
           </Box>
 
-          <Box component="div" sx={{ mt: 2 }}>
+          <Box className="mt-2">
             <WalletConnectControls>
-              <Box sx={{ mt: 1, mb: 4 }}>
-                <Typography variant="body2" fontWeight="strong">Balance</Typography>
-                <Typography variant="body2">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</Typography>
-                { eqtyBalance !== undefined && <Typography variant="body2">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</Typography> }
+              <Box className="mb-4 mt-1">
+                <Typography className="text-sm font-semibold">Balance</Typography>
+                <Typography className="text-sm">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</Typography>
+                { eqtyBalance !== undefined && <Typography className="text-sm">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</Typography> }
               </Box>
             </WalletConnectControls>
           </Box>
 
-          <Box component="div" sx={{ mt: 4 }}>
-            <Box
-              component="div"
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 2,
-                mb: 2,
-              }}
-            >
-              <Box component="div">
-                <Typography component="p" sx={{ fontWeight: 600 }}>
+          <Box className="mt-4">
+            <Box className="mb-2 flex items-center justify-between gap-2">
+              <Box>
+                <Typography className="font-semibold">
                   Anchor events
                 </Typography>
-                <Typography component="p" sx={{ fontSize: 12, color: "#64748b" }}>
+                <Typography className="text-xs text-slate-500">
                   Enable event anchoring
                 </Typography>
               </Box>
               <Switch checked={anchoring} onChange={(e) => setAnchoring(e.target.checked)} aria-label="Anchor events" />
             </Box>
 
-            <Box component="div" sx={{ display: "flex", gap: 1 }}>
+            <Box className="flex gap-1">
               <Button
                 type="button"
                 className={cn(modeButton({ active: themeMode === "light" }))}
@@ -155,24 +149,20 @@ export default function Sidebar(props: SidebarProps) {
           </Box>
         </Box>
 
-        <Box component="div" sx={{ flexGrow: 1 }}></Box>
+        <Box className="grow"></Box>
 
-        <Box sx={{ width: 350, p: 2 }} role="presentation">
-          <Box component="div" sx={{ display: "grid", gap: 1 }}>
+        <Box className="w-[350px] p-2" role="presentation">
+          <Box className="grid gap-1">
             <Button
-              variant="contained"
               size="small"
-              color="error"
+              className="mb-1 bg-red-600 text-white hover:bg-red-700"
               onClick={onReset}
-              sx={{ mb: 1 }}
             >
               Delete all Ownables
             </Button>
             <Button
-              variant="text"
               size="small"
-              color="error"
-              fullWidth
+              className="w-full text-red-700 hover:bg-red-50"
               onClick={onFactoryReset}
             >
               Factory Reset

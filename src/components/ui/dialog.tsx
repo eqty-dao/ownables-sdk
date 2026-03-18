@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { cn } from "./lib/cn";
+import { cn } from "@/utils/cn";
 
 export interface DialogProps {
   children: React.ReactNode;

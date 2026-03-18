@@ -1,10 +1,10 @@
 import React from "react";
-import { Alert } from "@/components/ui/primitives";
+import { Alert } from "@/components/ui";
 import logo from "../assets/logo.svg";
 import { Menu as MenuIcon, Mail as MailOutlinedIcon, TriangleAlert as WarningIcon } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui";
 import { cva } from "class-variance-authority";
-import { cn } from "./ui/lib/cn";
+import { cn } from "../utils/cn";
 
 interface AppToolbarProps {
   onMenuClick: () => void;
@@ -46,17 +46,8 @@ export default function AppToolbar({
       {showNetworkWarning && (
         <Alert
           severity="warning"
-          icon={<WarningIcon />}
-          sx={{
-            borderRadius: 0,
-            py: 0.5,
-            "& .MuiAlert-message": {
-              fontSize: "0.875rem",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-            },
-          }}
+          icon={<WarningIcon className="h-4 w-4" />}
+          className="flex items-center gap-2 rounded-none border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900"
         >
           Please switch to <strong>Base Sepolia</strong> network to use this application.
         </Alert>

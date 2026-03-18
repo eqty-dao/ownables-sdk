@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
-import { cn } from "./lib/cn";
+import { cn } from "@/utils/cn";
 
 type Anchor = "left" | "right" | "top" | "bottom";
 

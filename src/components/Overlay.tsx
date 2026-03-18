@@ -1,65 +1,57 @@
-import {Box, BoxProps} from "@/components/ui/primitives";
-import Grid from "@/components/ui/primitives/Grid";
-import {forwardRef, Ref, useEffect, useState} from "react";
+import { forwardRef, HTMLAttributes, Ref, useEffect, useState } from "react";
+import { Grid } from "@/components/ui";
 
-interface OverlayProps extends BoxProps {
-  disabled?: boolean|Promise<boolean>;
+interface OverlayProps extends HTMLAttributes<HTMLDivElement> {
+  disabled?: boolean | Promise<boolean>;
   zIndex?: number;
 }
 
-function Overlay(props: OverlayProps, ref: Ref<any>) {
-  const {children, sx, onClick, disabled, zIndex , ...boxProps} = props;
+function Overlay(props: OverlayProps, ref: Ref<HTMLDivElement>) {
+  const { children, onClick, disabled, zIndex, className, style, ...rest } = props;
   const [isEnabled, setIsEnabled] = useState(disabled === undefined);
 
   useEffect(() => {
     if (disabled instanceof Promise) {
-      disabled.then(v => setIsEnabled(!v));
-    } else {
-      setIsEnabled(!disabled)
+      disabled.then((v) => setIsEnabled(!v));
+      return;
     }
+    setIsEnabled(!disabled);
   }, [disabled]);
 
-  return <Box
-    {...boxProps}
-    ref={ref}
-    onClick={isEnabled ? onClick : undefined}
-    sx={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      bottom: 0,
-      right: 0,
-      zIndex: zIndex ?? 5,
-      backgroundColor: isEnabled ? '' : 'rgba(255, 255, 255, 0.8)',
-      cursor: onClick && isEnabled ? 'pointer' : '',
-      ...sx,
-  }}
-  >
-    {children}
-  </Box>
+  return (
+    <div
+      {...rest}
+      ref={ref}
+      onClick={isEnabled ? onClick : undefined}
+      className={className}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: zIndex ?? 5,
+        backgroundColor: isEnabled ? "" : "rgba(255, 255, 255, 0.8)",
+        cursor: onClick && isEnabled ? "pointer" : "",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export default forwardRef(Overlay);
 
-export function OverlayBanner(props: {children: React.ReactNode}) {
-  return <>
+export function OverlayBanner(props: { children: React.ReactNode }) {
+  return (
     <Grid container justifyContent="center" alignItems="center" height="100%" width="100%" overflow="hidden" padding={0} margin={0}>
       <Grid width="100%" padding={0} textAlign="center">
-        <Box sx={theme => ({
-          backgroundColor: theme.palette.primary.dark,
-          color: theme.palette.primary.contrastText,
-          pt: 1,
-          pb: 1,
-          width: "120%",
-          marginLeft: "-10%",
-          fontSize: 28,
-          transform: "rotate(-10deg)",
-          cursor: 'default',
-          userSelect: 'none',
-        })}>
+        <div
+          className="w-[120%] -ml-[10%] rotate-[-10deg] bg-slate-900 py-1 text-[28px] text-white"
+          style={{ cursor: "default", userSelect: "none" }}
+        >
           {props.children}
-        </Box>
+        </div>
       </Grid>
     </Grid>
-  </>
+  );
 }
+

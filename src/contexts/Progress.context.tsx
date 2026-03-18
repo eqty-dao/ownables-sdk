@@ -11,9 +11,9 @@ import {
   ListItemIcon,
   ListItemText,
   Typography
-} from '@/components/ui/primitives';
+} from '@/components/ui';
 import { CircleCheck as CheckCircleOutlineIcon, AlertCircle as ErrorOutlineIcon, Circle as RadioButtonUncheckedIcon } from "lucide-react";
-import CircularProgress from '@/components/ui/primitives/CircularProgress';
+import { CircularProgress } from "@/components/ui";
 
 export type ProgressStepStatus = 'pending' | 'active' | 'done' | 'error';
 
@@ -131,22 +131,22 @@ export function withProgress(log?: LogProgress) {
 
 const ProgressModal: React.FC<{ title: string; steps: ProgressStep[]; open: boolean; onClose: () => void; cancelLabel?: string; onCancel?: () => void; }> = ({ title, steps, open, onClose, cancelLabel, onCancel }) => {
   return (
-    <Dialog open={open} onClose={onClose} aria-labelledby="progress-dialog-title" fullWidth maxWidth="xs">
+    <Dialog open={open} onClose={onClose} aria-labelledby="progress-dialog-title" className="w-[min(420px,calc(100vw-32px))]">
       <DialogTitle id="progress-dialog-title">{title}</DialogTitle>
       <DialogContent>
         <List>
           {steps.map((step) => (
             <ListItem key={step.id} disableGutters>
-              <ListItemIcon sx={{ minWidth: 36 }}>
+              <ListItemIcon style={{ minWidth: 36 }}>
                 {step.status === 'active' && <CircularProgress size={20} />}
-                {step.status === 'done' && <CheckCircleOutlineIcon color="success" />}
-                {step.status === 'error' && <ErrorOutlineIcon color="error" />}
-                {(!step.status || step.status === 'pending') && <RadioButtonUncheckedIcon color="disabled" />}
+                {step.status === 'done' && <CheckCircleOutlineIcon />}
+                {step.status === 'error' && <ErrorOutlineIcon className="text-red-600" />}
+                {(!step.status || step.status === 'pending') && <RadioButtonUncheckedIcon className="text-slate-400" />}
               </ListItemIcon>
               <ListItemText
-                primary={<Box component="span" sx={{ fontWeight: step.status === 'active' ? 600 : 400 }}>{step.label}</Box>}
+                primary={<span style={{ fontWeight: step.status === 'active' ? 600 : 400 }}>{step.label}</span>}
                 secondary={step.status === 'error' && step.errorMessage ? (
-                  <Typography variant="caption" color="error">{step.errorMessage}</Typography>
+                  <Typography className="text-red-600">{step.errorMessage}</Typography>
                 ) : undefined}
               />
             </ListItem>
@@ -155,7 +155,7 @@ const ProgressModal: React.FC<{ title: string; steps: ProgressStep[]; open: bool
       </DialogContent>
       {(cancelLabel || onCancel) && (
         <DialogActions>
-          <Button onClick={onCancel} color="inherit">{cancelLabel || 'Cancel'}</Button>
+          <Button onClick={onCancel}>{cancelLabel || 'Cancel'}</Button>
         </DialogActions>
       )}
     </Dialog>

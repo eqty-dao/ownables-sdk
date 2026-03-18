@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
-import { cn } from "./lib/cn";
+import { cn } from "@/utils/cn";
 
 export function MenuRoot(props: BaseMenu.Root.Props<unknown>) {
   return <BaseMenu.Root {...props} />;

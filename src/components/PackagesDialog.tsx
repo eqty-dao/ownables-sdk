@@ -1,10 +1,10 @@
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
-import { Box, Button, IconButton, Skeleton, Typography } from "@/components/ui/primitives";
-import { Dialog } from "./ui/dialog";
+import { Box, Button, IconButton, Skeleton, Typography } from "@/components/ui";
+import { Dialog } from "@/components/ui";
 import { ChevronRight, FolderUp, Sparkles, X as CloseIcon } from "lucide-react";
 import { useService } from "../hooks/useService";
 import { cva } from "class-variance-authority";
-import { cn } from "./ui/lib/cn";
+import { cn } from "../utils/cn";
 
 const topActionButton = cva(
   "inline-flex flex-1 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
@@ -47,15 +47,15 @@ export function PackagesDialog(props: PackagesDialogProps) {
 
   const content = (
     <Box className={inline ? "w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" : ""}>
-      <Box component="div" sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, mb: 2 }}>
+      <Box className="mb-2 flex items-start gap-1.5">
         <IconButton onClick={onClose} aria-label="Close issue ownable modal">
           <CloseIcon size={18} />
         </IconButton>
-        <Box component="div">
-          <Typography component="h2" sx={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>
+        <Box>
+          <Typography className="text-2xl font-bold leading-tight">
             Issue an Ownable
           </Typography>
-          <Typography component="p" sx={{ mt: 0.5, color: "#64748b", fontSize: 14 }}>
+          <Typography className="mt-0.5 text-sm text-slate-500">
             Select a package or create a new one
           </Typography>
         </Box>
@@ -77,16 +77,16 @@ export function PackagesDialog(props: PackagesDialogProps) {
         </button>
       </div>
 
-      <Typography component="h3" sx={{ fontSize: 13, letterSpacing: "0.08em", color: "#64748b", mb: 1, textTransform: "uppercase" }}>
+      <Typography className="mb-1 text-[13px] uppercase tracking-[0.08em] text-slate-500">
         Available Packages
       </Typography>
 
       <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
         {isLoading ? (
           <>
-            <Skeleton variant="rectangular" height={62} sx={{ borderRadius: "12px" }} />
-            <Skeleton variant="rectangular" height={62} sx={{ borderRadius: "12px" }} />
-            <Skeleton variant="rectangular" height={62} sx={{ borderRadius: "12px" }} />
+            <Skeleton className="h-[62px] rounded-xl" />
+            <Skeleton className="h-[62px] rounded-xl" />
+            <Skeleton className="h-[62px] rounded-xl" />
           </>
         ) : filteredPackages.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
@@ -111,7 +111,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button variant="outlined" onClick={onClose}>
+        <Button className="border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={onClose}>
           Cancel
         </Button>
       </div>

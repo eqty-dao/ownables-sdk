@@ -3,13 +3,16 @@ import {
   Box,
   CircularProgress,
   Link,
+  Tag,
+  Tile,
   Tooltip,
   Typography,
-} from "@/components/ui/primitives";
+} from "@/components/ui";
 import {
   ExternalLink as OpenInNew,
   ImageOff as ImageNotSupported,
   Info,
+  Lock,
   LockOpen,
   Zap,
 } from "lucide-react";
@@ -57,11 +60,15 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     issuer && issuer.length > 10
       ? `${issuer.slice(0, 6)}...${issuer.slice(-4)}`
       : issuer;
+  const statusTag = isTransferred
+    ? { value: "Locked", variant: "locked" as const, icon: <Lock className="h-3 w-3" /> }
+    : isConsumable
+      ? { value: "Consumable", variant: "consumable" as const, icon: <Zap className="h-3 w-3" /> }
+      : { value: "Unlocked", variant: "unlocked" as const, icon: <LockOpen className="h-3 w-3" /> };
 
   const aboutSection = (
     <Box className="px-4 pb-8 md:px-2 md:pb-0">
       <Typography
-        component="h3"
         className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
       >
         About
@@ -72,20 +79,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         </Typography>
       )}
       <Box className="mb-3 flex items-center gap-2">
-        <Box
-          className={`flex items-center gap-1 text-xs ${
-            isConsumable
-              ? "text-amber-600 dark:text-amber-400"
-              : "text-gray-600 dark:text-gray-400"
-          }`}
-        >
-          {isConsumable ? (
-            <Zap className="h-3 w-3" />
-          ) : (
-            <LockOpen className="h-3 w-3" />
-          )}
-          <span>{isConsumable ? "Consumable" : "Unlocked"}</span>
-        </Box>
+        <Tag icon={statusTag.icon} value={statusTag.value} variant={statusTag.variant} />
       </Box>
       {metadata.external_url && (
         <Link
@@ -110,7 +104,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       <Box className="block md:hidden">
         <Box className="flex items-start gap-3 p-4">
           <Box className="min-w-0 flex-1">
-            <Typography component="h2" className="mb-0.5 text-lg font-bold dark:text-white">
+            <Typography className="mb-0.5 text-lg font-bold dark:text-white">
               {metadata.name}
             </Typography>
             {issuer && (
@@ -151,9 +145,12 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <If condition={!pkg.isDynamic}>
             <Box className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Box className="px-4 text-center">
-                <Box className="mb-4 text-6xl">
-                  <ImageNotSupported aria-label="No image" className="mx-auto text-slate-500 dark:text-gray-400" />
-                </Box>
+                <Tile
+                  size="lg"
+                  variant="neutral"
+                  className="mx-auto mb-4 h-20 w-20 rounded-2xl border-none text-6xl"
+                  icon={<ImageNotSupported aria-label="No image" className="mx-auto text-slate-500 dark:text-gray-400" />}
+                />
                 <Typography className="mb-2 text-xl font-semibold text-slate-900 dark:text-white">
                   {metadata.name}
                 </Typography>
@@ -169,7 +166,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             <Overlay>
               <div className="flex h-full w-full items-center justify-center overflow-hidden">
                 <div className="w-full text-center">
-                  <CircularProgress color="primary" size={80} />
+                  <CircularProgress size={80} />
                 </div>
               </div>
             </Overlay>
@@ -180,7 +177,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               title="You're unable to interact with this Ownable, because it has been transferred to a different account."
               followCursor
             >
-              <Overlay sx={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
+              <Overlay style={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
                 <OverlayBanner>Transferred</OverlayBanner>
               </Overlay>
             </Tooltip>
@@ -206,7 +203,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         <Box className="mb-6 rounded-2xl border border-slate-200 bg-white p-8 dark:border-[#2a2a2a] dark:bg-[#1a1a1a]">
           <Box className="mx-auto mb-6 flex max-w-[500px] items-start gap-4">
             <Box className="min-w-0 flex-1">
-              <Typography component="h2" className="mb-1 text-xl font-bold dark:text-white">
+              <Typography className="mb-1 text-xl font-bold dark:text-white">
                 {metadata.name}
               </Typography>
               {issuer && (
@@ -251,7 +248,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               <Overlay>
                 <div className="flex h-full w-full items-center justify-center overflow-hidden">
                   <div className="w-full text-center">
-                    <CircularProgress color="primary" size={80} />
+                    <CircularProgress size={80} />
                   </div>
                 </div>
               </Overlay>
@@ -262,7 +259,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 title="You're unable to interact with this Ownable, because it has been transferred to a different account."
                 followCursor
               >
-                <Overlay sx={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
+                <Overlay style={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
                   <OverlayBanner>Transferred</OverlayBanner>
                 </Overlay>
               </Tooltip>

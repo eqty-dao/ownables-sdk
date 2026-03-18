@@ -4,13 +4,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  TextField,
-  TextFieldProps,
   IconButton,
-  InputAdornment,
-} from "@/components/ui/primitives";
+} from "@/components/ui";
 import { useState } from "react";
-import { AlertColor } from "@/components/ui/primitives/Alert/Alert";
+import { AlertColor } from "@/components/ui";
 import { ClipboardPaste as Paste } from "lucide-react";
 
 interface PromptDialogProps {
@@ -21,7 +18,7 @@ interface PromptDialogProps {
   severity?: AlertColor;
   cancel?: string;
   ok?: string;
-  TextFieldProps?: TextFieldProps;
+  TextFieldProps?: { label?: string; className?: string; placeholder?: string };
   validate?: (value: string) => string;
   fee?: number | null;
   network?: string | null;
@@ -69,36 +66,39 @@ export default function PromptDialog(props: PromptDialogProps) {
         }}
       >
         {props.TextFieldProps ? (
-          <TextField
-            {...props.TextFieldProps}
-            variant="standard"
-            autoFocus
-            required
-            error={!!error}
-            helperText={error}
-            value={address}
-            onChange={(e) => {
-              setError(null);
-              setAddress(e.target.value);
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={handlePaste} edge="end">
-                    <Paste />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+          <label className="block">
+            {props.TextFieldProps.label ? (
+              <span className="mb-1 block text-sm text-slate-700">{props.TextFieldProps.label}</span>
+            ) : null}
+            <div className="relative">
+              <input
+                className={props.TextFieldProps.className || "w-full rounded-md border border-slate-300 px-3 py-2 pr-10"}
+                placeholder={props.TextFieldProps.placeholder}
+                autoFocus
+                required
+                value={address}
+                onChange={(e) => {
+                  setError(null);
+                  setAddress(e.target.value);
+                }}
+              />
+              <IconButton onClick={handlePaste} className="absolute right-1 top-1">
+                <Paste />
+              </IconButton>
+            </div>
+            {error ? <small className="mt-1 block text-xs text-red-600">{error}</small> : null}
+          </label>
         ) : null}
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={close} color="secondary">
+        <Button onClick={close}>
           {props.cancel || "Cancel"}
         </Button>
-        <Button onClick={submit} color={props.severity} variant="contained">
+        <Button
+          onClick={submit}
+          className={props.severity === "error" ? "bg-red-600 text-white hover:bg-red-700" : "bg-slate-900 text-white hover:bg-slate-800"}
+        >
           {props.ok || "Ok"}
         </Button>
       </DialogActions>

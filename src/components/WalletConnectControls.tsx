@@ -1,4 +1,4 @@
-import { Button, Typography } from '@/components/ui/primitives';
+import { Button, Typography } from '@/components/ui';
 import { Info as InfoOutlineIcon, RefreshCcw as CachedIcon } from "lucide-react";
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
@@ -25,18 +25,11 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
         if (!connected) {
           return (
             <>
-              <Button variant="contained" fullWidth onClick={openConnectModal}>
+              <Button className="w-full bg-slate-900 text-white hover:bg-slate-800" onClick={openConnectModal}>
                 Connect to wallet
               </Button>
               <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{
-                  mt: 1,
-                  display: "block",
-                  textAlign: "center",
-                  fontSize: "0.75rem",
-                }}
+                className="mt-1 block text-center text-xs text-slate-500"
               >
                 Ensure to connect on <strong>Base Sepolia</strong> testnet
               </Typography>
@@ -46,7 +39,7 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         if (chain?.unsupported) {
           return (
-            <Button variant="contained" color="warning" fullWidth onClick={openChainModal}>
+            <Button className="w-full bg-amber-500 text-white hover:bg-amber-600" onClick={openChainModal}>
               Wrong network — Switch
             </Button>
           );
@@ -54,14 +47,14 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         return (
           <>
-            <Typography sx={{ fontSize: 12, cursor: 'pointer' }} color="text.secondary" onClick={openChainModal}>
-              {chain?.name || 'Network'} address <CachedIcon sx={{ fontSize: 12 }} />
+            <Typography className="cursor-pointer text-xs text-slate-500" onClick={openChainModal}>
+              {chain?.name || 'Network'} address <CachedIcon className="inline h-3 w-3" />
             </Typography>
-            <Typography sx={{ fontSize: 14, fontWeight: 600, cursor: 'pointer' }} component="div" onClick={openAccountModal}>
-              {account?.displayName} <InfoOutlineIcon sx={{ fontSize: 14 }} />
+            <Typography className="cursor-pointer text-sm font-semibold" onClick={openAccountModal}>
+              {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
             </Typography>
             {children}
-            <Button variant="contained" fullWidth onClick={() => disconnect()} disabled={isLoading}>
+            <Button className="w-full bg-slate-900 text-white hover:bg-slate-800" onClick={() => disconnect()} disabled={isLoading}>
               {isLoading ? 'Disconnecting…' : 'Disconnect'}
             </Button>
           </>
