@@ -178,9 +178,9 @@ export default function CreateOwnableDialog({
       setError(null);
 
       // Step 1: Switch to correct chain if needed
-      const ltoNetworkId = builderService.getLtoNetworkId();
+      const networkCode = builderService.getNetworkCode();
       const expectedChainId =
-        ltoNetworkId === "L"
+        networkCode === "L"
           ? "0x2105" // Base Mainnet
           : "0x14a34"; // Base Sepolia
 
@@ -193,7 +193,7 @@ export default function CreateOwnableDialog({
         if (switchError?.code === 4902) {
           throw new Error(
             `Please add Base ${
-              ltoNetworkId === "L" ? "Mainnet" : "Sepolia"
+              networkCode === "L" ? "Mainnet" : "Sepolia"
             } to MetaMask first`
           );
         }
@@ -284,7 +284,7 @@ export default function CreateOwnableDialog({
 
       // Only include transaction ID if payment was made (not on testnet)
       if (txHash) {
-        ownableData.OWNABLE_LTO_TRANSACTION_ID = txHash;
+        ownableData.OWNABLE_BASE_TRANSACTION_ID = txHash;
       }
 
       zip.file("ownableData.json", JSON.stringify([ownableData], null, 2));
@@ -294,7 +294,7 @@ export default function CreateOwnableDialog({
 
       // Create chain.json
       const chainData = {
-        networkId: ltoNetworkId,
+        networkId: networkCode,
         timestamp: Date.now(),
         version: "1.0.0",
       };

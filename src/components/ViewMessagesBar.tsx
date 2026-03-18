@@ -31,8 +31,6 @@ interface ViewMessagesBarProps {
   >;
 }
 
-export const network = import.meta.env.VITE_LTO_NETWORK_ID;
-
 const messageItem = cva("mb-2 flex flex-col items-start border-b border-slate-200 pb-2");
 const messageHeader = cva("flex w-full items-center gap-2");
 const thumb = cva("h-[35px] w-[35px] overflow-hidden rounded-[10%]");

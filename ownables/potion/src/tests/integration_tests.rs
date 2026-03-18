@@ -14,9 +14,9 @@ pub fn contract_template() -> Box<dyn Contract<Empty>> {
 }
 
 const ADMIN: &str = "ADMIN";
-const LTO_USER: &str = "GjSacB6a5DFNEHjDSmn724QsrRStKYzkahPH67wyrhAY";
+const OWNABLE_USER: &str = "GjSacB6a5DFNEHjDSmn724QsrRStKYzkahPH67wyrhAY";
 const NATIVE_DENOM: &str = "denom";
-// const LTO_ADDRESS: &str = "3JmCa4jLVv7Yn2XkCnBUGsa7WNFVEMxAfWe";
+// const OWNABLE_ADDRESS: &str = "3JmCa4jLVv7Yn2XkCnBUGsa7WNFVEMxAfWe";
 
 fn mock_app() -> App {
     AppBuilder::new().build(|router, _, storage| {
@@ -24,7 +24,7 @@ fn mock_app() -> App {
             .bank
             .init_balance(
                 storage,
-                &Addr::unchecked(LTO_USER),
+                &Addr::unchecked(OWNABLE_USER),
                 vec![Coin {
                     denom: NATIVE_DENOM.to_string(),
                     amount: Uint128::new(1),
@@ -45,7 +45,7 @@ fn proper_instantiate() -> (App, Addr) {
     };
 
     let msg = InstantiateMsg {
-        ownable_id: LTO_USER.to_string(),
+        ownable_id: OWNABLE_USER.to_string(),
         nft,
         network_id: 76,
         image: None,
@@ -60,7 +60,7 @@ fn proper_instantiate() -> (App, Addr) {
     let ownable_addr = app
         .instantiate_contract(
             cw_template_id,
-            Addr::unchecked(LTO_USER),
+            Addr::unchecked(OWNABLE_USER),
             &msg,
             &[],
             "test",
@@ -78,7 +78,7 @@ fn drink_percentage() {
     let msg = ExecuteMsg::Consume { amount: 1 };
 
     app.execute_contract(
-        Addr::unchecked(LTO_USER),
+        Addr::unchecked(OWNABLE_USER),
         ownable_addr,
         &msg,
         &vec![]
@@ -94,7 +94,7 @@ fn transfer() {
     };
 
     app.execute_contract(
-        Addr::unchecked(LTO_USER),
+        Addr::unchecked(OWNABLE_USER),
         ownable_addr,
         &msg,
         &vec![]

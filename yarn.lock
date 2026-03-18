@@ -1395,58 +1395,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ltonetwork/ownable-sdk@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "@ltonetwork/ownable-sdk@workspace:."
-  dependencies:
-    "@babel/core": "npm:^7.29.0"
-    "@babel/preset-typescript": "npm:^7.28.5"
-    "@base-ui/react": "npm:^1.3.0"
-    "@cucumber/cucumber": "npm:^12.7.0"
-    "@fontsource/montserrat": "npm:^5.2.8"
-    "@letsrunit/bdd": "npm:^0.6.0"
-    "@letsrunit/cli": "npm:^0.6.0"
-    "@rainbow-me/rainbowkit": "npm:^2.2.10"
-    "@tailwindcss/postcss": "npm:^4.2.1"
-    "@tanstack/react-query": "npm:^5.90.5"
-    "@types/node": "npm:^25.5.0"
-    "@types/react": "npm:^19.2.14"
-    "@types/react-dom": "npm:^19.2.3"
-    "@vitejs/plugin-react": "npm:^6.0.1"
-    ajv: "npm:^8.18.0"
-    ajv-keywords: "npm:^5.1.0"
-    all-inline: "npm:^0.1.7"
-    autoprefixer: "npm:^10.4.27"
-    axios: "npm:^1.13.6"
-    babel-loader: "npm:^10.1.1"
-    blockstore-core: "npm:^6.1.2"
-    buffer: "npm:^6.0.3"
-    class-variance-authority: "npm:^0.7.1"
-    clsx: "npm:^2.1.1"
-    eqty-core: "npm:^1.0.2"
-    ipfs-unixfs-importer: "npm:^16.1.4"
-    jszip: "npm:^3.10.1"
-    lucide-react: "npm:^0.577.0"
-    mime: "npm:^4.1.0"
-    notistack: "npm:^3.0.2"
-    postcss: "npm:^8.5.8"
-    react: "npm:^19.2.4"
-    react-dom: "npm:^19.2.4"
-    react-json-view: "npm:^1.21.3"
-    simple-iframe-rpc: "npm:^0.1.16"
-    tailwind-merge: "npm:^3.5.0"
-    tailwindcss: "npm:^4.2.1"
-    typescript: "npm:^5.9.3"
-    util: "npm:^0.12.5"
-    viem: "npm:^2.47.2"
-    vite: "npm:^8.0.0"
-    wagmi: "npm:^2.19.5"
-    web-vitals: "npm:^5.1.0"
-    webpack: "npm:^5.105.4"
-    webpack-cli: "npm:^6.0.1"
-  languageName: unknown
-  linkType: soft
-
 "@metamask/eth-json-rpc-provider@npm:^1.0.0":
   version: 1.0.1
   resolution: "@metamask/eth-json-rpc-provider@npm:1.0.1"
@@ -1921,6 +1869,58 @@ __metadata:
   checksum: 10c0/9aae2fe6e8a3a3eeb6c1fdef78e1939cf05a0f37f8a4fae4d6bf2e09eb1e06f966ece85805626e01ba5fab48072b94f19b835449e58b6d26720ee19a58298add
   languageName: node
   linkType: hard
+
+"@ownables/sdk@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@ownables/sdk@workspace:."
+  dependencies:
+    "@babel/core": "npm:^7.29.0"
+    "@babel/preset-typescript": "npm:^7.28.5"
+    "@base-ui/react": "npm:^1.3.0"
+    "@cucumber/cucumber": "npm:^12.7.0"
+    "@fontsource/montserrat": "npm:^5.2.8"
+    "@letsrunit/bdd": "npm:^0.6.0"
+    "@letsrunit/cli": "npm:^0.6.0"
+    "@rainbow-me/rainbowkit": "npm:^2.2.10"
+    "@tailwindcss/postcss": "npm:^4.2.1"
+    "@tanstack/react-query": "npm:^5.90.5"
+    "@types/node": "npm:^25.5.0"
+    "@types/react": "npm:^19.2.14"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitejs/plugin-react": "npm:^6.0.1"
+    ajv: "npm:^8.18.0"
+    ajv-keywords: "npm:^5.1.0"
+    all-inline: "npm:^0.1.7"
+    autoprefixer: "npm:^10.4.27"
+    axios: "npm:^1.13.6"
+    babel-loader: "npm:^10.1.1"
+    blockstore-core: "npm:^6.1.2"
+    buffer: "npm:^6.0.3"
+    class-variance-authority: "npm:^0.7.1"
+    clsx: "npm:^2.1.1"
+    eqty-core: "npm:^1.0.2"
+    ipfs-unixfs-importer: "npm:^16.1.4"
+    jszip: "npm:^3.10.1"
+    lucide-react: "npm:^0.577.0"
+    mime: "npm:^4.1.0"
+    notistack: "npm:^3.0.2"
+    postcss: "npm:^8.5.8"
+    react: "npm:^19.2.4"
+    react-dom: "npm:^19.2.4"
+    react-json-view: "npm:^1.21.3"
+    simple-iframe-rpc: "npm:^0.1.16"
+    tailwind-merge: "npm:^3.5.0"
+    tailwindcss: "npm:^4.2.1"
+    typescript: "npm:^5.9.3"
+    util: "npm:^0.12.5"
+    viem: "npm:^2.47.2"
+    vite: "npm:^8.0.0"
+    wagmi: "npm:^2.19.5"
+    web-vitals: "npm:^5.1.0"
+    webpack: "npm:^5.105.4"
+    webpack-cli: "npm:^6.0.1"
+  languageName: unknown
+  linkType: soft
 
 "@oxc-project/runtime@npm:0.115.0":
   version: 0.115.0

@@ -8,7 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import { ArrowLeft as ArrowBack, X as CloseIcon } from "lucide-react";
 import { Drawer } from "@/components/ui";
-import ltoLogo from "../assets/ltonetwork.png";
+import ownablesLogo from "../assets/logo.svg";
 import EventChainService from "../services/EventChain.service";
 import WalletConnectControls from "./WalletConnectControls";
 import { useAccount, useBalance } from "wagmi"
@@ -97,10 +97,10 @@ export default function Sidebar(props: SidebarProps) {
                 <ArrowBack />
               </IconButton>
             </Box>
-            <Link href="https://ltonetwork.com" target="_blank">
+            <Link href="https://ownables.info" target="_blank">
               <img
-                src={ltoLogo}
-                alt="LTO Network"
+                src={ownablesLogo}
+                alt="Ownables"
                 style={{ width: 150, maxWidth: "100%", verticalAlign: -5 }}
               />
             </Link>

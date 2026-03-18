@@ -2,7 +2,7 @@
 name = "ownable"
 description = "My First Ownable"
 version = "0.1.1"
-authors = ["LTO Network <info@ltonetwork.com>"]
+authors = ["Ownables <info@eqty.me>"]
 edition = "2024"
 
 exclude = [

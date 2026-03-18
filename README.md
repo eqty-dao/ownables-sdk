@@ -3,7 +3,7 @@
 ![ownables](https://user-images.githubusercontent.com/100821/177121121-a1c3dc8c-8108-4c07-9e15-b83ebfdf8f98.png)
 
 Ownables are CosmWasm smart contracts that define ownership. In addition to running on a Cosmos blockchain, Ownables
-can run directly in a wallet using the [LTO Network](https://ltonetwork.com) private layer.
+can run directly in a wallet and integrate with Base.
 
 The SDK contains examples and tools for developing Ownables.
 
@@ -131,14 +131,16 @@ Adds armor to the robot. Only one shield can be added.
 
 Create a .env file in the project root (or use your existing one) and ensure the following variables are set:
 
-- VITE_LTO_API_URL
-- VITE_LTO_NETWORK_ID
-- VITE_LTO_EXPLORER_URL
-- VITE_LTO_WALLET_URL
+- VITE_E2E
+- VITE_E2E_MNEMONIC
+- VITE_E2E_ACCOUNT_INDEX
+- VITE_E2E_RPC_URL
 - VITE_RELAY
-- VITE_SECURE_KEY
-- VITE_OBUILDER
-- VITE_OBUILDER_API_SECRET_KEY
+- VITE_LOCAL
+- VITE_OWNABLE_EXAMPLES_URL
+- VITE_BUILDER
+- VITE_BUILDER_SERVER_WALLETS_ENDPOINT (optional, default: `/api/v1/ServerWalletAddresses`)
+- VITE_BUILDER_NETWORK_PARAM (optional, default: `networkId`)
 - VITE_WALLETCONNECT_PROJECT_ID
 
 RainbowKit requires a WalletConnect Cloud Project ID to enable WalletConnect and to display the full list of popular wallets in the connect modal (MetaMask, Coinbase, Ledger, etc.).
