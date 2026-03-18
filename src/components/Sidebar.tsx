@@ -40,6 +40,15 @@ const modeButton = cva(
   }
 );
 
+const sidebarButton = cva("w-full", {
+  variants: {
+    tone: {
+      danger: "mb-1 bg-red-600 text-white hover:bg-red-700",
+      subtleDanger: "text-red-700 hover:bg-red-50",
+    },
+  },
+});
+
 function resolveSystemDark(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
@@ -103,9 +112,9 @@ export default function Sidebar(props: SidebarProps) {
           <Box className="mt-2">
             <WalletConnectControls>
               <Box className="mb-4 mt-1">
-                <p className="text-sm font-semibold">Balance</p>
-                <p className="text-sm">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</p>
-                { eqtyBalance !== undefined && <p className="text-sm">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</p> }
+                <p className="text-body font-semibold">Balance</p>
+                <p className="text-body">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</p>
+                { eqtyBalance !== undefined && <p className="text-body">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</p> }
               </Box>
             </WalletConnectControls>
           </Box>
@@ -113,10 +122,10 @@ export default function Sidebar(props: SidebarProps) {
           <Box className="mt-4">
             <Box className="mb-2 flex items-center justify-between gap-2">
               <Box>
-                <p className="font-semibold">
+                <p className="text-body font-semibold">
                   Anchor events
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-caption">
                   Enable event anchoring
                 </p>
               </Box>
@@ -155,14 +164,14 @@ export default function Sidebar(props: SidebarProps) {
           <Box className="grid gap-1">
             <Button
               size="small"
-              className="mb-1 bg-red-600 text-white hover:bg-red-700"
+              className={cn(sidebarButton({ tone: "danger" }))}
               onClick={onReset}
             >
               Delete all Ownables
             </Button>
             <Button
               size="small"
-              className="w-full text-red-700 hover:bg-red-50"
+              className={cn(sidebarButton({ tone: "subtleDanger" }))}
               onClick={onFactoryReset}
             >
               Factory Reset

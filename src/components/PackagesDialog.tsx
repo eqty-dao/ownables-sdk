@@ -26,6 +26,10 @@ const topActionButton = cva(
   }
 );
 
+const packageItem = cva(
+  "flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition-colors hover:bg-slate-50"
+);
+
 interface PackagesDialogProps {
   packages: Array<TypedPackage | TypedPackageStub>;
   open: boolean;
@@ -52,10 +56,10 @@ export function PackagesDialog(props: PackagesDialogProps) {
           <CloseIcon size={18} />
         </IconButton>
         <Box>
-          <h2 className="text-2xl font-bold leading-tight">
+          <h2 className="text-page-title leading-tight sm:text-2xl">
             Issue an Ownable
           </h2>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="text-meta mt-0.5">
             Select a package or create a new one
           </p>
         </Box>
@@ -77,7 +81,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
         </button>
       </div>
 
-      <p className="mb-1 text-[13px] uppercase tracking-[0.08em] text-slate-500">
+      <p className="text-caption mb-1 uppercase tracking-[0.08em]">
         Available Packages
       </p>
 
@@ -89,7 +93,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
             <Skeleton className="h-[62px] rounded-xl" />
           </>
         ) : filteredPackages.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+          <div className="surface-muted px-3 py-4 text-sm">
             No packages available yet.
           </div>
         ) : (
@@ -98,7 +102,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
               key={pkg.title}
               type="button"
               onClick={() => onSelect(pkg)}
-              className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition-colors hover:bg-slate-50"
+              className={cn(packageItem())}
             >
               <div>
                 <div className="text-sm font-semibold text-slate-900">{pkg.title}</div>

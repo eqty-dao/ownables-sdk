@@ -10,10 +10,10 @@ The SDK contains examples and tools for developing Ownables.
 ## Quickstart
 
 ```
-npm i
-npm run rustup
-npm run ownables:build-all
-npm start
+yarn install
+yarn rustup
+yarn ownables:build-all
+yarn start
 ```
 
 Once that is done, navigate to http://localhost:3000/ and you should see an empty wallet that is ready to import Ownable
@@ -32,16 +32,16 @@ The wallet is a React application that can be used to test Ownables.
 
 In the project directory, you can run:
 
-### `npm start`
+### `yarn start`
 
 Runs the app in the development mode. Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits. You will also see any lint errors in the console.
 
-### `npm run test:e2e`
+### `yarn test:e2e`
 
 Runs the Cucumber-based end-to-end tests.
 
-### `npm run build`
+### `yarn build`
 
 Builds the app for production to the `build` folder. It correctly bundles React in production mode and optimizes the
 build for the best performance.
@@ -71,12 +71,12 @@ rustup target list --installed
 rustup target add wasm32-unknown-unknown
 ```
 
-Alternatively run `npm run rustup`.
+Alternatively run `yarn rustup`.
 
 ## Build
 
 ```
-npm run ownables:build --package=car
+yarn ownables:build --package=car
 ```
 
 ## Examples
@@ -152,4 +152,4 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 Notes:
 - This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
-- If you change .env while the dev server is running, you may need to restart npm start to pick up the changes.
+- If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.

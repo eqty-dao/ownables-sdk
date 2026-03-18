@@ -6,6 +6,8 @@ import ReactJson from "react-json-view";
 import { CircleX as Cancel, CircleCheck as CheckCircle } from "lucide-react";
 import shortId from "../utils/shortId";
 import { useChainId } from "wagmi";
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
 
 interface EventCardProps {
   event: Event;
@@ -18,6 +20,18 @@ enum DataView {
   BASE64,
   JSON,
 }
+
+const railBlock = cva(
+  "hidden w-[calc(45%-58px)] truncate border border-slate-200 bg-white px-4 py-2 text-xs md:block",
+  {
+    variants: {
+      edge: {
+        top: "self-end rounded-t-lg",
+        bottom: "self-start rounded-b-lg shadow-sm",
+      },
+    },
+  }
+);
 
 export default function EventCard(props: EventCardProps) {
   const [dataView, setDataView] = useState<DataView>(
@@ -40,7 +54,7 @@ export default function EventCard(props: EventCardProps) {
   return (
     <Box className="flex flex-col">
       {!props.isFirst && (
-        <div className="hidden w-[calc(45%-58px)] self-end truncate rounded-t-lg border border-slate-200 bg-white px-4 py-2 text-xs md:block">
+        <div className={cn(railBlock({ edge: "top" }))}>
           <strong>Previous: </strong> {shortId(event.previous?.hex ?? "", 30)}
         </div>
       )}
@@ -59,7 +73,12 @@ export default function EventCard(props: EventCardProps) {
           {anchorTx !== null && (
             <div className="mt-2">
               <strong>Anchor tx: </strong>
-              <Link href={anchorTx ? getExplorerUrl(anchorTx, chainId) : "#"} target="_blank" rel="noopener noreferrer">
+              <Link
+                href={anchorTx ? getExplorerUrl(anchorTx, chainId) : "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-primary"
+              >
                 {anchorTx ? shortId(anchorTx, 10) : "Not anchored"}
               </Link>
               {verified && (
@@ -95,7 +114,7 @@ export default function EventCard(props: EventCardProps) {
           </Box>
         </CardContent>
       </Card>
-      <div className="hidden w-[calc(45%-58px)] self-start truncate rounded-b-lg border border-slate-200 bg-white px-4 py-2 text-xs shadow-sm md:block">
+      <div className={cn(railBlock({ edge: "bottom" }))}>
         <strong>Hash:</strong> {shortId(event.hash.hex, 30)}
       </div>
     </Box>

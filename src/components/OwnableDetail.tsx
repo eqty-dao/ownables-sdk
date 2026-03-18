@@ -21,6 +21,8 @@ import { TypedPackage } from "../interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
 import Overlay, { OverlayBanner } from "./Overlay";
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
 
 interface OwnableDetailProps {
   chain: EventChain;
@@ -37,6 +39,29 @@ interface OwnableDetailProps {
   onTransfer: (address: string) => void;
   children?: ReactNode;
 }
+
+const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
+const issuerLink = cva("link-primary hover:underline");
+const widgetShell = cva("surface-widget", {
+  variants: {
+    layout: {
+      mobile: "mx-4 w-auto",
+      desktop: "mx-auto mb-6 flex w-full max-w-[500px] items-center justify-center",
+    },
+  },
+});
+const consumeButton = cva(
+  "w-full rounded-xl bg-orange-500 px-6 font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700",
+  {
+    variants: {
+      size: {
+        mobile: "py-3",
+        desktop: "mx-auto block max-w-[500px] py-4 text-lg",
+      },
+    },
+  }
+);
+const overlayCenter = cva("flex h-full w-full items-center justify-center overflow-hidden");
 
 export default function OwnableDetail(props: OwnableDetailProps) {
   const {
@@ -66,13 +91,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
   const aboutSection = (
     <Box className="px-4 pb-8 md:px-2 md:pb-0">
-      <h2
-        className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
-      >
+      <h2 className="text-caption mb-2 uppercase tracking-wide">
         About
       </h2>
       {metadata.description && (
-        <p className="mb-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+        <p className="text-body mb-3">
           {metadata.description}
         </p>
       )}
@@ -84,13 +107,13 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           href={metadata.external_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-3 flex items-center gap-1 text-sm font-medium text-indigo-600 visited:text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:visited:text-indigo-400 dark:hover:text-indigo-300"
+          className={cn(aboutLink(), "mb-3")}
         >
           <OpenInNew className="h-4 w-4" />
           <span>Visit external link</span>
         </Link>
       )}
-      <button className="flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
+      <button className={cn(aboutLink())}>
         <Info className="h-4 w-4" />
         <span>More information</span>
       </button>
@@ -102,16 +125,16 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       <Box className="block md:hidden">
         <Box className="flex items-start gap-3 p-4">
           <Box className="min-w-0 flex-1">
-            <h2 className="mb-0.5 text-lg font-bold dark:text-white">
+            <h2 className="text-section-title mb-0.5 text-lg">
               {metadata.name}
             </h2>
             {issuer && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-meta">
                 <a
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-600 visited:text-indigo-600 hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:visited:text-indigo-400 dark:hover:text-indigo-300"
+                  className={cn(issuerLink())}
                 >
                   {shortIssuer}
                 </a>
@@ -129,10 +152,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           />
         </Box>
 
-        <Box
-          className="relative mx-4 w-auto overflow-hidden rounded-2xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-indigo-50 to-purple-50 dark:border-gray-600 dark:from-indigo-950/20 dark:to-purple-950/20"
-          style={{ aspectRatio: "3 / 4" }}
-        >
+        <Box className={cn(widgetShell({ layout: "mobile" }))} style={{ aspectRatio: "3 / 4" }}>
           <OwnableFrame
             id={chain.id}
             packageCid={pkg.cid}
@@ -149,10 +169,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   className="mx-auto mb-4 h-20 w-20 rounded-2xl border-none text-6xl"
                   icon={<ImageNotSupported aria-label="No image" className="mx-auto text-slate-500 dark:text-gray-400" />}
                 />
-                <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-white">
+                <h3 className="text-section-title mb-2 text-xl font-semibold">
                   {metadata.name}
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-gray-400">
+                <p className="text-meta">
                   Interactive widget content would display here
                 </p>
               </Box>
@@ -162,7 +182,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
           {isApplying && (
             <Overlay>
-              <div className="flex h-full w-full items-center justify-center overflow-hidden">
+              <div className={cn(overlayCenter())}>
                 <div className="w-full text-center">
                   <CircularProgress size={80} />
                 </div>
@@ -186,7 +206,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <Box className="mx-4 mt-4">
             <button
               aria-label="Use Item"
-              className="w-full rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700"
+              className={cn(consumeButton({ size: "mobile" }))}
               onClick={onConsume}
             >
               Use Item
@@ -198,19 +218,19 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       </Box>
 
       <Box className="mx-auto hidden max-w-2xl p-8 md:block">
-        <Box className="mb-6 rounded-2xl border border-slate-200 bg-white p-8 dark:border-[#2a2a2a] dark:bg-[#1a1a1a]">
+        <Box className="surface-card mb-6 p-8">
           <Box className="mx-auto mb-6 flex max-w-[500px] items-start gap-4">
             <Box className="min-w-0 flex-1">
-              <h2 className="mb-1 text-xl font-bold dark:text-white">
+              <h2 className="text-section-title mb-1">
                 {metadata.name}
               </h2>
               {issuer && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-meta">
                   <a
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-600 visited:text-indigo-600 hover:text-indigo-700 hover:underline dark:text-indigo-400 dark:visited:text-indigo-400 dark:hover:text-indigo-300"
+                  className={cn(issuerLink())}
                 >
                   {shortIssuer}
                 </a>
@@ -228,10 +248,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             />
           </Box>
 
-          <Box
-            className="relative mx-auto mb-6 flex w-full max-w-[500px] items-center justify-center overflow-hidden"
-            style={{ aspectRatio: "3 / 4" }}
-          >
+          <Box className={cn(widgetShell({ layout: "desktop" }))} style={{ aspectRatio: "3 / 4" }}>
             <OwnableFrame
               id={chain.id}
               packageCid={pkg.cid}
@@ -244,7 +261,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
             {isApplying && (
               <Overlay>
-                <div className="flex h-full w-full items-center justify-center overflow-hidden">
+                <div className={cn(overlayCenter())}>
                   <div className="w-full text-center">
                     <CircularProgress size={80} />
                   </div>
@@ -267,7 +284,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           {isConsumable && !isTransferred && (
             <button
               aria-label="Use Item"
-              className="mx-auto block w-full max-w-[500px] rounded-xl bg-orange-500 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700"
+              className={cn(consumeButton({ size: "desktop" }))}
               onClick={onConsume}
             >
               Use Item

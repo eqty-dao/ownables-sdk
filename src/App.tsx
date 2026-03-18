@@ -57,6 +57,11 @@ const detailPane = cva("min-w-0 flex-1", {
   },
 });
 
+const emptyStateLink = cva("pointer-events-auto link-primary underline");
+const issueOwnableButton = cva(
+  "mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
+);
+
 export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -406,17 +411,17 @@ export default function App() {
       {ownables.length === 0 && (
         <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-4">
           <div className="max-w-2xl text-center">
-            <h1 className="text-4xl font-semibold text-slate-900 sm:text-5xl">
+            <h1 className="text-page-title">
               Let's get started!
             </h1>
             <p
-              className="mt-4 text-base text-slate-600 sm:text-2xl"
+              className="text-body mt-4 text-base sm:text-2xl"
             >
               Read{" "}
               <Link
                 href="https://docs.ltonetwork.com/ownables/what-are-ownables"
                 target="_blank"
-                className="pointer-events-auto text-indigo-600 underline"
+                className={cn(emptyStateLink())}
               >
                 the documentation
               </Link>{" "}
@@ -428,7 +433,7 @@ export default function App() {
                   <Link
                     href="#"
                     onClick={(e) => { e.preventDefault(); setShowPackages(true); }}
-                    className="pointer-events-auto text-indigo-600 underline"
+                    className={cn(emptyStateLink())}
                   >
                     the examples
                   </Link>
@@ -473,7 +478,7 @@ export default function App() {
               setShowPackages(true);
               setShowDetail(true);
             }}
-            className="mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
+            className={cn(issueOwnableButton())}
           >
             + Issue an Ownable
           </button>

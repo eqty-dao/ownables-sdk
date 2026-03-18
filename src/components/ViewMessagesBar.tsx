@@ -17,6 +17,8 @@ import placeholderImage from "../assets/cube.png";
 import { useMessageCount } from "../hooks/useMessageCount";
 import { useService } from "../hooks/useService";
 import { useChainId } from "wagmi";
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
 
 interface ViewMessagesBarProps {
   open: boolean;
@@ -31,18 +33,14 @@ interface ViewMessagesBarProps {
 
 export const network = import.meta.env.VITE_LTO_NETWORK_ID;
 
+const messageItem = cva("mb-2 flex flex-col items-start border-b border-slate-200 pb-2");
+const messageHeader = cva("flex w-full items-center gap-2");
+const thumb = cva("h-[35px] w-[35px] overflow-hidden rounded-[10%]");
+const miniButton = cva("px-1.5 py-[3px] text-[0.625rem] leading-[1.3]");
+
 const SkeletonMessageItem = () => (
-  <ListItem
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-      mb: 2,
-      borderBottom: "1px solid #ddd",
-      pb: 2,
-    }}
-  >
-    <Box style={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+  <ListItem className={cn(messageItem())}>
+    <Box className="flex w-full items-center gap-2">
       <Skeleton
        
         width={35}
@@ -189,7 +187,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Box style={{ width: 350, padding: 8 }}>
         <Box className="flex items-center justify-between">
-          <span>
+          <span className="text-body font-semibold">
             Messages
           </span>
           <IconButton onClick={onClose}>
@@ -198,7 +196,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
         </Box>
 
         <Box className="mt-2">
-          <span>
+          <span className="text-caption">
             {messagesCount > 0
               ? `You have ${messagesCount} unread messages.`
               : "No new messages"}
@@ -217,32 +215,11 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
               msg.version === 0 ? (
                 <ListItem
                   key={index}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    marginBottom: 8,
-                    borderBottom: "1px solid #ddd",
-                    paddingBottom: 8,
-                  }}
+                  className={cn(messageItem())}
                 >
-                  <Box
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "100%",
-                      gap: 8,
-                    }}
-                  >
+                  <Box className={cn(messageHeader())}>
                     {" "}
-                    <Box
-                      style={{
-                        width: 35,
-                        height: 35,
-                        borderRadius: "10%",
-                        overflow: "hidden",
-                      }}
-                    >
+                    <Box className={cn(thumb())}>
                       <img
                         src={placeholderImage}
                         alt="Thumbnail"
@@ -255,10 +232,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     </Box>
                     <ListItemText
                       primary={
-                        <span
-                         
-                          style={{ fontSize: "0.6rem", fontWeight: "bold" }}
-                        >
+                        <span className="text-[0.6rem] font-bold">
                           Sender:{" "}
                           {msg?.sender === builderAddress
                             ? "Obuilder"
@@ -266,10 +240,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                         </span>
                       }
                       secondary={
-                        <span
-                         
-                          style={{ fontSize: "0.6rem", color: "text.secondary" }}
-                        >
+                        <span className="text-[0.6rem] text-slate-500">
                           Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
                         </span>
                       }
@@ -283,12 +254,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     <Button
                      
                       size="small"
-                      style={{
-                        fontSize: "0.625rem",
-                        padding: "3px 6px",
-                        minWidth: "unset",
-                        lineHeight: 1.3,
-                      }}
+                      className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
                     >
                       Import Message
@@ -302,32 +268,11 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                 //version 2 message support
                 <ListItem
                   key={index}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    marginBottom: 8,
-                    borderBottom: "1px solid #ddd",
-                    paddingBottom: 8,
-                  }}
+                  className={cn(messageItem())}
                 >
-                  <Box
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "100%",
-                      gap: 8,
-                    }}
-                  >
+                  <Box className={cn(messageHeader())}>
                     {(msg?.meta?.thumbnail && (
-                      <Box
-                        style={{
-                          width: 35,
-                          height: 35,
-                          borderRadius: "10%",
-                          overflow: "hidden",
-                        }}
-                      >
+                      <Box className={cn(thumb())}>
                         <img
                           src={msg.meta.thumbnail}
                           alt="Thumbnail"
@@ -339,14 +284,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                         />
                       </Box>
                     )) || (
-                      <Box
-                        style={{
-                          width: 35,
-                          height: 35,
-                          borderRadius: "10%",
-                          overflow: "hidden",
-                        }}
-                      >
+                      <Box className={cn(thumb())}>
                         <img
                           src={placeholderImage}
                           alt="Thumbnail"
@@ -360,29 +298,20 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     )}
 
                     <Box>
-                      <span
-                       
-                        style={{ fontSize: "0.7rem", fontWeight: "bold" }}
-                      >
+                      <span className="block text-[0.7rem] font-bold">
                         {msg?.meta?.title
                           ? msg.meta.title.length > 16
                             ? msg.meta.title.slice(0, 16) + "..."
                             : msg.meta.title
                           : "Unknown"}
                       </span>
-                      <span
-                       
-                        style={{ fontSize: "0.6rem", fontWeight: "bold" }}
-                      >
+                      <span className="block text-[0.6rem] font-bold">
                         Sender:{" "}
                         {msg?.sender === builderAddress
                           ? "Obuilder"
                           : msg?.sender || "Unknown"}
                       </span>
-                      <span
-                       
-                        style={{ fontSize: "0.6rem", color: "text.secondary" }}
-                      >
+                      <span className="block text-[0.6rem] text-slate-500">
                         Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
                       </span>
                     </Box>
@@ -397,12 +326,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     <Button
                      
                       size="small"
-                      style={{
-                        fontSize: "0.625rem",
-                        padding: "3px 6px",
-                        minWidth: "unset",
-                        lineHeight: 1.3,
-                      }}
+                      className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
                     >
                       Import Message

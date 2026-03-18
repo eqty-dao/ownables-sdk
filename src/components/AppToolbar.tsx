@@ -2,7 +2,7 @@ import React from "react";
 import { Alert } from "@/components/ui";
 import logo from "../assets/logo.svg";
 import { Menu as MenuIcon, Mail as MailOutlinedIcon, TriangleAlert as WarningIcon } from "lucide-react";
-import { Button } from "@/components/ui";
+import { IconButton } from "@/components/ui";
 import { cva } from "class-variance-authority";
 import { cn } from "../utils/cn";
 
@@ -31,6 +31,25 @@ const networkPill = cva(
   }
 );
 
+const warningStrip = cva(
+  "flex items-center gap-2 rounded-none border-b px-4 py-2 text-sm",
+  {
+    variants: {
+      tone: {
+        warning: "border-amber-200 bg-amber-50 text-amber-900",
+      },
+    },
+    defaultVariants: {
+      tone: "warning",
+    },
+  }
+);
+
+const toolbarIconButton = cva("relative text-white hover:bg-white/20");
+const notificationBadge = cva(
+  "absolute -right-0.5 -top-0.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white"
+);
+
 export default function AppToolbar({
   onMenuClick,
   onNotificationClick,
@@ -47,7 +66,7 @@ export default function AppToolbar({
         <Alert
           severity="warning"
           icon={<WarningIcon className="h-4 w-4" />}
-          className="flex items-center gap-2 rounded-none border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900"
+          className={cn(warningStrip())}
         >
           Please switch to <strong>Base Sepolia</strong> network to use this application.
         </Alert>
@@ -66,30 +85,26 @@ export default function AppToolbar({
               </span>
             )}
 
-            <Button
+            <IconButton
               aria-label="messages"
-              variant="ghost"
-              iconOnly
-              className="relative text-white hover:bg-white/20"
+              className={cn(toolbarIconButton())}
               onClick={onNotificationClick}
             >
               <MailOutlinedIcon />
               {messagesCount > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                <span className={cn(notificationBadge())}>
                   {messagesCount}
                 </span>
               ) : null}
-            </Button>
+            </IconButton>
 
-            <Button
+            <IconButton
               aria-label="menu"
-              variant="ghost"
-              iconOnly
-              className="text-white hover:bg-white/20"
+              className={cn(toolbarIconButton())}
               onClick={onMenuClick}
             >
               <MenuIcon />
-            </Button>
+            </IconButton>
           </div>
         </div>
       </header>

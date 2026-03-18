@@ -3,6 +3,10 @@ import { Info as InfoOutlineIcon, RefreshCcw as CachedIcon } from "lucide-react"
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
 import { PropsWithChildren } from "react"
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
+
+const primaryWalletButton = cva("w-full bg-slate-900 text-white hover:bg-slate-800");
 
 export default function WalletConnectControls({ children }: PropsWithChildren) {
   const { disconnect, isLoading } = useDisconnect();
@@ -25,7 +29,7 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
         if (!connected) {
           return (
             <>
-              <Button className="w-full bg-slate-900 text-white hover:bg-slate-800" onClick={openConnectModal}>
+              <Button className={cn(primaryWalletButton())} onClick={openConnectModal}>
                 Connect to wallet
               </Button>
               <p
@@ -54,7 +58,7 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
               {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
             </p>
             {children}
-            <Button className="w-full bg-slate-900 text-white hover:bg-slate-800" onClick={() => disconnect()} disabled={isLoading}>
+            <Button className={cn(primaryWalletButton())} onClick={() => disconnect()} disabled={isLoading}>
               {isLoading ? 'Disconnecting…' : 'Disconnect'}
             </Button>
           </>
