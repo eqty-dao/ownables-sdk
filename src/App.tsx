@@ -460,6 +460,7 @@ export default function App() {
                   chain={chain}
                   packageCid={packageCid}
                   metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
+                  issuer={chain.events[0]?.signerAddress}
                   isConsumable={!!(pkg?.isConsumable)}
                   isSelected={selectedChainId === chain.id}
                   onClick={() => {

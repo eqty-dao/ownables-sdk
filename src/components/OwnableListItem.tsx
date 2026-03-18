@@ -5,6 +5,7 @@ import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
 import { cva } from "class-variance-authority";
 import { cn } from "../utils/cn";
+import shortId from "../utils/shortId";
 
 const itemCard = cva(
   "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
@@ -25,14 +26,16 @@ interface OwnableListItemProps {
   chain: EventChain;
   packageCid: string;
   metadata: TypedMetadata;
+  issuer?: string;
   isConsumable: boolean;
   isSelected: boolean;
   onClick: () => void;
 }
 
 export default function OwnableListItem(props: OwnableListItemProps) {
-  const { packageCid, metadata, isConsumable, isSelected, onClick } = props;
+  const { packageCid, metadata, issuer, isConsumable, isSelected, onClick } = props;
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const shortIssuer = issuer ? shortId(issuer, 10, "...") : undefined;
 
   const loadThumbnail = useCallback(async () => {
     try {
@@ -83,6 +86,11 @@ export default function OwnableListItem(props: OwnableListItemProps) {
           <Box className="mb-0.5 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
             {metadata.name}
           </Box>
+          {shortIssuer && (
+            <Box className="mb-1 truncate text-xs text-slate-500 dark:text-slate-400">
+              {shortIssuer}
+            </Box>
+          )}
           {isConsumable && (
             <Tag icon={<BoltOutlined className="h-3.5 w-3.5" />} value="Consumable" variant="consumable" />
           )}
