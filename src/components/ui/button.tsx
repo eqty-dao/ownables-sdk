@@ -1,44 +1,64 @@
-import * as React from "react";
-import { Button as BaseButton } from "@base-ui/react/button";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/utils/cn";
+import { forwardRef, type CSSProperties } from "react";
+import type { AnyProps } from "@/utils/uiCompat";
+import { mergeStyle, pickStyleProps } from "@/utils/uiCompat";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50",
-        primary: "bg-indigo-600 text-white hover:bg-indigo-700",
-        secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200",
-        ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
-        danger: "bg-red-600 text-white hover:bg-red-700",
-      },
-      size: {
-        sm: "h-8 px-3 text-xs",
-        md: "h-10 px-4",
-        lg: "h-12 px-6 text-base",
-      },
-      iconOnly: {
-        true: "h-10 w-10 p-0",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
-      iconOnly: false,
-    },
-  }
-);
+export const Button = forwardRef<any, AnyProps>(function Button(
+  { sx, style, type = "button", fullWidth, variant, color, size, ...rest },
+  ref
+) {
+  const extracted = pickStyleProps(rest);
+  if (fullWidth) extracted.style.width = "100%";
+  const variantName = variant || "text";
+  const colorName = color || "primary";
+  const baseStyle: CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: size === "small" ? "6px 10px" : size === "large" ? "12px 18px" : "8px 14px",
+    borderRadius: 10,
+    border: "1px solid transparent",
+    cursor: "pointer",
+    fontWeight: 600,
+    lineHeight: 1.2,
+  };
 
-export type ButtonProps = React.ComponentPropsWithoutRef<typeof BaseButton> &
-  VariantProps<typeof buttonVariants>;
+  const primaryStyles: Record<string, CSSProperties> = {
+    text: { color: "#0f172a", background: "transparent" },
+    outlined: { color: "#0f172a", background: "#ffffff", borderColor: "#cbd5e1" },
+    contained: { color: "#ffffff", background: "#0f172a" },
+  };
+  const secondaryStyles: Record<string, CSSProperties> = {
+    text: { color: "#334155", background: "transparent" },
+    outlined: { color: "#334155", background: "#ffffff", borderColor: "#cbd5e1" },
+    contained: { color: "#ffffff", background: "#475569" },
+  };
+  const warningStyles: Record<string, CSSProperties> = {
+    text: { color: "#92400e", background: "transparent" },
+    outlined: { color: "#92400e", background: "#ffffff", borderColor: "#fbbf24" },
+    contained: { color: "#ffffff", background: "#d97706" },
+  };
+  const errorStyles: Record<string, CSSProperties> = {
+    text: { color: "#b91c1c", background: "transparent" },
+    outlined: { color: "#b91c1c", background: "#ffffff", borderColor: "#fca5a5" },
+    contained: { color: "#ffffff", background: "#dc2626" },
+  };
+  const palette =
+    colorName === "error"
+      ? errorStyles
+      : colorName === "warning"
+        ? warningStyles
+        : colorName === "secondary"
+          ? secondaryStyles
+          : primaryStyles;
+  const variantStyle = palette[variantName] || primaryStyles.text;
 
-export const Button = React.forwardRef<HTMLElement, ButtonProps>(
-  ({ className, variant, size, iconOnly, ...props }, ref) => (
-    <BaseButton ref={ref} className={cn(buttonVariants({ variant, size, iconOnly }), className)} {...props} />
-  )
-);
-
-Button.displayName = "Button";
+  return (
+    <button
+      ref={ref}
+      type={type}
+      {...extracted.rest}
+      style={mergeStyle({ ...baseStyle, ...variantStyle, ...style, ...extracted.style }, sx)}
+    />
+  );
+});

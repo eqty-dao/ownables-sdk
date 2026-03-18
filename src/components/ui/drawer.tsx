@@ -1,31 +1,42 @@
-import * as React from "react";
-import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
-import { cn } from "@/utils/cn";
+import { Drawer as BaseDrawer } from "@base-ui/react";
+import type { CSSProperties } from "react";
+import type { AnyProps } from "@/utils/uiCompat";
+import { mergeStyle } from "@/utils/uiCompat";
 
-type Anchor = "left" | "right" | "top" | "bottom";
+function drawerPopupStyle(anchor: string | undefined): CSSProperties {
+  const side = anchor || "left";
+  const base: CSSProperties = {
+    position: "fixed",
+    zIndex: 1400,
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 18px 45px rgba(15, 23, 42, 0.22)",
+    overflow: "auto",
+    maxWidth: "100vw",
+    maxHeight: "100vh",
+  };
 
-function popupClass(anchor: Anchor) {
-  if (anchor === "right") return "fixed right-0 top-0 bottom-0 z-[1400] max-h-screen overflow-auto border-l border-slate-200 bg-white shadow-2xl";
-  if (anchor === "top") return "fixed top-0 left-0 right-0 z-[1400] max-h-screen overflow-auto border-b border-slate-200 bg-white shadow-2xl";
-  if (anchor === "bottom") return "fixed bottom-0 left-0 right-0 z-[1400] max-h-screen overflow-auto border-t border-slate-200 bg-white shadow-2xl";
-  return "fixed left-0 top-0 bottom-0 z-[1400] max-h-screen overflow-auto border-r border-slate-200 bg-white shadow-2xl";
+  if (side === "right") return { ...base, top: 0, right: 0, bottom: 0 };
+  if (side === "top") return { ...base, top: 0, left: 0, right: 0 };
+  if (side === "bottom") return { ...base, left: 0, right: 0, bottom: 0 };
+  return { ...base, top: 0, left: 0, bottom: 0 };
 }
 
-export interface DrawerProps {
-  anchor?: Anchor;
-  children: React.ReactNode;
-  className?: string;
-  hideBackdrop?: boolean;
-  onClose?: () => void;
-  open?: boolean;
-}
+const modalBackdropStyle: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.4)",
+  zIndex: 1300,
+};
 
-export function Drawer({ anchor = "left", children, className, hideBackdrop, onClose, open }: DrawerProps) {
+export function Drawer({ open, onClose, children, hideBackdrop, anchor, style, sx, ...rest }: AnyProps) {
   return (
-    <BaseDrawer.Root open={open} onOpenChange={(next) => !next && onClose?.()}>
+    <BaseDrawer.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
       <BaseDrawer.Portal>
-        {!hideBackdrop ? <BaseDrawer.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/40" /> : null}
-        <BaseDrawer.Popup className={cn(popupClass(anchor), className)}>{children}</BaseDrawer.Popup>
+        {!hideBackdrop ? <BaseDrawer.Backdrop style={modalBackdropStyle} /> : null}
+        <BaseDrawer.Popup {...rest} style={mergeStyle({ ...drawerPopupStyle(anchor), ...style }, sx)}>
+          {children}
+        </BaseDrawer.Popup>
       </BaseDrawer.Portal>
     </BaseDrawer.Root>
   );

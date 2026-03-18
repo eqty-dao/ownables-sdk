@@ -1,64 +1,40 @@
-import * as React from "react";
-import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { cn } from "@/utils/cn";
+import { Dialog as BaseDialog } from "@base-ui/react";
+import type { CSSProperties } from "react";
+import type { AnyProps } from "@/utils/uiCompat";
+import { mergeStyle } from "@/utils/uiCompat";
 
-export interface DialogProps {
-  children: React.ReactNode;
-  className?: string;
-  onClose?: () => void;
-  open?: boolean;
-}
+const modalBackdropStyle: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.4)",
+  zIndex: 1300,
+};
 
-export function Dialog({ open, onClose, className, children }: DialogProps) {
+const dialogPopupStyle: CSSProperties = {
+  position: "fixed",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  zIndex: 1400,
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
+  borderRadius: 14,
+  boxShadow: "0 18px 45px rgba(15, 23, 42, 0.22)",
+  padding: 16,
+  maxWidth: "min(640px, calc(100vw - 32px))",
+  maxHeight: "calc(100vh - 32px)",
+  overflow: "auto",
+};
+
+export function Dialog({ open, onClose, children, style, sx, ...rest }: AnyProps) {
   return (
-    <BaseDialog.Root open={open} onOpenChange={(next) => !next && onClose?.()}>
+    <BaseDialog.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/40" />
-        <BaseDialog.Popup
-          className={cn(
-            "fixed left-1/2 top-1/2 z-[1400] max-h-[calc(100vh-32px)] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-xl",
-            className
-          )}
-        >
+        <BaseDialog.Backdrop style={modalBackdropStyle} />
+        <BaseDialog.Popup {...rest} style={mergeStyle({ ...dialogPopupStyle, ...style }, sx)}>
           {children}
         </BaseDialog.Popup>
       </BaseDialog.Portal>
     </BaseDialog.Root>
   );
-}
-
-export function DialogTrigger(props: BaseDialog.Trigger.Props) {
-  return <BaseDialog.Trigger {...props} />;
-}
-
-export function DialogPortal(props: BaseDialog.Portal.Props) {
-  return <BaseDialog.Portal {...props} />;
-}
-
-export function DialogBackdrop({ className, ...props }: BaseDialog.Backdrop.Props) {
-  return <BaseDialog.Backdrop className={cn("fixed inset-0", className)} {...props} />;
-}
-
-export function DialogContent({ className, ...props }: BaseDialog.Popup.Props) {
-  return <div className={cn("pt-2", className)} {...props} />;
-}
-
-export function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-lg font-semibold", className)} {...props} />;
-}
-
-export function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm text-slate-600", className)} {...props} />;
-}
-
-export function DialogClose(props: BaseDialog.Close.Props) {
-  return <BaseDialog.Close {...props} />;
-}
-
-export function DialogActions({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mt-4 flex items-center justify-end gap-2", className)} {...props} />;
-}
-
-export function DialogContentText({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm text-slate-600", className)} {...props} />;
 }
