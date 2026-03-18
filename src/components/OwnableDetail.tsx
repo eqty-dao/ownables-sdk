@@ -22,7 +22,6 @@ import { TypedPackage } from "../interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
 import Overlay, { OverlayBanner } from "./Overlay";
-import If from "./If";
 
 interface OwnableDetailProps {
   chain: EventChain;
@@ -142,7 +141,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             iframeRef={iframeRef}
             onLoad={onLoad}
           />
-          <If condition={!pkg.isDynamic}>
+          {!pkg.isDynamic && (
             <Box className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Box className="px-4 text-center">
                 <Tile
@@ -159,10 +158,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 </Typography>
               </Box>
             </Box>
-          </If>
+          )}
           {children}
 
-          <If condition={isApplying}>
+          {isApplying && (
             <Overlay>
               <div className="flex h-full w-full items-center justify-center overflow-hidden">
                 <div className="w-full text-center">
@@ -170,9 +169,9 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 </div>
               </div>
             </Overlay>
-          </If>
+          )}
 
-          <If condition={isTransferred}>
+          {isTransferred && (
             <Tooltip
               title="You're unable to interact with this Ownable, because it has been transferred to a different account."
               followCursor
@@ -181,10 +180,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 <OverlayBanner>Transferred</OverlayBanner>
               </Overlay>
             </Tooltip>
-          </If>
+          )}
         </Box>
 
-        <If condition={isConsumable && !isTransferred}>
+        {isConsumable && !isTransferred && (
           <Box className="mx-4 mt-4">
             <button
               aria-label="Use Item"
@@ -194,7 +193,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               Use Item
             </button>
           </Box>
-        </If>
+        )}
 
         {(metadata.description || metadata.external_url) && aboutSection}
       </Box>
@@ -244,7 +243,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
             {children}
 
-            <If condition={isApplying}>
+            {isApplying && (
               <Overlay>
                 <div className="flex h-full w-full items-center justify-center overflow-hidden">
                   <div className="w-full text-center">
@@ -252,9 +251,9 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   </div>
                 </div>
               </Overlay>
-            </If>
+            )}
 
-            <If condition={isTransferred}>
+            {isTransferred && (
               <Tooltip
                 title="You're unable to interact with this Ownable, because it has been transferred to a different account."
                 followCursor
@@ -263,10 +262,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   <OverlayBanner>Transferred</OverlayBanner>
                 </Overlay>
               </Tooltip>
-            </If>
+            )}
           </Box>
 
-          <If condition={isConsumable && !isTransferred}>
+          {isConsumable && !isTransferred && (
             <button
               aria-label="Use Item"
               className="mx-auto block w-full max-w-[500px] rounded-xl bg-orange-500 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700"
@@ -274,7 +273,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             >
               Use Item
             </button>
-          </If>
+          )}
         </Box>
 
         {(metadata.description || metadata.external_url) && aboutSection}

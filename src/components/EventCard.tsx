@@ -2,7 +2,6 @@ import { Event } from "eqty-core";
 import { Box, Card, CardContent, Link } from "@/components/ui";
 import AntSwitch from "./AntSwitch";
 import { useState } from "react";
-import If from "./If";
 import ReactJson from "react-json-view";
 import { CircleX as Cancel, CircleCheck as CheckCircle } from "lucide-react";
 import shortId from "../utils/shortId";
@@ -40,11 +39,11 @@ export default function EventCard(props: EventCardProps) {
 
   return (
     <Box className="flex flex-col">
-      <If condition={!props.isFirst}>
+      {!props.isFirst && (
         <div className="hidden w-[calc(45%-58px)] self-end truncate rounded-t-lg border border-slate-200 bg-white px-4 py-2 text-xs md:block">
           <strong>Previous: </strong> {shortId(event.previous?.hex ?? "", 30)}
         </div>
-      </If>
+      )}
       <Card key={event.hash.base58} className="mb-3 rounded-br-lg rounded-tl-lg border border-slate-200 shadow-sm md:mb-0">
         <CardContent className="space-y-2 p-4 text-xs">
           <div>
@@ -57,20 +56,20 @@ export default function EventCard(props: EventCardProps) {
           <div className="truncate">
             <strong>Signature:</strong> {event.signature?.hex ?? ""}
           </div>
-          <If condition={anchorTx !== null}>
+          {anchorTx !== null && (
             <div className="mt-2">
               <strong>Anchor tx: </strong>
               <Link href={anchorTx ? getExplorerUrl(anchorTx, chainId) : "#"} target="_blank" rel="noopener noreferrer">
                 {anchorTx ? shortId(anchorTx, 10) : "Not anchored"}
               </Link>
-              <If condition={verified}>
+              {verified && (
                 <CheckCircle className="ml-1 inline-block h-4 w-4 align-middle text-emerald-600" />
-              </If>
-              <If condition={!verified}>
+              )}
+              {!verified && (
                 <Cancel className="ml-1 inline-block h-4 w-4 align-middle text-red-600" />
-              </If>
+              )}
             </div>
-          </If>
+          )}
           <div className="mt-2">
             <strong>Media type:</strong> {event.mediaType}
           </div>
@@ -84,12 +83,12 @@ export default function EventCard(props: EventCardProps) {
               className="inline-flex align-middle"
             />
             <span className="ml-1">JSON</span>
-            <If condition={dataView === DataView.BASE64}>
+            {dataView === DataView.BASE64 && (
               <pre className="base64 mb-0">{event.data.base64}</pre>
-            </If>
-            <If condition={dataView === DataView.JSON}>
+            )}
+            {dataView === DataView.JSON && (
               <ReactJson style={{ marginTop: 10 }} src={event.parsedData ? event.parsedData : event.data} enableClipboard={false} />
-            </If>
+            )}
           </div>
           <Box className="truncate pt-2 md:hidden">
             <strong>Hash:</strong> {shortId(event.hash.hex, 30)}
@@ -102,4 +101,3 @@ export default function EventCard(props: EventCardProps) {
     </Box>
   );
 }
-

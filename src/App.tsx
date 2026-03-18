@@ -7,7 +7,6 @@ import LoginDialog from "./components/LoginDialog";
 import Loading from "./components/Loading";
 import Sidebar from "./components/Sidebar";
 import { ViewMessagesBar } from "./components/ViewMessagesBar";
-import If from "./components/If";
 import { HAS_EXAMPLES } from "./services/Package.service";
 import * as React from "react";
 import Ownable from "./components/Ownable";
@@ -404,7 +403,7 @@ export default function App() {
         chainId={chainId}
         isConnected={isConnected}
       />
-      <If condition={ownables.length === 0}>
+      {ownables.length === 0 && (
         <Grid
           container
           className="pointer-events-none absolute inset-0 -z-10 place-items-center px-4"
@@ -425,23 +424,25 @@ export default function App() {
                 the documentation
               </Link>{" "}
               to learn how to issue an Ownable
-              <If condition={HAS_EXAMPLES}>
-                <br />
-                or try one of{" "}
-                <Link
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); setShowPackages(true); }}
-                  className="pointer-events-auto text-indigo-600 underline"
-                >
-                  the examples
-                </Link>
-              </If>
+              {HAS_EXAMPLES && (
+                <>
+                  <br />
+                  or try one of{" "}
+                  <Link
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setShowPackages(true); }}
+                    className="pointer-events-auto text-indigo-600 underline"
+                  >
+                    the examples
+                  </Link>
+                </>
+              )}
               .
               <br />
             </Typography>
           </Grid>
         </Grid>
-      </If>
+      )}
 
       <Box
         className="mx-auto mt-4 flex max-w-[1320px] gap-4 px-3 pb-6 md:px-4"
@@ -541,19 +542,11 @@ export default function App() {
                   }
                   onError={showError}
                 >
-                  <If
-                    condition={
-                      consuming?.chain.id === selectedOwnable.chain.id
-                    }
-                  >
+                  {consuming?.chain.id === selectedOwnable.chain.id && (
                     <Overlay zIndex={1000} />
-                  </If>
-                  <If
-                    condition={
-                      consuming !== null &&
-                      consuming.chain.id !== selectedOwnable.chain.id
-                    }
-                  >
+                  )}
+                  {consuming !== null &&
+                    consuming.chain.id !== selectedOwnable.chain.id && (
                     <Overlay
                       zIndex={1000}
                       disabled={canConsume({
@@ -564,7 +557,7 @@ export default function App() {
                         consume(selectedOwnable.chain, consuming!.chain)
                       }
                     />
-                  </If>
+                  )}
                 </Ownable>
               )}
             </Box>

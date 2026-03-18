@@ -14,7 +14,6 @@ import EventCard from "./EventCard";
 import shortId from "../utils/shortId";
 import Tooltip from "./Tooltip";
 import backgroundImage from "../assets/background.svg";
-import If from "./If";
 import useInterval from "../utils/useInterval";
 import { useService } from "../hooks/useService"
 
@@ -72,20 +71,20 @@ export default function OwnableInfo(props: OwnableInfoProps) {
           <Tooltip title={chain.id}>
             <Tag value={shortId(chain.id)} icon={<Fingerprint className="h-3.5 w-3.5" />} color="info" />
           </Tooltip>
-          <If condition={verified}>
+          {verified && (
             <Tag value="Anchors verified" color="success" />
-          </If>
+          )}
         </DialogTitle>
         <DialogTitle className="pb-1 pt-1 text-xl font-semibold">{metadata?.name}</DialogTitle>
         <DialogTitle className="pb-2 pt-0 text-sm text-slate-500">
           {metadata?.description}
         </DialogTitle>
         <DialogContent>
-          <If condition={chain.events.length === 0}>
+          {chain.events.length === 0 && (
             <Typography className="text-sm text-slate-500">
               This is a static ownable. It does not contain any events.
             </Typography>
-          </If>
+          )}
           {chain.events.map((event, i) => (
             <EventCard
               key={event.timestamp}
