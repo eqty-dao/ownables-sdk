@@ -1,5 +1,5 @@
 import { Drawer } from "@/components/ui";
-import {ReactNode} from "react";
+import { ReactNode } from "react";
 
 interface HelpDrawerProps {
   open: boolean;
@@ -7,15 +7,14 @@ interface HelpDrawerProps {
 }
 
 export default function HelpDrawer(props: HelpDrawerProps) {
-  return <Drawer
-    anchor="bottom"
-    open={props.open}
-    hideBackdrop
-    variant="persistent"
-    PaperProps={{
-      sx: theme => ({p: 2, textAlign: 'center', backgroundColor: theme.palette.primary.dark, color: theme.palette.primary.contrastText}),
-    }}
-  >
-    { props.children }
-  </Drawer>
+  return (
+    <Drawer
+      anchor="bottom"
+      open={props.open}
+      hideBackdrop
+      className="bg-slate-900 p-2 text-center text-white"
+    >
+      {props.children}
+    </Drawer>
+  );
 }
