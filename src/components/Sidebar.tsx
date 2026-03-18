@@ -3,7 +3,7 @@ import {
   Button,
   IconButton,
   Link,
-  Switch, Typography,
+  Switch,
 } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { ArrowLeft as ArrowBack, X as CloseIcon } from "lucide-react";
@@ -103,9 +103,9 @@ export default function Sidebar(props: SidebarProps) {
           <Box className="mt-2">
             <WalletConnectControls>
               <Box className="mb-4 mt-1">
-                <Typography className="text-sm font-semibold">Balance</Typography>
-                <Typography className="text-sm">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</Typography>
-                { eqtyBalance !== undefined && <Typography className="text-sm">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</Typography> }
+                <p className="text-sm font-semibold">Balance</p>
+                <p className="text-sm">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</p>
+                { eqtyBalance !== undefined && <p className="text-sm">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</p> }
               </Box>
             </WalletConnectControls>
           </Box>
@@ -113,12 +113,12 @@ export default function Sidebar(props: SidebarProps) {
           <Box className="mt-4">
             <Box className="mb-2 flex items-center justify-between gap-2">
               <Box>
-                <Typography className="font-semibold">
+                <p className="font-semibold">
                   Anchor events
-                </Typography>
-                <Typography className="text-xs text-slate-500">
+                </p>
+                <p className="text-xs text-slate-500">
                   Enable event anchoring
-                </Typography>
+                </p>
               </Box>
               <Switch checked={anchoring} onChange={(e) => setAnchoring(e.target.checked)} aria-label="Anchor events" />
             </Box>

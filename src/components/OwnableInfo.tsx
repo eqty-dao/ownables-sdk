@@ -3,7 +3,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Typography,
 } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint, Info as InfoOutlined } from "lucide-react";
@@ -81,9 +80,9 @@ export default function OwnableInfo(props: OwnableInfoProps) {
         </DialogTitle>
         <DialogContent>
           {chain.events.length === 0 && (
-            <Typography className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500">
               This is a static ownable. It does not contain any events.
-            </Typography>
+            </p>
           )}
           {chain.events.map((event, i) => (
             <EventCard

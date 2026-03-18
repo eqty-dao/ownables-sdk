@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Box,
-  Typography,
   IconButton,
   List,
   ListItem,
@@ -190,20 +189,20 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Box style={{ width: 350, p: 2 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography>
+          <span>
             Messages
-          </Typography>
+          </span>
           <IconButton onClick={onClose}>
             <ArrowBack />
           </IconButton>
         </Box>
 
         <Box className="mt-2">
-          <Typography>
+          <span>
             {messagesCount > 0
               ? `You have ${messagesCount} unread messages.`
               : "No new messages"}
-          </Typography>
+          </span>
         </Box>
 
         {loading ? (
@@ -256,7 +255,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     </Box>
                     <ListItemText
                       primary={
-                        <Typography
+                        <span
                          
                           style={{ fontSize: "0.6rem", fontWeight: "bold" }}
                         >
@@ -264,22 +263,22 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                           {msg?.sender === builderAddress
                             ? "Obuilder"
                             : msg?.sender || "Unknown"}
-                        </Typography>
+                        </span>
                       }
                       secondary={
-                        <Typography
+                        <span
                          
                           style={{ fontSize: "0.6rem", color: "text.secondary" }}
                         >
                           Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
-                        </Typography>
+                        </span>
                       }
                     />
                   </Box>
-                  <Typography className="mt-0.5 text-[0.55rem]">
+                  <span className="mt-0.5 text-[0.55rem]">
                     <span style={{ fontWeight: 800 }}> Date:</span>{" "}
                     {new Date(msg?.timestamp || 0).toLocaleString()}
-                  </Typography>
+                  </span>
                   <Box className="mt-1 flex items-center">
                     <Button
                      
@@ -361,7 +360,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     )}
 
                     <Box>
-                      <Typography
+                      <span
                        
                         style={{ fontSize: "0.7rem", fontWeight: "bold" }}
                       >
@@ -370,8 +369,8 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                             ? msg.meta.title.slice(0, 16) + "..."
                             : msg.meta.title
                           : "Unknown"}
-                      </Typography>
-                      <Typography
+                      </span>
+                      <span
                        
                         style={{ fontSize: "0.6rem", fontWeight: "bold" }}
                       >
@@ -379,20 +378,20 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                         {msg?.sender === builderAddress
                           ? "Obuilder"
                           : msg?.sender || "Unknown"}
-                      </Typography>
-                      <Typography
+                      </span>
+                      <span
                        
                         style={{ fontSize: "0.6rem", color: "text.secondary" }}
                       >
                         Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
-                      </Typography>
+                      </span>
                     </Box>
                   </Box>
 
-                  <Typography className="mt-0.5 text-[0.55rem]">
+                  <span className="mt-0.5 text-[0.55rem]">
                     <span style={{ fontWeight: 800 }}> Date:</span>{" "}
                     {new Date(msg?.timestamp || 0).toLocaleString()}
-                  </Typography>
+                  </span>
 
                   <Box className="mt-1 flex items-center">
                     <Button
@@ -432,9 +431,9 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
             >
               Prev
             </Button>
-            <Typography>
+            <span>
               Page {currentPage} of {Math.ceil(totalCount / itemsPerPage)}
-            </Typography>
+            </span>
             <Button
              
               size="small"

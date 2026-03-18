@@ -7,7 +7,6 @@ import {
   Button,
   TextField,
   Box,
-  Typography,
   CircularProgress,
   Alert,
 } from "@/components/ui";
@@ -405,9 +404,9 @@ export default function CreateOwnableDialog({
           />
 
           <Box>
-            <Typography className="mb-1 text-sm">
+            <p className="mb-1 text-sm">
               Image * (GIF, WebP, PNG, JPEG)
-            </Typography>
+            </p>
             <input
               ref={fileInputRef}
               type="file"
@@ -436,9 +435,9 @@ export default function CreateOwnableDialog({
               Template cost: {formatEther(parseEther(templateCost.eth))} ETH
               { templateCost.usd ? ` ($${templateCost.usd} USD)` : '' }
               {address && (
-                <Typography className="mt-0.5 block text-xs">
+                <p className="mt-0.5 block text-xs">
                   Payment will be sent to the builder service wallet
-                </Typography>
+                </p>
               )}
             </Alert>
           )}

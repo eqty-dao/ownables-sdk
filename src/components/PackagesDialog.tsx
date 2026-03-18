@@ -1,5 +1,5 @@
 import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
-import { Box, Button, IconButton, Skeleton, Typography } from "@/components/ui";
+import { Box, Button, IconButton, Skeleton } from "@/components/ui";
 import { Dialog } from "@/components/ui";
 import { ChevronRight, FolderUp, Sparkles, X as CloseIcon } from "lucide-react";
 import { useService } from "../hooks/useService";
@@ -52,12 +52,12 @@ export function PackagesDialog(props: PackagesDialogProps) {
           <CloseIcon size={18} />
         </IconButton>
         <Box>
-          <Typography className="text-2xl font-bold leading-tight">
+          <h2 className="text-2xl font-bold leading-tight">
             Issue an Ownable
-          </Typography>
-          <Typography className="mt-0.5 text-sm text-slate-500">
+          </h2>
+          <p className="mt-0.5 text-sm text-slate-500">
             Select a package or create a new one
-          </Typography>
+          </p>
         </Box>
       </Box>
 
@@ -77,9 +77,9 @@ export function PackagesDialog(props: PackagesDialogProps) {
         </button>
       </div>
 
-      <Typography className="mb-1 text-[13px] uppercase tracking-[0.08em] text-slate-500">
+      <p className="mb-1 text-[13px] uppercase tracking-[0.08em] text-slate-500">
         Available Packages
-      </Typography>
+      </p>
 
       <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
         {isLoading ? (

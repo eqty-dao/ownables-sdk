@@ -6,7 +6,6 @@ import {
   Tag,
   Tile,
   Tooltip,
-  Typography,
 } from "@/components/ui";
 import {
   ExternalLink as OpenInNew,
@@ -67,15 +66,15 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
   const aboutSection = (
     <Box className="px-4 pb-8 md:px-2 md:pb-0">
-      <Typography
+      <h2
         className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
       >
         About
-      </Typography>
+      </h2>
       {metadata.description && (
-        <Typography className="mb-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+        <p className="mb-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
           {metadata.description}
-        </Typography>
+        </p>
       )}
       <Box className="mb-3 flex items-center gap-2">
         <Tag icon={statusTag.icon} value={statusTag.value} variant={statusTag.variant} />
@@ -103,11 +102,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       <Box className="block md:hidden">
         <Box className="flex items-start gap-3 p-4">
           <Box className="min-w-0 flex-1">
-            <Typography className="mb-0.5 text-lg font-bold dark:text-white">
+            <h2 className="mb-0.5 text-lg font-bold dark:text-white">
               {metadata.name}
-            </Typography>
+            </h2>
             {issuer && (
-              <Typography className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 <a
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
@@ -116,7 +115,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 >
                   {shortIssuer}
                 </a>
-              </Typography>
+              </p>
             )}
           </Box>
           <OwnableActions
@@ -150,12 +149,12 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   className="mx-auto mb-4 h-20 w-20 rounded-2xl border-none text-6xl"
                   icon={<ImageNotSupported aria-label="No image" className="mx-auto text-slate-500 dark:text-gray-400" />}
                 />
-                <Typography className="mb-2 text-xl font-semibold text-slate-900 dark:text-white">
+                <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-white">
                   {metadata.name}
-                </Typography>
-                <Typography className="text-sm text-slate-500 dark:text-gray-400">
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-gray-400">
                   Interactive widget content would display here
-                </Typography>
+                </p>
               </Box>
             </Box>
           )}
@@ -202,11 +201,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         <Box className="mb-6 rounded-2xl border border-slate-200 bg-white p-8 dark:border-[#2a2a2a] dark:bg-[#1a1a1a]">
           <Box className="mx-auto mb-6 flex max-w-[500px] items-start gap-4">
             <Box className="min-w-0 flex-1">
-              <Typography className="mb-1 text-xl font-bold dark:text-white">
+              <h2 className="mb-1 text-xl font-bold dark:text-white">
                 {metadata.name}
-              </Typography>
+              </h2>
               {issuer && (
-                <Typography className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   <a
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
@@ -215,7 +214,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 >
                   {shortIssuer}
                 </a>
-                </Typography>
+                </p>
               )}
             </Box>
             <OwnableActions

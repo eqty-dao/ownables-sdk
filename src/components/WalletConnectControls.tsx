@@ -1,4 +1,4 @@
-import { Button, Typography } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { Info as InfoOutlineIcon, RefreshCcw as CachedIcon } from "lucide-react";
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
@@ -28,11 +28,11 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
               <Button className="w-full bg-slate-900 text-white hover:bg-slate-800" onClick={openConnectModal}>
                 Connect to wallet
               </Button>
-              <Typography
+              <p
                 className="mt-1 block text-center text-xs text-slate-500"
               >
                 Ensure to connect on <strong>Base Sepolia</strong> testnet
-              </Typography>
+              </p>
             </>
           );
         }
@@ -47,12 +47,12 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         return (
           <>
-            <Typography className="cursor-pointer text-xs text-slate-500" onClick={openChainModal}>
+            <p className="cursor-pointer text-xs text-slate-500" onClick={openChainModal}>
               {chain?.name || 'Network'} address <CachedIcon className="inline h-3 w-3" />
-            </Typography>
-            <Typography className="cursor-pointer text-sm font-semibold" onClick={openAccountModal}>
+            </p>
+            <p className="cursor-pointer text-sm font-semibold" onClick={openAccountModal}>
               {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
-            </Typography>
+            </p>
             {children}
             <Button className="w-full bg-slate-900 text-white hover:bg-slate-800" onClick={() => disconnect()} disabled={isLoading}>
               {isLoading ? 'Disconnecting…' : 'Disconnect'}

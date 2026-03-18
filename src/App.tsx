@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertColor, Box, Button, CircularProgress, Grid, IconButton, Link, Typography } from "@/components/ui";
+import { AlertColor, Box, Button, CircularProgress, Grid, IconButton, Link } from "@/components/ui";
 import { ArrowLeft as ArrowBack } from "lucide-react";
 import PackagesPanel from "./components/PackagesPanel";
 import { TypedPackage } from "./interfaces/TypedPackage";
@@ -409,10 +409,10 @@ export default function App() {
           className="pointer-events-none absolute inset-0 -z-10 place-items-center px-4"
         >
           <Grid className="max-w-2xl text-center">
-            <Typography className="text-4xl font-semibold text-slate-900 sm:text-5xl">
+            <h1 className="text-4xl font-semibold text-slate-900 sm:text-5xl">
               Let's get started!
-            </Typography>
-            <Typography
+            </h1>
+            <p
               className="mt-4 text-base text-slate-600 sm:text-2xl"
             >
               Read{" "}
@@ -439,7 +439,7 @@ export default function App() {
               )}
               .
               <br />
-            </Typography>
+            </p>
           </Grid>
         </Grid>
       )}
@@ -591,14 +591,14 @@ export default function App() {
       <LoginDialog key={address} open={showLogin} />
 
       <HelpDrawer open={consuming !== null}>
-        <Typography className="font-bold">
+        <p className="font-bold">
           Select which Ownable should consume this{" "}
           <em>
             {consuming && packageService
               ? packageService.info(consuming.package).title
               : ""}
           </em>
-        </Typography>
+        </p>
         <Box>
           <Button className="text-white" onClick={() => setConsuming(null)}>
             Cancel

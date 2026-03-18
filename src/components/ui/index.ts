@@ -4,7 +4,6 @@ export { createTheme } from "./create-theme";
 export { Box, type BoxProps } from "./box";
 export { Stack } from "./stack";
 export { Grid } from "./grid";
-export { Typography } from "./typography";
 export { Link } from "./link";
 
 export { Button } from "./button";

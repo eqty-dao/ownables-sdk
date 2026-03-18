@@ -9,8 +9,7 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText,
-  Typography
+  ListItemText
 } from '@/components/ui';
 import { CircleCheck as CheckCircleOutlineIcon, AlertCircle as ErrorOutlineIcon, Circle as RadioButtonUncheckedIcon } from "lucide-react";
 import { CircularProgress } from "@/components/ui";
@@ -146,7 +145,7 @@ const ProgressModal: React.FC<{ title: string; steps: ProgressStep[]; open: bool
               <ListItemText
                 primary={<span style={{ fontWeight: step.status === 'active' ? 600 : 400 }}>{step.label}</span>}
                 secondary={step.status === 'error' && step.errorMessage ? (
-                  <Typography className="text-red-600">{step.errorMessage}</Typography>
+                  <span className="text-red-600">{step.errorMessage}</span>
                 ) : undefined}
               />
             </ListItem>
