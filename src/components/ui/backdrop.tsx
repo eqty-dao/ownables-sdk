@@ -1,11 +1,6 @@
-import type { AnyProps } from "@/utils/uiCompat";
-import { mergeStyle } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
-export function Backdrop({ open, children, sx, style, ...rest }: AnyProps) {
+export function Backdrop({ open, children, ...rest }: AnyProps & { open?: boolean }) {
   if (!open) return null;
-  return (
-    <div {...rest} style={mergeStyle(style, sx)}>
-      {children}
-    </div>
-  );
+  return <div {...rest}>{children}</div>;
 }

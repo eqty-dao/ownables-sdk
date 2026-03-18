@@ -1,7 +1,7 @@
-import type { AnyProps } from "@/utils/uiCompat";
-import { asElement, mergeStyle } from "@/utils/uiCompat";
+import type React from "react";
 
-export function Skeleton({ component, sx, style, ...rest }: AnyProps) {
-  const Component = asElement(component, "div");
-  return <Component aria-hidden="true" {...rest} style={mergeStyle(style, sx)} />;
+type SkeletonProps = React.HTMLAttributes<HTMLDivElement>;
+
+export function Skeleton(props: SkeletonProps) {
+  return <div aria-hidden="true" {...props} />;
 }

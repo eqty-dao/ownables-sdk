@@ -1,4 +1,4 @@
-import type { AnyProps } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
 export function Menu({ open, children, onClose, ...rest }: AnyProps) {
   if (!open) return null;

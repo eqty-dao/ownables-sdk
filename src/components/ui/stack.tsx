@@ -1,9 +1,10 @@
 import { forwardRef } from "react";
-import type { AnyProps } from "@/utils/uiCompat";
-import { asElement, mergeStyle, pickStyleProps } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
-export const Stack = forwardRef<any, AnyProps>(function Stack({ component, sx, style, ...rest }, ref) {
-  const extracted = pickStyleProps(rest);
-  const Component = asElement(component, "div");
-  return <Component ref={ref} {...extracted.rest} style={mergeStyle({ ...style, ...extracted.style }, sx)} />;
+export const Stack = forwardRef<HTMLDivElement, AnyProps>(function Stack({ children, ...rest }, ref) {
+  return (
+    <div ref={ref} {...rest}>
+      {children}
+    </div>
+  );
 });

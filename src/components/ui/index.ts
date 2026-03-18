@@ -1,6 +1,3 @@
-export { ThemeProvider } from "./theme-provider";
-export { createTheme } from "./create-theme";
-
 export { Box, type BoxProps } from "./box";
 export { Stack } from "./stack";
 export { Grid } from "./grid";

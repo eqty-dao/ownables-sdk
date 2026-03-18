@@ -1,6 +1,7 @@
-import type { AnyProps } from "@/utils/uiCompat";
+import type React from "react";
+import type { AnyProps } from "./types";
 
-export function Badge({ children, badgeContent, variant, ...rest }: AnyProps) {
+export function Badge({ children, badgeContent, variant, ...rest }: AnyProps & { badgeContent?: React.ReactNode; variant?: string }) {
   return (
     <span {...rest}>
       {children}

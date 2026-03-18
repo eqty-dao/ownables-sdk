@@ -1,7 +1,7 @@
-import { forwardRef } from "react";
-import type { AnyProps } from "@/utils/uiCompat";
-import { mergeStyle } from "@/utils/uiCompat";
+import { forwardRef, type AnchorHTMLAttributes } from "react";
 
-export const Link = forwardRef<any, AnyProps>(function Link({ sx, style, ...rest }, ref) {
-  return <a ref={ref} {...rest} style={mergeStyle(style, sx)} />;
+type LinkProps = AnchorHTMLAttributes<HTMLAnchorElement>;
+
+export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(props, ref) {
+  return <a ref={ref} {...props} />;
 });

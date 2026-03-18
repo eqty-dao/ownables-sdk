@@ -1,22 +1,53 @@
-import { forwardRef } from "react";
-import type { AnyProps } from "@/utils/uiCompat";
-import { mergeStyle } from "@/utils/uiCompat";
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type Ref,
+  type TextareaHTMLAttributes,
+} from "react";
+import { cn } from "@/utils/cn";
 
-export type TextFieldProps = AnyProps;
+type SharedProps = {
+  className?: string;
+  error?: boolean;
+  helperText?: string;
+  label?: string;
+  multiline?: boolean;
+  rows?: number;
+};
 
-export const TextField = forwardRef<any, AnyProps>(function TextField(
-  { label, helperText, error, InputProps, multiline, rows, sx, style, ...rest },
+type InputTextFieldProps = SharedProps & InputHTMLAttributes<HTMLInputElement>;
+type TextareaTextFieldProps = SharedProps & TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+export type TextFieldProps = InputTextFieldProps | TextareaTextFieldProps;
+
+export const TextField = forwardRef<HTMLInputElement | HTMLTextAreaElement, TextFieldProps>(function TextField(
+  { className, label, helperText, error, multiline, rows = 3, ...rest },
   ref
 ) {
-  const InputTag: any = multiline ? "textarea" : "input";
   return (
-    <label style={mergeStyle(style, sx)}>
-      {label ? <span>{label}</span> : null}
-      <span>
-        <InputTag ref={ref} rows={rows} {...rest} />
-        {InputProps?.endAdornment}
-      </span>
-      {helperText ? <small data-error={!!error}>{helperText}</small> : null}
+    <label className={cn("flex w-full flex-col gap-1", className)}>
+      {label ? <span className="text-sm font-medium">{label}</span> : null}
+      {multiline ? (
+        <textarea
+          ref={ref as Ref<HTMLTextAreaElement>}
+          rows={rows}
+          className={cn(
+            "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-500",
+            error ? "border-red-500" : ""
+          )}
+          {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
+        />
+      ) : (
+        <input
+          ref={ref as Ref<HTMLInputElement>}
+          className={cn(
+            "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-500",
+            error ? "border-red-500" : ""
+          )}
+          {...(rest as InputHTMLAttributes<HTMLInputElement>)}
+        />
+      )}
+      {helperText ? <small className={cn("text-xs text-slate-500", error ? "text-red-600" : "")}>{helperText}</small> : null}
     </label>
   );
 });

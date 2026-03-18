@@ -1,4 +1,4 @@
-import type { AnyProps } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
 export function AlertTitle({ children, ...rest }: AnyProps) {
   return <strong {...rest}>{children}</strong>;

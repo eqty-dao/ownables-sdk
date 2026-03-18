@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertColor, Box, Button, CircularProgress, Grid, IconButton, Link } from "@/components/ui";
+import { AlertColor, Box, Button, CircularProgress, IconButton, Link } from "@/components/ui";
 import { ArrowLeft as ArrowBack } from "lucide-react";
 import PackagesPanel from "./components/PackagesPanel";
 import { TypedPackage } from "./interfaces/TypedPackage";
@@ -404,11 +404,8 @@ export default function App() {
         isConnected={isConnected}
       />
       {ownables.length === 0 && (
-        <Grid
-          container
-          className="pointer-events-none absolute inset-0 -z-10 place-items-center px-4"
-        >
-          <Grid className="max-w-2xl text-center">
+        <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-4">
+          <div className="max-w-2xl text-center">
             <h1 className="text-4xl font-semibold text-slate-900 sm:text-5xl">
               Let's get started!
             </h1>
@@ -440,8 +437,8 @@ export default function App() {
               .
               <br />
             </p>
-          </Grid>
-        </Grid>
+          </div>
+        </div>
       )}
 
       <Box

@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { Switch as BaseSwitch } from "@base-ui/react";
-import type { AnyProps } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
 export const Switch = forwardRef<any, AnyProps>(function Switch({ checked, onChange, style, ...rest }, ref) {
   return (

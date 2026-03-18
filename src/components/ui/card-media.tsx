@@ -1,14 +1,12 @@
-import { forwardRef } from "react";
-import type { AnyProps } from "@/utils/uiCompat";
-import { asElement, mergeStyle } from "@/utils/uiCompat";
+import { forwardRef, type ImgHTMLAttributes } from "react";
 
-export const CardMedia = forwardRef<any, AnyProps>(function CardMedia(
-  { component, image, src, sx, style, ...rest },
+type CardMediaProps = ImgHTMLAttributes<HTMLImageElement> & {
+  image?: string;
+};
+
+export const CardMedia = forwardRef<HTMLImageElement, CardMediaProps>(function CardMedia(
+  { image, src, ...rest },
   ref
 ) {
-  const Component = asElement(component, "img");
-  if (Component === "img") {
-    return <img ref={ref} src={src || image} {...rest} style={mergeStyle(style, sx)} />;
-  }
-  return <Component ref={ref} {...rest} style={mergeStyle(style, sx)} />;
+  return <img ref={ref} src={src || image} {...rest} />;
 });

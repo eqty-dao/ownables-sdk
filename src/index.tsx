@@ -9,7 +9,6 @@ import "./index.css";
 
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
-import { createTheme, ThemeProvider } from "@/components/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "@rainbow-me/rainbowkit/styles.css";
@@ -18,18 +17,6 @@ import { WagmiProvider, http } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
 import { ServicesProvider } from "./contexts/Services.context";
 import { ProgressProvider } from "./contexts/Progress.context";
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#1caaff",
-      contrastText: "#ffffff",
-    },
-    secondary: {
-      main: "#666666",
-    },
-  },
-});
 
 const chains = [baseSepolia, base] as const;
 const queryClient = new QueryClient();
@@ -63,11 +50,9 @@ root.render(
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <ServicesProvider>
-            <ThemeProvider theme={theme}>
-              <ProgressProvider>
-                <App />
-              </ProgressProvider>
-            </ThemeProvider>
+            <ProgressProvider>
+              <App />
+            </ProgressProvider>
           </ServicesProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

@@ -1,11 +1,10 @@
-import type { AnyProps } from "@/utils/uiCompat";
-import { mergeStyle } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
 export type AlertColor = "success" | "info" | "warning" | "error" | "primary" | "secondary";
 
-export function Alert({ children, severity, sx, style, ...rest }: AnyProps) {
+export function Alert({ children, severity, ...rest }: AnyProps & { severity?: AlertColor }) {
   return (
-    <div role="alert" data-severity={severity} {...rest} style={mergeStyle(style, sx)}>
+    <div role="alert" data-severity={severity} {...rest}>
       {children}
     </div>
   );

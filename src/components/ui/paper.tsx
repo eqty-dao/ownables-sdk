@@ -1,8 +1,10 @@
 import { forwardRef } from "react";
-import type { AnyProps } from "@/utils/uiCompat";
-import { asElement, mergeStyle } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
-export const Paper = forwardRef<any, AnyProps>(function Paper({ component, sx, style, ...rest }, ref) {
-  const Component = asElement(component, "div");
-  return <Component ref={ref} {...rest} style={mergeStyle(style, sx)} />;
+export const Paper = forwardRef<HTMLDivElement, AnyProps>(function Paper({ children, ...rest }, ref) {
+  return (
+    <div ref={ref} {...rest}>
+      {children}
+    </div>
+  );
 });

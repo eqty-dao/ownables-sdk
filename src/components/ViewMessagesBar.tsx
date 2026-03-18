@@ -187,8 +187,8 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box style={{ width: 350, p: 2 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
+      <Box style={{ width: 350, padding: 8 }}>
+        <Box className="flex items-center justify-between">
           <span>
             Messages
           </span>
@@ -221,9 +221,9 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "flex-start",
-                    mb: 2,
+                    marginBottom: 8,
                     borderBottom: "1px solid #ddd",
-                    pb: 2,
+                    paddingBottom: 8,
                   }}
                 >
                   <Box
@@ -231,7 +231,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                       display: "flex",
                       alignItems: "center",
                       width: "100%",
-                      gap: 1,
+                      gap: 8,
                     }}
                   >
                     {" "}
@@ -306,9 +306,9 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "flex-start",
-                    mb: 2,
+                    marginBottom: 8,
                     borderBottom: "1px solid #ddd",
-                    pb: 2,
+                    paddingBottom: 8,
                   }}
                 >
                   <Box
@@ -316,7 +316,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                       display: "flex",
                       alignItems: "center",
                       width: "100%",
-                      gap: 1,
+                      gap: 8,
                     }}
                   >
                     {(msg?.meta?.thumbnail && (
@@ -417,12 +417,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
           </List>
         )}
         {messages.length > 0 && (
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mt={2}
-          >
+          <Box className="mt-2 flex items-center justify-between">
             <Button
              
               size="small"

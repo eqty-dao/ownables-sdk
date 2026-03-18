@@ -1,4 +1,4 @@
-import type { AnyProps } from "@/utils/uiCompat";
+import type { AnyProps } from "./types";
 
 export function DialogTitle({ children, ...rest }: AnyProps) {
   return <h2 {...rest}>{children}</h2>;

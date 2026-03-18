@@ -4,7 +4,6 @@ import {
   CardActions,
   CardContent,
   CardMedia,
-  Grid,
   Box,
 } from "@/components/ui";
 import bgImage from "../assets/login-bg.jpg";
@@ -31,11 +30,9 @@ export default function LoginDialog(props: LoginDialogProps) {
         </CardContent>
         <CardActions style={{ paddingBottom: 14 }}>
           <Box className="grow">
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <WalletConnectControls />
-              </Grid>
-            </Grid>
+            <div className="flex flex-col gap-2">
+              <WalletConnectControls />
+            </div>
           </Box>
         </CardActions>
       </Card>
