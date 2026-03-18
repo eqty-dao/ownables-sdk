@@ -5,15 +5,11 @@ export { Link } from "./link";
 
 export { Button } from "./button";
 export { IconButton } from "./icon-button";
-export { ButtonBase } from "./button-base";
 
 export { Paper } from "./paper";
-export { Card } from "./card";
-export { CardContent } from "./card-content";
-export { CardActions } from "./card-actions";
+export { Card, CardContent, CardActions, CardMedia } from "./card";
 export { AppBar } from "./app-bar";
 export { Toolbar } from "./toolbar";
-export { CardMedia } from "./card-media";
 
 export { Badge } from "./badge";
 export { Chip } from "./chip";
@@ -29,22 +25,13 @@ export { Switch } from "./switch";
 export { InputAdornment } from "./input-adornment";
 export { TextField, type TextFieldProps } from "./text-field";
 
-export { List } from "./list";
-export { ListItem } from "./list-item";
-export { ListItemButton } from "./list-item-button";
-export { ListItemText } from "./list-item-text";
-export { ListItemIcon } from "./list-item-icon";
+export { List, ListItem, ListItemButton, ListItemText, ListItemIcon } from "./list";
 export { Skeleton } from "./skeleton";
 
 export { Tooltip, type TooltipProps } from "./tooltip";
-export { Menu } from "./menu";
-export { MenuItem } from "./menu-item";
+export { Menu, MenuItem } from "./menu";
 
-export { Dialog } from "./dialog";
-export { DialogTitle } from "./dialog-title";
-export { DialogContent } from "./dialog-content";
-export { DialogContentText } from "./dialog-content-text";
-export { DialogActions } from "./dialog-actions";
+export { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "./dialog";
 
 export { Drawer } from "./drawer";
 export { Tag, type TagProps } from "./tag";

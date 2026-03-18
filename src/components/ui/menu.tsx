@@ -9,3 +9,11 @@ export function Menu({ open, children, onClose, ...rest }: AnyProps) {
     </div>
   );
 }
+
+export function MenuItem({ children, onClick, ...rest }: AnyProps) {
+  return (
+    <button type="button" {...rest} onClick={onClick}>
+      {children}
+    </button>
+  );
+}

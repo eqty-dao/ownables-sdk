@@ -1,6 +1,7 @@
 import { ReactNode, RefObject } from "react";
 import {
   Box,
+  Button,
   CircularProgress,
   Link,
   Tag,
@@ -113,10 +114,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <span>Visit external link</span>
         </Link>
       )}
-      <button className={cn(aboutLink())}>
+      <Button className={cn(aboutLink())}>
         <Info className="h-4 w-4" />
         <span>More information</span>
-      </button>
+      </Button>
     </Box>
   );
 
@@ -130,14 +131,14 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             </h2>
             {issuer && (
               <p className="text-meta">
-                <a
+                <Link
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(issuerLink())}
                 >
                   {shortIssuer}
-                </a>
+                </Link>
               </p>
             )}
           </Box>
@@ -204,13 +205,13 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
         {isConsumable && !isTransferred && (
           <Box className="mx-4 mt-4">
-            <button
+            <Button
               aria-label="Use Item"
               className={cn(consumeButton({ size: "mobile" }))}
               onClick={onConsume}
             >
               Use Item
-            </button>
+            </Button>
           </Box>
         )}
 
@@ -226,14 +227,14 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               </h2>
               {issuer && (
                 <p className="text-meta">
-                  <a
-                  href={`https://basescan.org/address/${issuer}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(issuerLink())}
-                >
-                  {shortIssuer}
-                </a>
+                  <Link
+                    href={`https://basescan.org/address/${issuer}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(issuerLink())}
+                  >
+                    {shortIssuer}
+                  </Link>
                 </p>
               )}
             </Box>
@@ -282,13 +283,13 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           </Box>
 
           {isConsumable && !isTransferred && (
-            <button
+            <Button
               aria-label="Use Item"
               className={cn(consumeButton({ size: "desktop" }))}
               onClick={onConsume}
             >
               Use Item
-            </button>
+            </Button>
           )}
         </Box>
 

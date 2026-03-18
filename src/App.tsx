@@ -472,7 +472,7 @@ export default function App() {
           </Box>
 
           {/* Issue an Ownable — dashed border button */}
-          <button
+          <Button
             type="button"
             onClick={() => {
               setShowPackages(true);
@@ -481,7 +481,7 @@ export default function App() {
             className={cn(issueOwnableButton())}
           >
             + Issue an Ownable
-          </button>
+          </Button>
         </Box>
 
         {/* Right detail panel */}

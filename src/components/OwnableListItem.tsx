@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Box, Tag, Tile } from "@/components/ui";
+import { Box, Button, Tag, Tile } from "@/components/ui";
 import { Zap as BoltOutlined, ImageOff as ImageNotSupported } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
@@ -60,7 +60,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
   }, [loadThumbnail]);
 
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       className={cn(itemCard({ selected: isSelected }))}
@@ -88,6 +88,6 @@ export default function OwnableListItem(props: OwnableListItemProps) {
           )}
         </Box>
       </div>
-    </button>
+    </Button>
   );
 }

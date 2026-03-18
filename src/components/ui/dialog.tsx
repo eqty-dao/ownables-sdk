@@ -1,6 +1,7 @@
 import { Dialog as BaseDialog } from "@base-ui/react";
 import type React from "react";
 import { cn } from "@/utils/cn";
+import type { AnyProps } from "./types";
 
 export interface DialogProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onClose"> {
   open?: boolean;
@@ -24,4 +25,20 @@ export function Dialog({ open, onClose, className, children, ...rest }: DialogPr
       </BaseDialog.Portal>
     </BaseDialog.Root>
   );
+}
+
+export function DialogTitle({ children, ...rest }: AnyProps) {
+  return <h2 {...rest}>{children}</h2>;
+}
+
+export function DialogContent({ children, ...rest }: AnyProps) {
+  return <div {...rest}>{children}</div>;
+}
+
+export function DialogContentText({ children, ...rest }: AnyProps) {
+  return <p {...rest}>{children}</p>;
+}
+
+export function DialogActions({ children, ...rest }: AnyProps) {
+  return <div {...rest}>{children}</div>;
 }

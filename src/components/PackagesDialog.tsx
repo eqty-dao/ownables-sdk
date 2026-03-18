@@ -66,11 +66,11 @@ export function PackagesDialog(props: PackagesDialogProps) {
       </Box>
 
       <div className="mb-4 flex items-center gap-2">
-        <button type="button" className={cn(topActionButton({ emphasis: "primary" }))} onClick={onImport}>
+        <Button type="button" className={cn(topActionButton({ emphasis: "primary" }))} onClick={onImport}>
           <FolderUp size={16} />
           Upload
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           className={cn(topActionButton({ emphasis: "secondary", disabled: !hasBuilder }))}
           onClick={onCreate}
@@ -78,7 +78,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
         >
           <Sparkles size={16} />
           Builder
-        </button>
+        </Button>
       </div>
 
       <p className="text-caption mb-1 uppercase tracking-[0.08em]">
@@ -98,7 +98,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
           </div>
         ) : (
           filteredPackages.map((pkg) => (
-            <button
+            <Button
               key={pkg.title}
               type="button"
               onClick={() => onSelect(pkg)}
@@ -109,7 +109,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
                 <div className="text-xs text-slate-500">{pkg.description}</div>
               </div>
               <ChevronRight size={16} className="text-slate-400" />
-            </button>
+            </Button>
           ))
         )}
       </div>
