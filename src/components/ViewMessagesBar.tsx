@@ -31,7 +31,7 @@ interface ViewMessagesBarProps {
   >;
 }
 
-const messageItem = cva("mb-2 flex flex-col items-start border-b border-slate-200 pb-2");
+const messageItem = cva("mb-2 flex flex-col items-start border-b border-slate-200 pb-2 dark:border-slate-700");
 const messageHeader = cva("flex w-full items-center gap-2");
 const thumb = cva("h-[35px] w-[35px] overflow-hidden rounded-[10%]");
 const miniButton = cva("px-1.5 py-[3px] text-[0.625rem] leading-[1.3]");
@@ -233,12 +233,12 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                         <span className="text-[0.6rem] font-bold">
                           Sender:{" "}
                           {msg?.sender === builderAddress
-                            ? "Obuilder"
+                            ? "Builder"
                             : msg?.sender || "Unknown"}
                         </span>
                       }
                       secondary={
-                        <span className="text-[0.6rem] text-slate-500">
+                        <span className="text-[0.6rem] text-slate-500 dark:text-slate-400">
                           Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
                         </span>
                       }
@@ -306,10 +306,10 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                       <span className="block text-[0.6rem] font-bold">
                         Sender:{" "}
                         {msg?.sender === builderAddress
-                          ? "Obuilder"
+                          ? "Builder"
                           : msg?.sender || "Unknown"}
                       </span>
-                      <span className="block text-[0.6rem] text-slate-500">
+                      <span className="block text-[0.6rem] text-slate-500 dark:text-slate-400">
                         Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
                       </span>
                     </Box>
@@ -348,7 +348,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
             >
               Prev
             </Button>
-            <span>
+            <span className="text-sm text-slate-700 dark:text-slate-300">
               Page {currentPage} of {Math.ceil(totalCount / itemsPerPage)}
             </span>
             <Button

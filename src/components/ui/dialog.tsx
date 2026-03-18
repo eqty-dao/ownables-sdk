@@ -14,7 +14,7 @@ export function Dialog({ open, onClose, className, children, ...rest }: DialogPr
         <BaseDialog.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/40" />
         <BaseDialog.Popup
           className={cn(
-            "fixed left-1/2 top-1/2 z-[1400] max-h-[calc(100vh-32px)] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-xl",
+            "fixed left-1/2 top-1/2 z-[1400] max-h-[calc(100vh-32px)] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900",
             className
           )}
           {...rest}

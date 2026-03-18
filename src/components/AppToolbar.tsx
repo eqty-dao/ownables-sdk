@@ -36,7 +36,7 @@ const warningStrip = cva(
   {
     variants: {
       tone: {
-        warning: "border-amber-200 bg-amber-50 text-amber-900",
+        warning: "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-200",
       },
     },
     defaultVariants: {

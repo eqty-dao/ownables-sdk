@@ -1,4 +1,5 @@
 import { forwardRef, HTMLAttributes, Ref, useEffect, useState } from "react";
+import { cn } from "@/utils/cn";
 
 interface OverlayProps extends HTMLAttributes<HTMLDivElement> {
   disabled?: boolean | Promise<boolean>;
@@ -22,12 +23,11 @@ function Overlay(props: OverlayProps, ref: Ref<HTMLDivElement>) {
       {...rest}
       ref={ref}
       onClick={isEnabled ? onClick : undefined}
-      className={className}
+      className={cn(!isEnabled && "bg-white/80 dark:bg-slate-900/65", className)}
       style={{
         position: "absolute",
         inset: 0,
         zIndex: zIndex ?? 5,
-        backgroundColor: isEnabled ? "" : "rgba(255, 255, 255, 0.8)",
         cursor: onClick && isEnabled ? "pointer" : "",
         ...style,
       }}

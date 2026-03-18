@@ -11,8 +11,8 @@ const itemCard = cva(
   {
     variants: {
       selected: {
-        true: "border-indigo-500 bg-indigo-50 shadow-md",
-        false: "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
+        true: "border-indigo-500 bg-indigo-50 shadow-md dark:bg-indigo-950/30",
+        false: "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600",
       },
     },
     defaultVariants: {
@@ -80,7 +80,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
 
         {/* Name + consumable chip */}
         <Box className="min-w-0 flex-1">
-          <Box className="mb-0.5 truncate text-sm font-semibold text-slate-900">
+          <Box className="mb-0.5 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
             {metadata.name}
           </Box>
           {isConsumable && (

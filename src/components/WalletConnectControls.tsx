@@ -32,9 +32,7 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
               <Button className={cn(primaryWalletButton())} onClick={openConnectModal}>
                 Connect to wallet
               </Button>
-              <p
-                className="mt-1 block text-center text-xs text-slate-500"
-              >
+              <p className="mt-1 block text-center text-xs text-slate-500 dark:text-slate-400">
                 Ensure to connect on <strong>Base Sepolia</strong> testnet
               </p>
             </>
@@ -51,10 +49,10 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         return (
           <>
-            <p className="cursor-pointer text-xs text-slate-500" onClick={openChainModal}>
+            <p className="cursor-pointer text-xs text-slate-500 dark:text-slate-400" onClick={openChainModal}>
               {chain?.name || 'Network'} address <CachedIcon className="inline h-3 w-3" />
             </p>
-            <p className="cursor-pointer text-sm font-semibold" onClick={openAccountModal}>
+            <p className="cursor-pointer text-sm font-semibold text-slate-900 dark:text-slate-100" onClick={openAccountModal}>
               {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
             </p>
             {children}

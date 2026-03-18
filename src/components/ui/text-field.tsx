@@ -26,13 +26,13 @@ export const TextField = forwardRef<HTMLInputElement | HTMLTextAreaElement, Text
 ) {
   return (
     <label className={cn("flex w-full flex-col gap-1", className)}>
-      {label ? <span className="text-sm font-medium">{label}</span> : null}
+      {label ? <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{label}</span> : null}
       {multiline ? (
         <textarea
           ref={ref as Ref<HTMLTextAreaElement>}
           rows={rows}
           className={cn(
-            "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-500",
+            "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-400",
             error ? "border-red-500" : ""
           )}
           {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
@@ -41,13 +41,13 @@ export const TextField = forwardRef<HTMLInputElement | HTMLTextAreaElement, Text
         <input
           ref={ref as Ref<HTMLInputElement>}
           className={cn(
-            "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-500",
+            "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-400",
             error ? "border-red-500" : ""
           )}
           {...(rest as InputHTMLAttributes<HTMLInputElement>)}
         />
       )}
-      {helperText ? <small className={cn("text-xs text-slate-500", error ? "text-red-600" : "")}>{helperText}</small> : null}
+      {helperText ? <small className={cn("text-xs text-slate-500 dark:text-slate-400", error ? "text-red-600 dark:text-red-400" : "")}>{helperText}</small> : null}
     </label>
   );
 });

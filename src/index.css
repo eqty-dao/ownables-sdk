@@ -35,7 +35,7 @@
   }
 
   .surface-muted {
-    @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-600;
+    @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300;
   }
 
   .surface-widget {
@@ -48,11 +48,13 @@ body {
   font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
 
-  background-image: url("assets/background.svg");
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-size: cover;
+.dark body {
+  background-color: #0b1220;
+  color: #e2e8f0;
 }
 
 div::-webkit-scrollbar {
@@ -63,6 +65,10 @@ div::-webkit-scrollbar-track {
 }
 div::-webkit-scrollbar-thumb {
   background-color: rgba(0,0,0,.1);
+}
+
+.dark div::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
 }
 
 code {

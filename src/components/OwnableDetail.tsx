@@ -196,7 +196,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               title="You're unable to interact with this Ownable, because it has been transferred to a different account."
               followCursor
             >
-              <Overlay style={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
+              <Overlay className="bg-white/80 dark:bg-slate-900/70">
                 <OverlayBanner>Transferred</OverlayBanner>
               </Overlay>
             </Tooltip>
@@ -275,7 +275,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                 title="You're unable to interact with this Ownable, because it has been transferred to a different account."
                 followCursor
               >
-                <Overlay style={{ backgroundColor: "rgba(255, 255, 255, 0.8)" }}>
+                <Overlay className="bg-white/80 dark:bg-slate-900/70">
                   <OverlayBanner>Transferred</OverlayBanner>
                 </Overlay>
               </Tooltip>

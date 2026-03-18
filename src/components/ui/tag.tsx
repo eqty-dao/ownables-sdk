@@ -7,17 +7,17 @@ const tagVariants = cva(
   {
     variants: {
       variant: {
-        neutral: "border-slate-200 bg-slate-50 text-slate-700",
-        locked: "border-red-200 bg-red-50 text-red-700",
-        unlocked: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        consumable: "border-amber-200 bg-amber-50 text-amber-700",
+        neutral: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200",
+        locked: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
+        unlocked: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+        consumable: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
       },
       color: {
         default: "",
-        success: "border-emerald-200 bg-emerald-50 text-emerald-700",
-        warning: "border-amber-200 bg-amber-50 text-amber-700",
-        danger: "border-red-200 bg-red-50 text-red-700",
-        info: "border-sky-200 bg-sky-50 text-sky-700",
+        success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+        warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
+        danger: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
+        info: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300",
       },
     },
     defaultVariants: {
@@ -41,4 +41,3 @@ export function Tag({ className, variant, color, icon, value, ...props }: TagPro
     </span>
   );
 }
-

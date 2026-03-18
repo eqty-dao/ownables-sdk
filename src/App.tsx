@@ -31,7 +31,7 @@ import { cva } from "class-variance-authority";
 import { cn } from "./utils/cn";
 
 const listPane = cva(
-  "w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-[360px]",
+  "w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 md:w-[360px]",
   {
     variants: {
       hiddenOnMobile: {
@@ -59,7 +59,7 @@ const detailPane = cva("min-w-0 flex-1", {
 
 const emptyStateLink = cva("pointer-events-auto link-primary underline");
 const issueOwnableButton = cva(
-  "mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
+  "mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
 );
 
 export default function App() {

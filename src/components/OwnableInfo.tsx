@@ -12,7 +12,6 @@ import { EventChain } from "eqty-core";
 import EventCard from "./EventCard";
 import shortId from "../utils/shortId";
 import Tooltip from "./Tooltip";
-import backgroundImage from "../assets/background.svg";
 import useInterval from "../hooks/useInterval";
 import { useService } from "../hooks/useService"
 
@@ -21,13 +20,6 @@ interface OwnableInfoProps {
   chain: EventChain;
   metadata?: TypedMetadata;
 }
-
-const style = {
-  backgroundImage: `url(${backgroundImage})`,
-  backgroundRepeat: "no-repeat",
-  backgroundAttachment: "fixed",
-  backgroundSize: "cover",
-};
 
 export default function OwnableInfo(props: OwnableInfoProps) {
   const { chain, metadata } = props;
@@ -63,7 +55,6 @@ export default function OwnableInfo(props: OwnableInfoProps) {
       <Dialog
         onClose={() => setOpen(false)}
         open={open}
-        style={style}
         className="w-[min(900px,calc(100vw-32px))]"
       >
         <DialogTitle className="flex items-center gap-2 pb-0 pt-4 text-xs font-semibold text-sky-700">
@@ -75,12 +66,12 @@ export default function OwnableInfo(props: OwnableInfoProps) {
           )}
         </DialogTitle>
         <DialogTitle className="pb-1 pt-1 text-xl font-semibold">{metadata?.name}</DialogTitle>
-        <DialogTitle className="pb-2 pt-0 text-sm text-slate-500">
+        <DialogTitle className="pb-2 pt-0 text-sm text-slate-500 dark:text-slate-400">
           {metadata?.description}
         </DialogTitle>
         <DialogContent>
           {chain.events.length === 0 && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               This is a static ownable. It does not contain any events.
             </p>
           )}

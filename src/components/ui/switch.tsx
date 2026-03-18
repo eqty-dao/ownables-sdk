@@ -1,5 +1,6 @@
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import { Switch as BaseSwitch } from "@base-ui/react";
+import { cn } from "@/utils/cn";
 
 type SwitchChangeEvent = {
   target: {
@@ -13,7 +14,7 @@ type SwitchProps = Omit<ComponentPropsWithoutRef<"button">, "onChange" | "childr
 };
 
 export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch(
-  { checked, onChange, style, ...rest },
+  { checked, onChange, className, ...rest },
   ref
 ) {
   return (
@@ -21,32 +22,17 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
       ref={ref}
       checked={checked}
       onCheckedChange={(next: boolean) => onChange?.({ target: { checked: next } })}
-      style={{
-        position: "relative",
-        display: "inline-flex",
-        height: 24,
-        width: 44,
-        flexShrink: 0,
-        borderRadius: 9999,
-        background: checked ? "#0f172a" : "#cbd5e1",
-        padding: 2,
-        cursor: "pointer",
-        transition: "background-color 160ms ease",
-        ...(style || {}),
-      }}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-slate-300 p-0.5 transition-colors data-[checked]:bg-slate-900 dark:bg-slate-700 dark:data-[checked]:bg-slate-200",
+        className
+      )}
       {...rest}
     >
       <BaseSwitch.Thumb
-        style={{
-          display: "block",
-          height: 20,
-          width: 20,
-          borderRadius: "50%",
-          background: "#ffffff",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
-          transform: checked ? "translateX(20px)" : "translateX(0px)",
-          transition: "transform 160ms ease",
-        }}
+        className={cn(
+          "block h-5 w-5 rounded-full bg-white shadow-sm transition-transform dark:bg-slate-900 dark:data-[checked]:bg-white"
+        )}
+        style={{ transform: checked ? "translateX(20px)" : "translateX(0px)" }}
       />
     </BaseSwitch.Root>
   );

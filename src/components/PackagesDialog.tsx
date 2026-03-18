@@ -11,8 +11,8 @@ const topActionButton = cva(
   {
     variants: {
       emphasis: {
-        primary: "border-slate-300 bg-white text-slate-800 hover:bg-slate-50",
-        secondary: "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200",
+        primary: "border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
+        secondary: "border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
       },
       disabled: {
         true: "cursor-not-allowed opacity-50",
@@ -27,7 +27,7 @@ const topActionButton = cva(
 );
 
 const packageItem = cva(
-  "flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition-colors hover:bg-slate-50"
+  "flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
 );
 
 interface PackagesDialogProps {
@@ -50,7 +50,7 @@ export function PackagesDialog(props: PackagesDialogProps) {
   const hasBuilder = !!builderService;
 
   const content = (
-    <Box className={inline ? "w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" : ""}>
+    <Box className={inline ? "w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900" : ""}>
       <Box className="mb-2 flex items-start gap-1.5">
         <IconButton onClick={onClose} aria-label="Close issue ownable modal">
           <CloseIcon size={18} />
@@ -105,17 +105,17 @@ export function PackagesDialog(props: PackagesDialogProps) {
               className={cn(packageItem())}
             >
               <div>
-                <div className="text-sm font-semibold text-slate-900">{pkg.title}</div>
-                <div className="text-xs text-slate-500">{pkg.description}</div>
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{pkg.title}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{pkg.description}</div>
               </div>
-              <ChevronRight size={16} className="text-slate-400" />
+              <ChevronRight size={16} className="text-slate-400 dark:text-slate-500" />
             </Button>
           ))
         )}
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button className="border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" onClick={onClose}>
+        <Button className="border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800" onClick={onClose}>
           Cancel
         </Button>
       </div>

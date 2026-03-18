@@ -22,7 +22,7 @@ enum DataView {
 }
 
 const railBlock = cva(
-  "hidden w-[calc(45%-58px)] truncate border border-slate-200 bg-white px-4 py-2 text-xs md:block",
+  "hidden w-[calc(45%-58px)] truncate border border-slate-200 bg-white px-4 py-2 text-xs dark:border-slate-700 dark:bg-slate-900 md:block",
   {
     variants: {
       edge: {
@@ -58,8 +58,8 @@ export default function EventCard(props: EventCardProps) {
           <strong>Previous: </strong> {shortId(event.previous?.hex ?? "", 30)}
         </div>
       )}
-      <Card key={event.hash.base58} className="mb-3 rounded-br-lg rounded-tl-lg border border-slate-200 shadow-sm md:mb-0">
-        <CardContent className="space-y-2 p-4 text-xs">
+      <Card key={event.hash.base58} className="mb-3 rounded-br-lg rounded-tl-lg border border-slate-200 shadow-sm dark:border-slate-700 dark:bg-slate-900 md:mb-0">
+        <CardContent className="space-y-2 p-4 text-xs text-slate-800 dark:text-slate-200">
           <div>
             <strong>Timestamp: </strong>
             {event.timestamp ? new Date(event.timestamp).toString() : ""}
@@ -106,7 +106,12 @@ export default function EventCard(props: EventCardProps) {
               <pre className="base64 mb-0">{event.data.base64}</pre>
             )}
             {dataView === DataView.JSON && (
-              <ReactJson style={{ marginTop: 10 }} src={event.parsedData ? event.parsedData : event.data} enableClipboard={false} />
+              <ReactJson
+                style={{ marginTop: 10 }}
+                src={event.parsedData ? event.parsedData : event.data}
+                enableClipboard={false}
+                theme={document.documentElement.classList.contains("dark") ? "summerfruit:inverted" : "rjv-default"}
+              />
             )}
           </div>
           <Box className="truncate pt-2 md:hidden">

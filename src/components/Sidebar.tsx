@@ -31,7 +31,7 @@ const modeButton = cva(
     variants: {
       active: {
         true: "border-slate-900 bg-slate-900 text-white",
-        false: "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+        false: "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
       },
     },
     defaultVariants: {
@@ -44,7 +44,7 @@ const sidebarButton = cva("w-full", {
   variants: {
     tone: {
       danger: "mb-1 bg-red-600 text-white hover:bg-red-700",
-      subtleDanger: "text-red-700 hover:bg-red-50",
+      subtleDanger: "text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40",
     },
   },
 });

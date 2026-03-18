@@ -20,7 +20,7 @@ export default function AlertDialog(props: AlertDialogProps) {
   const {open, onClose, severity} = props;
 
   return <Dialog open={open} onClose={onClose} transitionDuration={0}>
-    <Alert className="rounded-xl border border-slate-200 bg-white p-4" severity={severity || 'info'}>
+    <Alert className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900" severity={severity || 'info'}>
       <AlertTitle>{props.title}</AlertTitle>
       <Box className="pr-3">{ props.children }</Box>
       <DialogActions className="pb-0">
