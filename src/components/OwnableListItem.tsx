@@ -13,7 +13,7 @@ const itemCard = cva(
     variants: {
       selected: {
         true: "border-indigo-500 bg-indigo-50 shadow-md dark:bg-indigo-950/30",
-        false: "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600",
+        false: "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm dark:border-[#2a2a2a] dark:bg-[#252525] dark:hover:border-[#333333]",
       },
     },
     defaultVariants: {
@@ -87,7 +87,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
             {metadata.name}
           </Box>
           {shortIssuer && (
-            <Box className="mb-1 truncate text-xs text-slate-500 dark:text-slate-400">
+            <Box className="mb-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400">
               {shortIssuer}
             </Box>
           )}

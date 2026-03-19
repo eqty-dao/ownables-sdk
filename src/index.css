@@ -35,7 +35,7 @@
   }
 
   .surface-muted {
-    @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300;
+    @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-600 dark:border-[#333333] dark:bg-[#252525] dark:text-slate-300;
   }
 
   .surface-widget {
@@ -53,8 +53,8 @@ body {
 }
 
 .dark body {
-  background-color: #0b1220;
-  color: #e2e8f0;
+  background-color: oklch(0.145 0 0);
+  color: oklch(0.985 0 0);
 }
 
 div::-webkit-scrollbar {

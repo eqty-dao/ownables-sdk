@@ -42,7 +42,7 @@ interface OwnableDetailProps {
 }
 
 const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
-const issuerLink = cva("link-primary hover:underline");
+const issuerLink = cva("font-mono link-primary hover:underline");
 const widgetShell = cva("relative overflow-hidden rounded-2xl", {
   variants: {
     layout: {

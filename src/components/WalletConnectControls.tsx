@@ -6,7 +6,7 @@ import { PropsWithChildren } from "react"
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
-const primaryWalletButton = cva("w-full bg-slate-900 text-white hover:bg-slate-800");
+const primaryWalletButton = cva("w-full");
 
 export default function WalletConnectControls({ children }: PropsWithChildren) {
   const { disconnect, isLoading } = useDisconnect();
@@ -28,14 +28,9 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         if (!connected) {
           return (
-            <>
-              <Button className={cn(primaryWalletButton())} onClick={openConnectModal}>
-                Connect to wallet
-              </Button>
-              <p className="mt-1 block text-center text-xs text-slate-500 dark:text-slate-400">
-                Ensure to connect on <strong>Base Sepolia</strong> testnet
-              </p>
-            </>
+            <Button variant="primary" size="large" className={cn(primaryWalletButton())} onClick={openConnectModal}>
+              Connect to wallet
+            </Button>
           );
         }
 

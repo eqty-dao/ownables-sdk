@@ -17,6 +17,8 @@ ownablesOrig
 
 # testing
 /coverage
+.playwright-mcp
+.letsrunit
 
 # misc
 .DS_Store

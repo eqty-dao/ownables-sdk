@@ -1,17 +1,15 @@
 import {
   Box,
-  Button,
-  IconButton,
-  Link,
   Switch,
+  Button,
 } from "@/components/ui";
 import { useEffect, useState } from "react";
-import { ArrowLeft as ArrowBack, X as CloseIcon } from "lucide-react";
-import { Drawer } from "@/components/ui";
-import ownablesLogo from "../assets/logo.svg";
+import { X as CloseIcon, Sun, Moon, Monitor, Copy } from "lucide-react";
+import { Drawer, DrawerClose } from "@/components/ui";
 import EventChainService from "../services/EventChain.service";
 import WalletConnectControls from "./WalletConnectControls";
-import { useAccount, useBalance } from "wagmi"
+import { useAccount, useBalance, useDisconnect } from "wagmi"
+import { useChainModal } from "@rainbow-me/rainbowkit"
 import useEqtyToken from "../hooks/useEqtyToken"
 import { cva } from "class-variance-authority";
 import { cn } from "../utils/cn";
@@ -26,12 +24,12 @@ interface SidebarProps {
 type ThemeMode = "light" | "dark" | "system";
 
 const modeButton = cva(
-  "flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
+  "w-full rounded-xl border-2 p-3 text-sm font-medium transition-colors",
   {
     variants: {
       active: {
-        true: "border-slate-900 bg-slate-900 text-white",
-        false: "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
+        true: "border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/20 dark:text-indigo-300",
+        false: "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-[#333333] dark:bg-transparent dark:text-slate-300 dark:hover:bg-[#252525]",
       },
     },
     defaultVariants: {
@@ -39,15 +37,6 @@ const modeButton = cva(
     },
   }
 );
-
-const sidebarButton = cva("w-full", {
-  variants: {
-    tone: {
-      danger: "mb-1 bg-red-600 text-white hover:bg-red-700",
-      subtleDanger: "text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40",
-    },
-  },
-});
 
 function resolveSystemDark(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -67,9 +56,10 @@ export default function Sidebar(props: SidebarProps) {
     const stored = localStorage.getItem("theme-mode");
     return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
   });
-  const { address } = useAccount();
-  // Only poll balances when sidebar is open to avoid constant RPC calls
-  const { data: ethBalance } = useBalance({ address, formatUnits: 'ether', watch: open });
+  const { address, isConnected, chain } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { openChainModal } = useChainModal();
+  const { data: ethBalance } = useBalance({ address, query: { refetchInterval: open ? 10000 : false } });
   const { balance: eqtyBalance } = useEqtyToken({ address, watch: open });
 
   useEffect(() => {
@@ -87,91 +77,173 @@ export default function Sidebar(props: SidebarProps) {
     return () => media.removeEventListener("change", listener);
   }, [themeMode]);
 
+  const shortAddress = address
+    ? `${address.slice(0, 6)}...${address.slice(-4)}`
+    : "";
+
+  const copyAddress = () => {
+    if (address) navigator.clipboard.writeText(address);
+  };
+
+  const handleNetworkClick = () => {
+    openChainModal?.();
+  };
+
   return (
     <>
-      <Drawer anchor="right" open={open} onClose={onClose}>
-        <Box className="w-[350px] p-2" role="presentation">
-          <Box className="flex items-start justify-between">
-            <Box className="inline-flex sm:hidden">
-              <IconButton onClick={onClose} size="small" className="mr-2">
-                <ArrowBack />
-              </IconButton>
-            </Box>
-            <Link href="https://ownables.info" target="_blank">
-              <img
-                src={ownablesLogo}
-                alt="Ownables"
-                style={{ width: 150, maxWidth: "100%", verticalAlign: -5 }}
-              />
-            </Link>
-            <IconButton onClick={onClose} size="small" className="ml-2">
-              <CloseIcon className="h-4 w-4" />
-            </IconButton>
-          </Box>
+      <Drawer anchor="right" open={open} onClose={onClose} className="flex w-[384px] flex-col overflow-hidden">
+        {/* Header */}
+        <Box className="flex flex-shrink-0 items-center justify-between p-6">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Settings</h2>
+          <DrawerClose
+            aria-label="Close settings"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
+          >
+            <CloseIcon className="h-5 w-5" />
+          </DrawerClose>
+        </Box>
 
-          <Box className="mt-2">
-            <WalletConnectControls>
-              <Box className="mb-4 mt-1">
-                <p className="text-body font-semibold">Balance</p>
-                <p className="text-body">{Number(ethBalance?.formatted).toFixed(4)} {ethBalance?.symbol}</p>
-                { eqtyBalance !== undefined && <p className="text-body">{Number(eqtyBalance?.formatted).toFixed(0)} {eqtyBalance?.symbol}</p> }
-              </Box>
-            </WalletConnectControls>
-          </Box>
+        {/* Scrollable content */}
+        <Box className="flex flex-1 flex-col overflow-y-auto p-6">
 
-          <Box className="mt-4">
-            <Box className="mb-2 flex items-center justify-between gap-2">
+          {/* Network badge — clickable to switch chain */}
+          {isConnected && chain && (
+            <div className="mb-8">
+              <button
+                type="button"
+                onClick={handleNetworkClick}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 transition-colors hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50"
+                title="Click to switch network"
+              >
+                <span className="h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+                <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                  {chain.name?.toUpperCase() ?? "NETWORK"}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Wallet info rows (connected) */}
+          {isConnected && (
+            <Box className="mb-8 flex flex-col gap-4">
+              {/* Address row */}
               <Box>
-                <p className="text-body font-semibold">
-                  Anchor events
+                <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">Address</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-sm text-slate-900 dark:text-slate-100">{shortAddress}</p>
+                  <Button
+                    variant="ghost"
+                    onClick={copyAddress}
+                    aria-label="Copy address"
+                    className="h-7 w-7 p-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Box>
+
+              {/* ETH Balance */}
+              <Box>
+                <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">ETH Balance</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {ethBalance ? `${Number(ethBalance.formatted).toFixed(4)} ETH` : "— ETH"}
                 </p>
-                <p className="text-caption">
-                  Enable event anchoring
+              </Box>
+
+              {/* EQTY Balance */}
+              <Box>
+                <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">EQTY Balance</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {eqtyBalance !== undefined
+                    ? `${Number(eqtyBalance.formatted).toFixed(2)} EQTY`
+                    : "— EQTY"}
                 </p>
+              </Box>
+            </Box>
+          )}
+
+          {/* DISCONNECT button (connected) */}
+          {isConnected && (
+            <Button
+              variant="primary"
+              size="large"
+              className="mb-8 w-full"
+              onClick={() => disconnect()}
+            >
+              DISCONNECT
+            </Button>
+          )}
+
+          {/* WalletConnectControls (not connected) */}
+          {!isConnected && (
+            <Box className="mb-8">
+              <WalletConnectControls />
+            </Box>
+          )}
+
+          {/* Anchor events card */}
+          {isConnected && (
+            <Box className="mb-8 flex items-center justify-between rounded-xl border border-black/10 p-4 dark:border-[#333333]">
+              <Box>
+                <p className="text-base font-medium text-slate-900 dark:text-slate-100">Anchor events</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Enable event anchoring</p>
               </Box>
               <Switch checked={anchoring} onChange={(e) => setAnchoring(e.target.checked)} aria-label="Anchor events" />
             </Box>
+          )}
 
-            <Box className="flex gap-1">
-              <Button
-                type="button"
-                className={cn(modeButton({ active: themeMode === "light" }))}
-                onClick={() => setThemeMode("light")}
-              >
-                Light
-              </Button>
-              <Button
-                type="button"
-                className={cn(modeButton({ active: themeMode === "dark" }))}
-                onClick={() => setThemeMode("dark")}
-              >
-                Dark
-              </Button>
-              <Button
-                type="button"
-                className={cn(modeButton({ active: themeMode === "system" }))}
-                onClick={() => setThemeMode("system")}
-              >
-                System
-              </Button>
-            </Box>
+          {/* Theme buttons */}
+          <Box className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              className={cn(modeButton({ active: themeMode === "light" }))}
+              onClick={() => setThemeMode("light")}
+            >
+              <span className="flex flex-col items-center gap-1">
+                <Sun className="h-6 w-6" />
+                <span>Light</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={cn(modeButton({ active: themeMode === "dark" }))}
+              onClick={() => setThemeMode("dark")}
+            >
+              <span className="flex flex-col items-center gap-1">
+                <Moon className="h-6 w-6" />
+                <span>Dark</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={cn(modeButton({ active: themeMode === "system" }))}
+              onClick={() => setThemeMode("system")}
+            >
+              <span className="flex flex-col items-center gap-1">
+                <Monitor className="h-6 w-6" />
+                <span>System</span>
+              </span>
+            </button>
           </Box>
         </Box>
 
-        <Box className="grow"></Box>
-
-        <Box className="w-[350px] p-2" role="presentation">
-          <Box className="grid gap-1">
+        {/* Danger section (pinned to bottom) */}
+        <Box className="flex-shrink-0 p-6 pt-0">
+          <Box className="flex flex-col gap-3">
+            {isConnected && (
+              <Button
+                variant="danger"
+                size="large"
+                className="w-full"
+                onClick={onReset}
+              >
+                Delete All Ownables
+              </Button>
+            )}
             <Button
-              size="small"
-              className={cn(sidebarButton({ tone: "danger" }))}
-              onClick={onReset}
-            >
-              Delete all Ownables
-            </Button>
-            <Button
-              size="small"
-              className={cn(sidebarButton({ tone: "subtleDanger" }))}
+              variant="danger-outlined"
+              size="large"
+              className="w-full"
               onClick={onFactoryReset}
             >
               Factory Reset

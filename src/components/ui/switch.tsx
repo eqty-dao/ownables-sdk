@@ -23,7 +23,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
       checked={checked}
       onCheckedChange={(next: boolean) => onChange?.({ target: { checked: next } })}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-slate-300 p-0.5 transition-colors data-[checked]:bg-slate-900 dark:bg-slate-700 dark:data-[checked]:bg-slate-200",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-slate-300 p-0.5 transition-colors data-[checked]:bg-indigo-600 dark:bg-slate-700 dark:data-[checked]:bg-indigo-500",
         className
       )}
       {...rest}
