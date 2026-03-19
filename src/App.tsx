@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isE2E } from "./utils/isE2E";
 import { AlertColor, Box, Button, CircularProgress, IconButton, Link } from "@/components/ui";
 import { ArrowLeft as ArrowBack } from "lucide-react";
 import PackagesPanel from "./components/PackagesPanel";
@@ -121,7 +122,6 @@ export default function App() {
     });
   }, [ownableService]);
 
-  const isE2E = import.meta.env.VITE_E2E === "true";
 
   useEffect(() => {
     setShowLogin(!isConnected && !isE2E);

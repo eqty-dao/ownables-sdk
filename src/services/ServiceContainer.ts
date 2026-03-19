@@ -1,4 +1,5 @@
 import IDBService from "./IDB.service";
+import { isE2E } from "../utils/isE2E";
 import EventChainService from "./EventChain.service";
 import OwnableService from "./Ownable.service";
 import PackageService from "./Package.service";
@@ -36,7 +37,6 @@ export default class ServiceContainer {
     public readonly walletClient?: WalletClient,
     public readonly publicClient?: PublicClient
   ) {
-    const isE2E = import.meta.env.VITE_E2E === "true";
 
     this.register(
       "eqty",
