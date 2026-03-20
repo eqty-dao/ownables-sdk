@@ -5,11 +5,11 @@ import JSZip from "jszip";
 import * as fs from "fs/promises";
 
 if (argv.length < 3) {
-  console.error("No package zip specified");
+  console.error("Usage: yarn ownables:cid <package-name>");
   exit(1);
 }
 
-const zipPath = argv[2];
+const zipPath = `ownables/${argv[2]}.zip`;
 
 const blockstore = new class extends BaseBlockstore {
   async put (key, val, options) {

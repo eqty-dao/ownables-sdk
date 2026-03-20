@@ -12,7 +12,7 @@ The SDK contains examples and tools for developing Ownables.
 ```
 yarn install
 yarn rustup
-yarn ownables:build-all
+yarn ownables:build
 yarn start
 ```
 
@@ -75,8 +75,14 @@ Alternatively run `yarn rustup`.
 
 ## Build
 
+Build a single package:
 ```
-yarn ownables:build --package=car
+yarn ownables:build car
+```
+
+Build all packages:
+```
+yarn ownables:build
 ```
 
 ## Examples
