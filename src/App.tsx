@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { isE2E } from "./utils/isE2E";
 import { AlertColor, Box, Button, CircularProgress, IconButton, Link } from "@/components/ui";
-import { ArrowLeft as ArrowBack } from "lucide-react";
+import { ArrowLeft as ArrowBack, Plus } from "lucide-react";
 import PackagesPanel from "./components/PackagesPanel";
 import { TypedPackage } from "./interfaces/TypedPackage";
 import LoginDialog from "./components/LoginDialog";
@@ -32,7 +32,7 @@ import { cva } from "class-variance-authority";
 import { cn } from "./utils/cn";
 
 const listPane = cva(
-  "w-full flex-shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-transparent dark:bg-transparent dark:shadow-none md:w-[360px]",
+  "w-full flex-shrink-0 px-4 md:w-[384px]",
   {
     variants: {
       hiddenOnMobile: {
@@ -60,7 +60,7 @@ const detailPane = cva("min-w-0 flex-1", {
 
 const emptyStateLink = cva("pointer-events-auto link-primary underline");
 const issueOwnableButton = cva(
-  "mt-3 flex w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-[#333333] dark:bg-transparent dark:text-slate-400 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
+  "mt-2 flex w-full items-start justify-start gap-3 rounded-[14px] border-2 border-dashed border-slate-300 bg-transparent p-4 text-left transition-all hover:border-indigo-400 dark:border-[#333333] dark:hover:border-indigo-500"
 );
 
 export default function App() {
@@ -481,7 +481,19 @@ export default function App() {
             }}
             className={cn(issueOwnableButton())}
           >
-            + Issue an Ownable
+            {/* Icon tile */}
+            <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-100 to-purple-100 transition-all hover:from-indigo-200 hover:to-purple-200 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-800/40 dark:hover:to-purple-800/40">
+              <Plus className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            {/* Text */}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Issue an Ownable
+              </p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Create a new ownable from a package
+              </p>
+            </div>
           </Button>
         </Box>
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Box, Button, Tag, Tile } from "@/components/ui";
-import { Zap as BoltOutlined, ImageOff as ImageNotSupported } from "lucide-react";
+import { Box, Button, Tile } from "@/components/ui";
+import { Box as BoxIcon, Zap as BoltOutlined } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
 import { cva } from "class-variance-authority";
@@ -8,7 +8,7 @@ import { cn } from "../utils/cn";
 import shortId from "../utils/shortId";
 
 const itemCard = cva(
-  "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+  "flex w-full items-start justify-start rounded-[14px] border p-4 text-left transition-all active:scale-[0.99]",
   {
     variants: {
       selected: {
@@ -68,31 +68,34 @@ export default function OwnableListItem(props: OwnableListItemProps) {
       onClick={onClick}
       className={cn(itemCard({ selected: isSelected }))}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex w-full items-start gap-3">
         {/* Thumbnail */}
         <Tile
           size="lg"
           variant="brand"
-          className="flex-shrink-0 overflow-hidden"
-          icon={<ImageNotSupported aria-label="No image" className="text-slate-400" />}
+          className="flex-shrink-0 overflow-hidden rounded-[14px] border-transparent"
+          icon={<BoxIcon aria-label="No image" className="h-8 w-8 text-indigo-400 dark:text-indigo-300" />}
         >
           {thumbnailUrl ? (
             <img src={thumbnailUrl} alt={metadata.name} className="h-full w-full object-cover" />
           ) : null}
         </Tile>
 
-        {/* Name + consumable chip */}
+        {/* Name + status tag */}
         <Box className="min-w-0 flex-1">
-          <Box className="mb-0.5 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <p className="mb-0.5 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
             {metadata.name}
-          </Box>
+          </p>
           {shortIssuer && (
-            <Box className="mb-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400">
+            <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
               {shortIssuer}
-            </Box>
+            </p>
           )}
           {isConsumable && (
-            <Tag icon={<BoltOutlined className="h-3.5 w-3.5" />} value="Consumable" variant="consumable" />
+            <div className="mt-1 flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <BoltOutlined className="h-3 w-3" />
+              <span>Consumable</span>
+            </div>
           )}
         </Box>
       </div>
