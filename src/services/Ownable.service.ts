@@ -411,9 +411,9 @@ export default class OwnableService {
     consumer: { chain: EventChain; package: string },
     info: TypedOwnableInfo
   ): Promise<boolean> {
-    if (!this.packages.info(consumer.package).isConsumer) return false;
-
     try {
+      if (!this.packages.info(consumer.package).isConsumer) return false;
+
       const state = await this.eventChains.getStateDump(
         consumer.chain.id,
         consumer.chain.state.hex
@@ -431,8 +431,7 @@ export default class OwnableService {
       );
 
       return result === true;
-    } catch (error) {
-      console.warn("Error checking canConsume:", error);
+    } catch {
       return false;
     }
   }

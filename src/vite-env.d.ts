@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_BUILDER_SERVER_WALLETS_ENDPOINT?: string;
   readonly VITE_BUILDER_NETWORK_PARAM?: string;
   readonly VITE_WALLETCONNECT_PROJECT_ID?: string;
+  readonly VITE_BASE_SEPOLIA_RPC_URL?: string;
+  readonly VITE_BASE_MAINNET_RPC_URL?: string;
 }
 
 interface ImportMeta {

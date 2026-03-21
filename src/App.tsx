@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { isE2E } from "./utils/isE2E";
 import { AlertColor, Box, Button, CircularProgress, IconButton, Link } from "@/components/ui";
 import { ArrowLeft as ArrowBack, Plus } from "lucide-react";
-import PackagesPanel from "./components/PackagesPanel";
+import IssueOwnablePanel from "./components/IssueOwnablePanel";
 import { TypedPackage } from "./interfaces/TypedPackage";
 import LoginDialog from "./components/LoginDialog";
 import Loading from "./components/Loading";
@@ -60,7 +60,20 @@ const detailPane = cva("min-w-0 flex-1", {
 
 const emptyStateLink = cva("pointer-events-auto link-primary underline");
 const issueOwnableButton = cva(
-  "mt-2 flex w-full items-start justify-start gap-3 rounded-[14px] border-2 border-dashed border-slate-300 bg-transparent p-4 text-left transition-all hover:border-indigo-400 dark:border-[#333333] dark:hover:border-indigo-500"
+  "mt-2 flex w-full items-start justify-start gap-3 rounded-[14px] border-2 p-4 text-left transition-all",
+  {
+    variants: {
+      selected: {
+        true: "border-indigo-500 bg-indigo-50 shadow-md dark:bg-indigo-950/30",
+        false: "border-dashed border-slate-300 bg-transparent hover:border-indigo-400 dark:border-[#333333] dark:hover:border-indigo-500",
+      },
+      dimmed: {
+        true: "cursor-not-allowed opacity-40",
+        false: "",
+      },
+    },
+    defaultVariants: { selected: false, dimmed: false },
+  }
 );
 
 export default function App() {
@@ -68,7 +81,7 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showViewMessagesBar, setShowViewMessagesBar] = useState(false);
-  const [showPackages, setShowPackages] = React.useState(false);
+  const ISSUE_OWNABLE_ID = "issue";
   const [showCreateOwnable, setShowCreateOwnable] = React.useState(false);
   const [message, setMessages] = useState(0);
   const [ownables, setOwnables] = useState<
@@ -128,7 +141,6 @@ export default function App() {
 
     setShowSidebar(false);
     setShowViewMessagesBar(false);
-    setShowPackages(false);
     setConsuming(null);
     setAlert(null);
     setConfirm(null);
@@ -180,7 +192,6 @@ export default function App() {
       const result = await ownableService.create(pkg, onProgress);
       setOwnables([...ownables, { chain: result.chain, package: pkg.cid }]);
       setSelectedChainId(result.chain.id);
-      setShowPackages(false);
       ctrl.close();
 
       if (result.txHash) {
@@ -308,15 +319,10 @@ export default function App() {
     chain: EventChain;
     package: string;
   }): Promise<boolean> => {
-    try {
-      return Boolean(
-        consuming?.info &&
-          (await ownableService?.canConsume(consumer, consuming!.info))
-      );
-    } catch (e) {
-      console.error(e, (e as any).cause);
-      return false;
-    }
+    return Boolean(
+      consuming?.info &&
+        (await ownableService?.canConsume(consumer, consuming!.info))
+    );
   };
 
   const consume = (consumer: EventChain, consumable: EventChain) => {
@@ -432,7 +438,7 @@ export default function App() {
                   or try one of{" "}
                   <Link
                     href="#"
-                    onClick={(e) => { e.preventDefault(); setShowPackages(true); }}
+                    onClick={(e) => { e.preventDefault(); setSelectedChainId(ISSUE_OWNABLE_ID); setShowDetail(true); }}
                     className={cn(emptyStateLink())}
                   >
                     the examples
@@ -463,7 +469,18 @@ export default function App() {
                   issuer={chain.events[0]?.signerAddress}
                   isConsumable={!!(pkg?.isConsumable)}
                   isSelected={selectedChainId === chain.id}
+                  consumeIntent={
+                    consuming === null ? "none"
+                    : chain.id === consuming.chain.id ? "active"
+                    : "none"
+                  }
                   onClick={() => {
+                    if (consuming !== null) {
+                      if (chain.id !== consuming.chain.id) {
+                        consume(chain, consuming.chain);
+                      }
+                      return;
+                    }
                     setSelectedChainId(chain.id);
                     setShowDetail(true);
                   }}
@@ -476,10 +493,12 @@ export default function App() {
           <Button
             type="button"
             onClick={() => {
-              setShowPackages(true);
+              if (consuming !== null) return;
+              setSelectedChainId(ISSUE_OWNABLE_ID);
               setShowDetail(true);
             }}
-            className={cn(issueOwnableButton())}
+            disabled={consuming !== null}
+            className={cn(issueOwnableButton({ selected: selectedChainId === ISSUE_OWNABLE_ID, dimmed: consuming !== null }))}
           >
             {/* Icon tile */}
             <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-100 to-purple-100 transition-all hover:from-indigo-200 hover:to-purple-200 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-800/40 dark:hover:to-purple-800/40">
@@ -513,7 +532,7 @@ export default function App() {
                 <IconButton
                   aria-label="Back"
                   onClick={() => {
-                    setShowPackages(false);
+                    setSelectedChainId(null);
                     setShowDetail(false);
                   }}
                 >
@@ -521,11 +540,8 @@ export default function App() {
                 </IconButton>
               </Box>
 
-              {showPackages && (
-                <PackagesPanel
-                  inline
-                  open={showPackages}
-                  onClose={() => setShowPackages(false)}
+              {selectedChainId === ISSUE_OWNABLE_ID && (
+                <IssueOwnablePanel
                   onSelect={forge}
                   onImportFR={relayImport}
                   onError={showError}
@@ -534,7 +550,7 @@ export default function App() {
                 />
               )}
 
-              {!showPackages && selectedOwnable && (
+              {selectedChainId !== ISSUE_OWNABLE_ID && selectedOwnable && (
                 <Ownable
                   key={selectedOwnable.chain.id}
                   chain={selectedOwnable.chain}
@@ -592,7 +608,6 @@ export default function App() {
         onClose={() => setShowCreateOwnable(false)}
         onSuccess={() => {
           setShowCreateOwnable(false);
-          setShowPackages(false);
         }}
       />
 

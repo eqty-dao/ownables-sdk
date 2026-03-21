@@ -43,6 +43,11 @@
   }
 }
 
+/* Raise notistack above the HelpDrawer (z-1400) */
+.notistack-SnackbarContainer {
+  z-index: 1500 !important;
+}
+
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;

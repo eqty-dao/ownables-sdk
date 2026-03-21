@@ -31,8 +31,8 @@ if (isE2E) {
     chains,
     connectors: [mock({ accounts: [e2eAccount.address] })],
     transports: {
-      [baseSepolia.id]: http(),
-      [base.id]: http(),
+      [baseSepolia.id]: http(import.meta.env.VITE_BASE_SEPOLIA_RPC_URL || undefined),
+      [base.id]: http(import.meta.env.VITE_BASE_MAINNET_RPC_URL || undefined),
     },
   });
 } else {
@@ -50,8 +50,8 @@ if (isE2E) {
     projectId: walletConnectProjectId,
     chains,
     transports: {
-      [baseSepolia.id]: http(),
-      [base.id]: http(),
+      [baseSepolia.id]: http(import.meta.env.VITE_BASE_SEPOLIA_RPC_URL || undefined),
+      [base.id]: http(import.meta.env.VITE_BASE_MAINNET_RPC_URL || undefined),
     },
   });
 }
