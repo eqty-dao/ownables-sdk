@@ -10,6 +10,7 @@ ownables/car
 ownables/storiedApes
 ownables/*/assets/instantiate_msg.json
 ownablesOrig
+ownables/target
 /.pnp
 .pnp.js
 /build
