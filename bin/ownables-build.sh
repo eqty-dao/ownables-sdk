@@ -9,7 +9,7 @@ build_package() {
     rm -rf "$dir/pkg/"
     wasm-pack build --out-name ownable --target web "$dir/"
     (cd "$dir" && cargo schema)
-    zip -r -j "./ownables/$name.zip" "$dir/assets/" "$dir/pkg/"*.js "$dir/pkg/"*.wasm "$dir/pkg/package.json" "$dir/schema/"*.json
+    zip -r -j "./ownables/$name.zip" "$dir/assets/" "$dir/pkg/ownable_bg.wasm" "$dir/pkg/package.json" "$dir/schema/"*.json
   else
     zip -r -j "./ownables/$name.zip" "$dir/"*
   fi
