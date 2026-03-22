@@ -28,15 +28,12 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-json-view": "^1.21.3",
-    "simple-iframe-rpc": "^0.1.16",
     "tailwind-merge": "^3.5.0",
     "typescript": "^5.9.3",
     "util": "^0.12.5",
     "viem": "^2.47.2",
     "wagmi": "^2.19.5",
-    "web-vitals": "^5.1.0",
-    "webpack": "^5.105.4",
-    "webpack-cli": "^6.0.1"
+    "web-vitals": "^5.1.0"
   },
   "overrides": {
     "react-json-view": {
@@ -45,13 +42,12 @@
     }
   },
   "scripts": {
-    "start": "yarn build:ownable.js && vite",
-    "dev": "yarn build:ownable.js && vite",
-    "build": "yarn build:ownable.js && vite build",
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
     "check:styles": "node bin/check-styles.mjs",
     "preview": "vite preview",
     "test:e2e": "cucumber-js",
-    "build:ownable.js": "webpack --config ownable-js.webpack.js --no-stats",
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
     "ownables:build": "bin/ownables-build.sh",
     "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/*/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/*/Cargo.lock",
@@ -90,7 +86,6 @@
     "ajv": "^8.18.0",
     "ajv-keywords": "^5.1.0",
     "autoprefixer": "^10.4.27",
-    "babel-loader": "^10.1.1",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
     "vite": "^8.0.0"

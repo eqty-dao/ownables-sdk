@@ -94,6 +94,7 @@ export default function App() {
     package: string;
     info: TypedOwnableInfo;
   } | null>(null);
+  const [consumeEligibility, setConsumeEligibility] = useState<Record<string, boolean>>({});
   const [alert, setAlert] = useState<{
     title: string;
     message: React.ReactNode;
@@ -128,8 +129,14 @@ export default function App() {
   useEffect(() => {
     if (!ownableService) return;
 
-    ownableService.loadAll().then((loaded) => {
+    ownableService.loadAll().then(async (loaded) => {
       setOwnables(loaded);
+      // Phase 1: initialize workers for all ownables so canConsume works without rendering
+      await Promise.allSettled(
+        loaded.map(({ chain, package: cid }) =>
+          ownableService.initWorker(chain.id, cid)
+        )
+      );
       if (loaded.length > 0) setSelectedChainId(loaded[0].chain.id);
       setLoaded(true);
     });
@@ -292,6 +299,7 @@ export default function App() {
           current.filter((ownable) => ownable.chain.id !== id)
         );
         //Delete ownable
+        ownableService.clearRpc(id);
         await ownableService.delete(id);
 
         //delete ownable from relay
@@ -324,6 +332,24 @@ export default function App() {
         (await ownableService?.canConsume(consumer, consuming!.info))
     );
   };
+
+  // Compute eligibility for all non-consuming ownables when consume mode activates
+  useEffect(() => {
+    if (!consuming) { setConsumeEligibility({}); return; }
+    const candidates = ownables.filter(({ chain }) => chain.id !== consuming.chain.id);
+    Promise.allSettled(
+      candidates.map(({ chain, package: pkg }) =>
+        canConsume({ chain, package: pkg }).then((eligible) => [chain.id, eligible] as const)
+      )
+    ).then((results) => {
+      const eligibility: Record<string, boolean> = {};
+      results.forEach((result, i) => {
+        if (result.status === "fulfilled") eligibility[candidates[i].chain.id] = result.value[1];
+      });
+      setConsumeEligibility(eligibility);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consuming]);
 
   const consume = (consumer: EventChain, consumable: EventChain) => {
     if (consumer.id === consumable.id) return;
@@ -472,6 +498,8 @@ export default function App() {
                   consumeIntent={
                     consuming === null ? "none"
                     : chain.id === consuming.chain.id ? "active"
+                    : consumeEligibility[chain.id] === false ? "ineligible"
+                    : consumeEligibility[chain.id] === true ? "eligible"
                     : "none"
                   }
                   onClick={() => {
@@ -580,10 +608,7 @@ export default function App() {
                     consuming.chain.id !== selectedOwnable.chain.id && (
                     <Overlay
                       zIndex={1000}
-                      disabled={canConsume({
-                        chain: selectedOwnable.chain,
-                        package: selectedOwnable.package,
-                      }).then((can) => !can)}
+                      disabled={consumeEligibility[selectedOwnable.chain.id] === false}
                       onClick={() =>
                         consume(selectedOwnable.chain, consuming!.chain)
                       }

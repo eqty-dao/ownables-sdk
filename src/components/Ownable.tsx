@@ -6,9 +6,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { Cancelled, connect as rpcConnect } from "simple-iframe-rpc";
 import { Binary, EventChain, IMessageMeta } from "eqty-core";
-import { OwnableRPC, StateDump } from "../services/Ownable.service";
+import { StateDump } from "../services/Ownable.service";
 import {
   TypedMetadata,
   TypedOwnableInfo,
@@ -232,16 +231,11 @@ export default function Ownable(props: OwnableProps) {
       return;
     }
 
-    const iframeWindow = iframeRef.current!.contentWindow!;
-    const rpc = rpcConnect<Required<OwnableRPC>>(window, iframeWindow, "*", {
-      timeout: 5000,
-    });
-
     try {
-      await ownables.init(chain, pkg.cid, rpc, uniqueMessageHash);
+      ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
+      await ownables.init(chain, pkg.cid, uniqueMessageHash);
       setInitialized(true);
     } catch (e) {
-      if (e instanceof Cancelled) return;
       props.onError("Failed to forge Ownable", ownableErrorMessage(e));
     }
   }, [chain, ownables, pkg, props, uniqueMessageHash]);
@@ -334,10 +328,10 @@ export default function Ownable(props: OwnableProps) {
     return () => window.removeEventListener("message", windowMessageHandler);
   }, [windowMessageHandler]);
 
-  // Cleanup rpc on unmount when service ready
+  // Unregister widget window on unmount (worker stays alive for canConsume checks)
   useEffect(() => {
     return () => {
-      ownables?.clearRpc(chain.id);
+      ownables?.setWidgetWindow(chain.id, null);
     };
   }, [chain.id, ownables]);
 
