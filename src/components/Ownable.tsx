@@ -65,6 +65,7 @@ export default function Ownable(props: OwnableProps) {
     name: pkg?.title ?? "",
     description: pkg?.description,
   });
+  const [isConsumed, setIsConsumed] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -160,8 +161,13 @@ export default function Ownable(props: OwnableProps) {
             .query({ get_metadata: {} }, effective)) as TypedMetadata)
         : metadata;
 
+      const consumed = pkg.isConsumable
+        ? await ownables.rpc(chain.id).query({ is_consumed: {} }, effective).catch(() => false) as boolean
+        : false;
+
       setInfo(infoResp);
       setMetadata(metadataResp);
+      setIsConsumed(consumed);
     },
     [chain.id, metadata, ownables, pkg, stateDump]
   );
@@ -365,7 +371,8 @@ export default function Ownable(props: OwnableProps) {
       pkg={pkg}
       metadata={metadata}
       issuer={info?.issuer}
-      isConsumable={pkg.isConsumable && !isTransferred}
+      isConsumable={pkg.isConsumable && !isTransferred && !isConsumed}
+      isConsumed={isConsumed}
       isTransferred={isTransferred}
       iframeRef={iframeRef}
       isApplying={isApplying}
