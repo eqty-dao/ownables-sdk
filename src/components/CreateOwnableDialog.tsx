@@ -7,10 +7,9 @@ import {
   Button,
   TextField,
   Box,
-  Typography,
   CircularProgress,
   Alert,
-} from "@mui/material";
+} from "@/components/ui";
 import { enqueueSnackbar } from "notistack";
 import { useService } from "../hooks/useService";
 import { useAccount, useChainId } from "wagmi";
@@ -179,9 +178,9 @@ export default function CreateOwnableDialog({
       setError(null);
 
       // Step 1: Switch to correct chain if needed
-      const ltoNetworkId = builderService.getLtoNetworkId();
+      const networkCode = builderService.getNetworkCode();
       const expectedChainId =
-        ltoNetworkId === "L"
+        networkCode === "L"
           ? "0x2105" // Base Mainnet
           : "0x14a34"; // Base Sepolia
 
@@ -194,7 +193,7 @@ export default function CreateOwnableDialog({
         if (switchError?.code === 4902) {
           throw new Error(
             `Please add Base ${
-              ltoNetworkId === "L" ? "Mainnet" : "Sepolia"
+              networkCode === "L" ? "Mainnet" : "Sepolia"
             } to MetaMask first`
           );
         }
@@ -285,7 +284,7 @@ export default function CreateOwnableDialog({
 
       // Only include transaction ID if payment was made (not on testnet)
       if (txHash) {
-        ownableData.OWNABLE_LTO_TRANSACTION_ID = txHash;
+        ownableData.OWNABLE_BASE_TRANSACTION_ID = txHash;
       }
 
       zip.file("ownableData.json", JSON.stringify([ownableData], null, 2));
@@ -295,7 +294,7 @@ export default function CreateOwnableDialog({
 
       // Create chain.json
       const chainData = {
-        networkId: ltoNetworkId,
+        networkId: networkCode,
         timestamp: Date.now(),
         version: "1.0.0",
       };
@@ -365,10 +364,10 @@ export default function CreateOwnableDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} className="w-[min(560px,calc(100vw-32px))]">
       <DialogTitle>Create Ownable</DialogTitle>
       <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
+        <Box className="flex flex-col gap-2 pt-2">
           {error && (
             <Alert severity="error" onClose={() => setError(null)}>
               {error}
@@ -379,7 +378,7 @@ export default function CreateOwnableDialog({
             label="Name *"
             value={name}
             onChange={handleNameChange}
-            fullWidth
+            className="w-full"
             required
             disabled={isUploading || isProcessingPayment}
             helperText={
@@ -393,7 +392,7 @@ export default function CreateOwnableDialog({
             label="Description"
             value={description}
             onChange={handleDescriptionChange}
-            fullWidth
+            className="w-full"
             multiline
             rows={3}
             disabled={isUploading || isProcessingPayment}
@@ -405,9 +404,9 @@ export default function CreateOwnableDialog({
           />
 
           <Box>
-            <Typography variant="body2" sx={{ mb: 1 }}>
+            <p className="mb-1 text-sm">
               Image * (GIF, WebP, PNG, JPEG)
-            </Typography>
+            </p>
             <input
               ref={fileInputRef}
               type="file"
@@ -417,13 +416,7 @@ export default function CreateOwnableDialog({
               style={{ width: "100%" }}
             />
             {imagePreview && (
-              <Box
-                sx={{
-                  mt: 2,
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
+              <Box className="mt-2 flex justify-center">
                 <img
                   src={imagePreview}
                   alt="Preview"
@@ -442,9 +435,9 @@ export default function CreateOwnableDialog({
               Template cost: {formatEther(parseEther(templateCost.eth))} ETH
               { templateCost.usd ? ` ($${templateCost.usd} USD)` : '' }
               {address && (
-                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                <p className="mt-0.5 block text-xs">
                   Payment will be sent to the builder service wallet
-                </Typography>
+                </p>
               )}
             </Alert>
           )}
@@ -464,16 +457,12 @@ export default function CreateOwnableDialog({
         </Button>
         <Button
           onClick={handleUpload}
-          variant="contained"
+          className="bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
           disabled={
             isUploading || isProcessingPayment || !name.trim() || !imageFile
           }
-          startIcon={
-            isUploading || isProcessingPayment ? (
-              <CircularProgress size={20} />
-            ) : null
-          }
         >
+          {isUploading || isProcessingPayment ? <CircularProgress size={20} /> : null}
           {isProcessingPayment
             ? "Processing Payment..."
             : isUploading

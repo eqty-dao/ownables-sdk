@@ -1,37 +1,25 @@
 import {
-  Chip,
+  Tag,
   DialogContent,
   DialogTitle,
   IconButton,
-  SxProps,
-  Theme,
-  Typography,
-} from "@mui/material";
+} from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
-import { Fingerprint, InfoOutlined } from "@mui/icons-material";
+import { Fingerprint, Info as InfoOutlined } from "lucide-react";
 import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
-import Dialog from "@mui/material/Dialog";
+import { Dialog } from "@/components/ui";
 import { EventChain } from "eqty-core";
 import EventCard from "./EventCard";
 import shortId from "../utils/shortId";
 import Tooltip from "./Tooltip";
-import backgroundImage from "../assets/background.svg";
-import If from "./If";
-import useInterval from "../utils/useInterval";
+import useInterval from "../hooks/useInterval";
 import { useService } from "../hooks/useService"
 
 interface OwnableInfoProps {
-  sx?: SxProps<Theme>;
+  className?: string;
   chain: EventChain;
   metadata?: TypedMetadata;
 }
-
-const style = {
-  backgroundImage: `url(${backgroundImage})`,
-  backgroundRepeat: "no-repeat",
-  backgroundAttachment: "fixed",
-  backgroundSize: "cover",
-};
 
 export default function OwnableInfo(props: OwnableInfoProps) {
   const { chain, metadata } = props;
@@ -61,57 +49,32 @@ export default function OwnableInfo(props: OwnableInfoProps) {
 
   return (
     <>
-      <IconButton sx={props.sx} onClick={() => setOpen(true)}>
+      <IconButton className={props.className} onClick={() => setOpen(true)}>
         <InfoOutlined />
       </IconButton>
       <Dialog
         onClose={() => setOpen(false)}
-        fullWidth
-        maxWidth="lg"
         open={open}
-        PaperProps={{ sx: style }}
+        className="w-[min(900px,calc(100vw-32px))]"
       >
-        <DialogTitle
-          component="div"
-          sx={{ fontSize: 12, pb: 0 }}
-          color="primary"
-        >
+        <DialogTitle className="flex items-center gap-2 pb-0 pt-4 text-xs font-semibold text-sky-700">
           <Tooltip title={chain.id}>
-            <Chip
-              label={shortId(chain.id)}
-              icon={<Fingerprint />}
-              color="primary"
-              size="small"
-              variant="outlined"
-            />
+            <Tag value={shortId(chain.id)} icon={<Fingerprint className="h-3.5 w-3.5" />} color="info" />
           </Tooltip>
-          <If condition={verified}>
-            <Chip
-              label="Anchors verfied"
-              color="success"
-              size="small"
-              sx={{ ml: 1 }}
-            />
-          </If>
+          {verified && (
+            <Tag value="Anchors verified" color="success" />
+          )}
         </DialogTitle>
-        <DialogTitle sx={{ pt: 1, pb: 1 }}>{metadata?.name}</DialogTitle>
-        <DialogTitle
-          component="h3"
-          sx={(theme) => ({
-            fontSize: 14,
-            pt: 0,
-            pb: 1.5,
-            color: theme.palette.text.secondary,
-          })}
-        >
+        <DialogTitle className="pb-1 pt-1 text-xl font-semibold">{metadata?.name}</DialogTitle>
+        <DialogTitle className="pb-2 pt-0 text-sm text-slate-500 dark:text-slate-400">
           {metadata?.description}
         </DialogTitle>
         <DialogContent>
-          <If condition={chain.events.length === 0}>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          {chain.events.length === 0 && (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               This is a static ownable. It does not contain any events.
-            </Typography>
-          </If>
+            </p>
+          )}
           {chain.events.map((event, i) => (
             <EventCard
               key={event.timestamp}

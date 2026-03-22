@@ -11,7 +11,7 @@ const getMimeType = (filename: string): string | null | undefined =>
 
 export class RelayService {
   public static readonly URL =
-    process.env.REACT_APP_RELAY || process.env.REACT_APP_LOCAL;
+    import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL;
   private static readonly STORAGE_PREFIX = "relay_siwe_token:";
 
   public readonly relay: Relay;

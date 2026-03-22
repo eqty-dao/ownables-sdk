@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
-  Drawer,
   Box,
-  Typography,
   IconButton,
   List,
   ListItem,
@@ -10,14 +8,17 @@ import {
   Button,
   Badge,
   Skeleton,
-} from "@mui/material";
-import { ArrowBack } from "@mui/icons-material";
+} from "@/components/ui";
+import { ArrowLeft as ArrowBack } from "lucide-react";
+import { Drawer } from "@/components/ui";
 import { EventChain } from "eqty-core";
 import { enqueueSnackbar } from "notistack";
 import placeholderImage from "../assets/cube.png";
 import { useMessageCount } from "../hooks/useMessageCount";
 import { useService } from "../hooks/useService";
 import { useChainId } from "wagmi";
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
 
 interface ViewMessagesBarProps {
   open: boolean;
@@ -30,37 +31,31 @@ interface ViewMessagesBarProps {
   >;
 }
 
-export const network = process.env.REACT_APP_LTO_NETWORK_ID;
+const messageItem = cva("mb-2 flex flex-col items-start border-b border-slate-200 pb-2 dark:border-slate-700");
+const messageHeader = cva("flex w-full items-center gap-2");
+const thumb = cva("h-[35px] w-[35px] overflow-hidden rounded-[10%]");
+const miniButton = cva("px-1.5 py-[3px] text-[0.625rem] leading-[1.3]");
 
 const SkeletonMessageItem = () => (
-  <ListItem
-    sx={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-      mb: 2,
-      borderBottom: "1px solid #ddd",
-      pb: 2,
-    }}
-  >
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+  <ListItem className={cn(messageItem())}>
+    <Box className="flex w-full items-center gap-2">
       <Skeleton
-        variant="rectangular"
+       
         width={35}
         height={35}
-        sx={{ borderRadius: "10%" }}
+        style={{ borderRadius: "10%" }}
       />
-      <Box sx={{ flex: 1 }}>
-        <Skeleton variant="text" width="80%" height={16} />
-        <Skeleton variant="text" width="60%" height={14} />
+      <Box style={{ flex: 1 }}>
+        <Skeleton width="80%" height={16} />
+        <Skeleton width="60%" height={14} />
       </Box>
     </Box>
-    <Skeleton variant="text" width="70%" height={14} sx={{ mt: 1 }} />
+    <Skeleton width="70%" height={14} className="mt-1" />
     <Skeleton
-      variant="rectangular"
+     
       width={80}
       height={28}
-      sx={{ mt: 1, borderRadius: 1 }}
+      style={{ marginTop: 4, borderRadius: 4 }}
     />
   </ListItem>
 );
@@ -188,22 +183,22 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box sx={{ width: 350, p: 2 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6" component="div">
+      <Box style={{ width: 350, padding: 8 }}>
+        <Box className="flex items-center justify-between">
+          <span className="text-body font-semibold">
             Messages
-          </Typography>
+          </span>
           <IconButton onClick={onClose}>
             <ArrowBack />
           </IconButton>
         </Box>
 
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1">
+        <Box className="mt-2">
+          <span className="text-caption">
             {messagesCount > 0
               ? `You have ${messagesCount} unread messages.`
               : "No new messages"}
-          </Typography>
+          </span>
         </Box>
 
         {loading ? (
@@ -218,32 +213,11 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
               msg.version === 0 ? (
                 <ListItem
                   key={index}
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    mb: 2,
-                    borderBottom: "1px solid #ddd",
-                    pb: 2,
-                  }}
+                  className={cn(messageItem())}
                 >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "100%",
-                      gap: 1,
-                    }}
-                  >
+                  <Box className={cn(messageHeader())}>
                     {" "}
-                    <Box
-                      sx={{
-                        width: 35,
-                        height: 35,
-                        borderRadius: "10%",
-                        overflow: "hidden",
-                      }}
-                    >
+                    <Box className={cn(thumb())}>
                       <img
                         src={placeholderImage}
                         alt="Thumbnail"
@@ -256,50 +230,35 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     </Box>
                     <ListItemText
                       primary={
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: "0.6rem", fontWeight: "bold" }}
-                        >
+                        <span className="text-[0.6rem] font-bold">
                           Sender:{" "}
                           {msg?.sender === builderAddress
-                            ? "Obuilder"
+                            ? "Builder"
                             : msg?.sender || "Unknown"}
-                        </Typography>
+                        </span>
                       }
                       secondary={
-                        <Typography
-                          variant="body2"
-                          sx={{ fontSize: "0.6rem", color: "text.secondary" }}
-                        >
+                        <span className="text-[0.6rem] text-slate-500 dark:text-slate-400">
                           Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
-                        </Typography>
+                        </span>
                       }
                     />
                   </Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 0.5, fontSize: "0.55rem" }}
-                  >
+                  <span className="mt-0.5 text-[0.55rem]">
                     <span style={{ fontWeight: 800 }}> Date:</span>{" "}
                     {new Date(msg?.timestamp || 0).toLocaleString()}
-                  </Typography>
-                  <Box display="flex" alignItems="center" mt={1}>
+                  </span>
+                  <Box className="mt-1 flex items-center">
                     <Button
-                      variant="contained"
+                     
                       size="small"
-                      sx={{
-                        fontSize: "0.625rem",
-                        padding: "3px 6px",
-                        minWidth: "unset",
-                        lineHeight: 1.3,
-                      }}
+                      className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
                     >
                       Import Message
                     </Button>
                     {!importedHashes.has(msg?.hash) && (
-                      <Badge color="success" variant="dot" sx={{ ml: 2 }} />
+                      <Badge variant="dot" style={{ marginLeft: 8 }} />
                     )}
                   </Box>
                 </ListItem>
@@ -307,32 +266,11 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                 //version 2 message support
                 <ListItem
                   key={index}
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    mb: 2,
-                    borderBottom: "1px solid #ddd",
-                    pb: 2,
-                  }}
+                  className={cn(messageItem())}
                 >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "100%",
-                      gap: 1,
-                    }}
-                  >
+                  <Box className={cn(messageHeader())}>
                     {(msg?.meta?.thumbnail && (
-                      <Box
-                        sx={{
-                          width: 35,
-                          height: 35,
-                          borderRadius: "10%",
-                          overflow: "hidden",
-                        }}
-                      >
+                      <Box className={cn(thumb())}>
                         <img
                           src={msg.meta.thumbnail}
                           alt="Thumbnail"
@@ -344,14 +282,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                         />
                       </Box>
                     )) || (
-                      <Box
-                        sx={{
-                          width: 35,
-                          height: 35,
-                          borderRadius: "10%",
-                          overflow: "hidden",
-                        }}
-                      >
+                      <Box className={cn(thumb())}>
                         <img
                           src={placeholderImage}
                           alt="Thumbnail"
@@ -365,59 +296,41 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     )}
 
                     <Box>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontSize: "0.7rem", fontWeight: "bold" }}
-                      >
+                      <span className="block text-[0.7rem] font-bold">
                         {msg?.meta?.title
                           ? msg.meta.title.length > 16
                             ? msg.meta.title.slice(0, 16) + "..."
                             : msg.meta.title
                           : "Unknown"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontSize: "0.6rem", fontWeight: "bold" }}
-                      >
+                      </span>
+                      <span className="block text-[0.6rem] font-bold">
                         Sender:{" "}
                         {msg?.sender === builderAddress
-                          ? "Obuilder"
+                          ? "Builder"
                           : msg?.sender || "Unknown"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontSize: "0.6rem", color: "text.secondary" }}
-                      >
+                      </span>
+                      <span className="block text-[0.6rem] text-slate-500 dark:text-slate-400">
                         Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB
-                      </Typography>
+                      </span>
                     </Box>
                   </Box>
 
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 0.5, fontSize: "0.55rem" }}
-                  >
+                  <span className="mt-0.5 text-[0.55rem]">
                     <span style={{ fontWeight: 800 }}> Date:</span>{" "}
                     {new Date(msg?.timestamp || 0).toLocaleString()}
-                  </Typography>
+                  </span>
 
-                  <Box display="flex" alignItems="center" mt={1}>
+                  <Box className="mt-1 flex items-center">
                     <Button
-                      variant="contained"
+                     
                       size="small"
-                      sx={{
-                        fontSize: "0.625rem",
-                        padding: "3px 6px",
-                        minWidth: "unset",
-                        lineHeight: 1.3,
-                      }}
+                      className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
                     >
                       Import Message
                     </Button>
                     {!importedHashes.has(msg?.hash) && (
-                      <Badge color="success" variant="dot" sx={{ ml: 2 }} />
+                      <Badge variant="dot" style={{ marginLeft: 8 }} />
                     )}
                   </Box>
                 </ListItem>
@@ -426,25 +339,20 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
           </List>
         )}
         {messages.length > 0 && (
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mt={2}
-          >
+          <Box className="mt-2 flex items-center justify-between">
             <Button
-              variant="outlined"
+             
               size="small"
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
             >
               Prev
             </Button>
-            <Typography variant="body2">
+            <span className="text-sm text-slate-700 dark:text-slate-300">
               Page {currentPage} of {Math.ceil(totalCount / itemsPerPage)}
-            </Typography>
+            </span>
             <Button
-              variant="outlined"
+             
               size="small"
               onClick={() =>
                 setCurrentPage((prev) =>
@@ -457,9 +365,9 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
             </Button>
           </Box>
         )}
-        <Box display="flex" justifyContent="center" mt={1}>
+        <Box className="mt-1 flex justify-center">
           <Button
-            variant="text"
+           
             size="small"
             onClick={() => {
               setItemsPerPage((prev) => (prev === 50 ? 100 : 50));

@@ -1,9 +1,12 @@
-import { Button, Typography } from '@mui/material';
-import InfoOutlineIcon from '@mui/icons-material/InfoOutlined';
-import CachedIcon from '@mui/icons-material/Cached';
+import { Button } from '@/components/ui';
+import { Info as InfoOutlineIcon, RefreshCcw as CachedIcon } from "lucide-react";
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useDisconnect } from 'wagmi';
 import { PropsWithChildren } from "react"
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
+
+const primaryWalletButton = cva("w-full");
 
 export default function WalletConnectControls({ children }: PropsWithChildren) {
   const { disconnect, isLoading } = useDisconnect();
@@ -25,29 +28,15 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         if (!connected) {
           return (
-            <>
-              <Button variant="contained" fullWidth onClick={openConnectModal}>
-                Connect to wallet
-              </Button>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{
-                  mt: 1,
-                  display: "block",
-                  textAlign: "center",
-                  fontSize: "0.75rem",
-                }}
-              >
-                Ensure to connect on <strong>Base Sepolia</strong> testnet
-              </Typography>
-            </>
+            <Button variant="primary" size="large" className={cn(primaryWalletButton())} onClick={openConnectModal}>
+              Connect to wallet
+            </Button>
           );
         }
 
         if (chain?.unsupported) {
           return (
-            <Button variant="contained" color="warning" fullWidth onClick={openChainModal}>
+            <Button className="w-full bg-amber-500 text-white hover:bg-amber-600" onClick={openChainModal}>
               Wrong network — Switch
             </Button>
           );
@@ -55,14 +44,14 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
 
         return (
           <>
-            <Typography sx={{ fontSize: 12, cursor: 'pointer' }} color="text.secondary" onClick={openChainModal}>
-              {chain?.name || 'Network'} address <CachedIcon sx={{ fontSize: 12 }} />
-            </Typography>
-            <Typography sx={{ fontSize: 14, fontWeight: 600, cursor: 'pointer' }} component="div" onClick={openAccountModal}>
-              {account?.displayName} <InfoOutlineIcon sx={{ fontSize: 14 }} />
-            </Typography>
+            <p className="cursor-pointer text-xs text-slate-500 dark:text-slate-400" onClick={openChainModal}>
+              {chain?.name || 'Network'} address <CachedIcon className="inline h-3 w-3" />
+            </p>
+            <p className="cursor-pointer text-sm font-semibold text-slate-900 dark:text-slate-100" onClick={openAccountModal}>
+              {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
+            </p>
             {children}
-            <Button variant="contained" fullWidth onClick={() => disconnect()} disabled={isLoading}>
+            <Button className={cn(primaryWalletButton())} onClick={() => disconnect()} disabled={isLoading}>
               {isLoading ? 'Disconnecting…' : 'Disconnect'}
             </Button>
           </>

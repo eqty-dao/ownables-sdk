@@ -1,6 +1,6 @@
-## 📦 A Guide for Devs and Builders: Working with LTO Ownables
+## A Guide for Devs and Builders: Working with Ownables
 
-As the **LTO Ownables** ecosystem grows, the need for robust tooling and clear developer guidelines becomes essential. This guide will walk you through how to structure and send Ownables using the **LTO SDK and relay infrastructure**.
+As the Ownables ecosystem grows, the need for robust tooling and clear developer guidelines becomes essential. This guide walks you through how to structure and send Ownables using the SDK and relay infrastructure.
 
 If you're building Ownables or integrating them into your app, this guide is for you.
 
@@ -8,7 +8,7 @@ If you're building Ownables or integrating them into your app, this guide is for
 
 ### 🔧 Structuring Your Ownable Message
 
-Each Ownable is packaged and sent between wallets using the **Relay Server**, which handles wallet-to-wallet communication on the LTO Network.
+Each Ownable is packaged and sent between wallets using the Relay Server.
 
 To ensure your Ownable can be **previewed before download**, you should include a **`thumbnail.webp`** file inside the Ownable zip package.
 
@@ -47,6 +47,6 @@ Make sure your message includes the structured Ownable zip with any required met
 
 ### 📚 More Resources
 
-- [LTO Network Docs](https://docs.ltonetwork.com/)
-- [Ownables SDK on GitHub](https://github.com/ltonetwork/ownables-sdk)
+- [Ownables Docs](https://docs.ltonetwork.com/ownables/what-are-ownables)
+- [Ownables SDK on GitHub](https://github.com/eqty-dao/ownables-sdk)
 - [Examples and Demos](https://demo.ownables.info)

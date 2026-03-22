@@ -1,4 +1,5 @@
 import IDBService from "./IDB.service";
+import { isE2E } from "../utils/isE2E";
 import EventChainService from "./EventChain.service";
 import OwnableService from "./Ownable.service";
 import PackageService from "./Package.service";
@@ -8,11 +9,12 @@ import { RelayService } from "./Relay.service";
 import EQTYService from "./EQTY.service";
 import BuilderService from "./Builder.service";
 import type { PublicClient, WalletClient } from "viem";
+import { createE2EViemClients } from "./E2EWallet";
 
 export interface ServiceMap {
   relay: RelayService;
   localStorage: LocalStorageService;
-  eqty: EQTYService;
+  eqty: EQTYService | MockEQTYService;
   idb: IDBService;
   eventChains: EventChainService;
   packages: PackageService;
@@ -35,10 +37,24 @@ export default class ServiceContainer {
     public readonly walletClient?: WalletClient,
     public readonly publicClient?: PublicClient
   ) {
+
     this.register(
       "eqty",
-      async (c) =>
-        new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient)
+      async (c) => {
+        if (isE2E) {
+          const { address, walletClient, publicClient } = createE2EViemClients(
+            c.chainId!
+          );
+          return new EQTYService(address, c.chainId!, walletClient, publicClient);
+        }
+
+        return new EQTYService(
+          c.address!,
+          c.chainId!,
+          c.walletClient,
+          c.publicClient
+        );
+      }
     );
 
     this.register("idb", async (c) =>

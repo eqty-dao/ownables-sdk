@@ -4,9 +4,9 @@ import {
   Button,
   Dialog,
   DialogActions,
-} from "@mui/material";
+} from "@/components/ui";
 import {ReactNode} from "react";
-import {AlertColor} from "@mui/material/Alert/Alert";
+import { AlertColor } from "@/components/ui";
 
 interface AlertDialogProps {
   open: boolean;
@@ -20,11 +20,11 @@ export default function AlertDialog(props: AlertDialogProps) {
   const {open, onClose, severity} = props;
 
   return <Dialog open={open} onClose={onClose} transitionDuration={0}>
-    <Alert variant="outlined" severity={severity || 'info'}>
+    <Alert className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900" severity={severity || 'info'}>
       <AlertTitle>{props.title}</AlertTitle>
-      <Box sx={{pr: 3}}>{ props.children }</Box>
-      <DialogActions sx={{pb: 0}}>
-        <Button variant="text" size="small" onClick={onClose}>Ok</Button>
+      <Box className="pr-3">{ props.children }</Box>
+      <DialogActions className="pb-0">
+        <Button size="small" onClick={onClose}>Ok</Button>
       </DialogActions>
     </Alert>
   </Dialog>

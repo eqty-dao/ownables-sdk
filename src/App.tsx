@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
-import { Box, Button, CircularProgress, Link, Typography } from "@mui/material";
-import PackagesFab from "./components/PackagesFab";
+import { isE2E } from "./utils/isE2E";
+import { AlertColor, Box, Button, CircularProgress, IconButton, Link } from "@/components/ui";
+import { ArrowLeft as ArrowBack, Plus } from "lucide-react";
+import IssueOwnablePanel from "./components/IssueOwnablePanel";
 import { TypedPackage } from "./interfaces/TypedPackage";
 import LoginDialog from "./components/LoginDialog";
 import Loading from "./components/Loading";
 import Sidebar from "./components/Sidebar";
 import { ViewMessagesBar } from "./components/ViewMessagesBar";
-import If from "./components/If";
 import { HAS_EXAMPLES } from "./services/Package.service";
-import Grid from "@mui/material/Unstable_Grid2";
 import * as React from "react";
 import Ownable from "./components/Ownable";
+import OwnableListItem from "./components/OwnableListItem";
 import { EventChain } from "eqty-core";
 import HelpDrawer from "./components/HelpDrawer";
 import AppToolbar from "./components/AppToolbar";
 import AlertDialog from "./components/AlertDialog";
-import { AlertColor } from "@mui/material/Alert/Alert";
 import ownableErrorMessage from "./utils/ownableErrorMessage";
 import Overlay from "./components/Overlay";
 import ConfirmDialog from "./components/ConfirmDialog";
@@ -28,23 +28,73 @@ import { useService } from "./hooks/useService";
 import LocalStorageService from "./services/LocalStorage.service";
 import CreateOwnableDialog from "./components/CreateOwnableDialog";
 import { useProgress } from "./contexts/Progress.context";
+import { cva } from "class-variance-authority";
+import { cn } from "./utils/cn";
+
+const listPane = cva(
+  "w-full flex-shrink-0 px-4 lg:w-[384px]",
+  {
+    variants: {
+      hiddenOnMobile: {
+        true: "hidden lg:block",
+        false: "block",
+      },
+    },
+    defaultVariants: {
+      hiddenOnMobile: false,
+    },
+  }
+);
+
+const detailPane = cva("min-w-0 flex-1", {
+  variants: {
+    showOnMobile: {
+      true: "block",
+      false: "hidden",
+    },
+  },
+  defaultVariants: {
+    showOnMobile: false,
+  },
+});
+
+const emptyStateLink = cva("pointer-events-auto link-primary underline");
+const issueOwnableButton = cva(
+  "mt-2 flex w-full items-start justify-start gap-3 rounded-[14px] border-2 p-4 text-left transition-all",
+  {
+    variants: {
+      selected: {
+        true: "border-indigo-500 bg-indigo-50 shadow-md dark:bg-indigo-950/30",
+        false: "border-dashed border-slate-300 bg-transparent hover:border-indigo-400 dark:border-[#333333] dark:hover:border-indigo-500",
+      },
+      dimmed: {
+        true: "cursor-not-allowed opacity-40",
+        false: "",
+      },
+    },
+    defaultVariants: { selected: false, dimmed: false },
+  }
+);
 
 export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showViewMessagesBar, setShowViewMessagesBar] = useState(false);
-  const [showPackages, setShowPackages] = React.useState(false);
+  const ISSUE_OWNABLE_ID = "issue";
   const [showCreateOwnable, setShowCreateOwnable] = React.useState(false);
   const [message, setMessages] = useState(0);
   const [ownables, setOwnables] = useState<
     Array<{ chain: EventChain; package: string; uniqueMessageHash?: string }>
   >([]);
+  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [consuming, setConsuming] = useState<{
     chain: EventChain;
     package: string;
     info: TypedOwnableInfo;
   } | null>(null);
+  const [consumeEligibility, setConsumeEligibility] = useState<Record<string, boolean>>({});
   const [alert, setAlert] = useState<{
     title: string;
     message: React.ReactNode;
@@ -79,18 +129,25 @@ export default function App() {
   useEffect(() => {
     if (!ownableService) return;
 
-    ownableService
-      .loadAll()
-      .then((ownables) => setOwnables(ownables))
-      .then(() => setLoaded(true));
+    ownableService.loadAll().then(async (loaded) => {
+      setOwnables(loaded);
+      // Phase 1: initialize workers for all ownables so canConsume works without rendering
+      await Promise.allSettled(
+        loaded.map(({ chain, package: cid }) =>
+          ownableService.initWorker(chain.id, cid)
+        )
+      );
+      if (loaded.length > 0) setSelectedChainId(loaded[0].chain.id);
+      setLoaded(true);
+    });
   }, [ownableService]);
 
+
   useEffect(() => {
-    setShowLogin(!isConnected);
+    setShowLogin(!isConnected && !isE2E);
 
     setShowSidebar(false);
     setShowViewMessagesBar(false);
-    setShowPackages(false);
     setConsuming(null);
     setAlert(null);
     setConfirm(null);
@@ -141,7 +198,7 @@ export default function App() {
       const [ctrl, onProgress] = progress.open({ title: `Forging ${pkg.title}`, steps });
       const result = await ownableService.create(pkg, onProgress);
       setOwnables([...ownables, { chain: result.chain, package: pkg.cid }]);
-      setShowPackages(false);
+      setSelectedChainId(result.chain.id);
       ctrl.close();
 
       if (result.txHash) {
@@ -155,7 +212,7 @@ export default function App() {
             variant: "success",
             action: (
               <Button
-                color="inherit"
+                className="text-white hover:bg-white/20"
                 size="small"
                 onClick={() => window.open(explorerUrl, "_blank")}
               >
@@ -187,14 +244,19 @@ export default function App() {
         (data: TypedPackage) => data.chain && data.cid
       );
 
-      setOwnables((prevOwnables) => [
-        ...prevOwnables,
-        ...validPackages.map((data: TypedPackage) => ({
-          chain: data.chain,
-          package: data.cid,
-          uniqueMessageHash: data.uniqueMessageHash,
-        })),
-      ]);
+      setOwnables((prevOwnables) => {
+        const next = [
+          ...prevOwnables,
+          ...validPackages.map((data: TypedPackage) => ({
+            chain: data.chain,
+            package: data.cid,
+            uniqueMessageHash: data.uniqueMessageHash,
+          })),
+        ];
+        if (!selectedChainId && next.length > 0)
+          setSelectedChainId(next[0].chain.id);
+        return next;
+      });
 
       enqueueSnackbar(`Ownable successfully loaded`, { variant: "success" });
       await setMessageCount(0);
@@ -237,6 +299,7 @@ export default function App() {
           current.filter((ownable) => ownable.chain.id !== id)
         );
         //Delete ownable
+        ownableService.clearRpc(id);
         await ownableService.delete(id);
 
         //delete ownable from relay
@@ -264,16 +327,29 @@ export default function App() {
     chain: EventChain;
     package: string;
   }): Promise<boolean> => {
-    try {
-      return Boolean(
-        consuming?.info &&
-          (await ownableService?.canConsume(consumer, consuming!.info))
-      );
-    } catch (e) {
-      console.error(e, (e as any).cause);
-      return false;
-    }
+    return Boolean(
+      consuming?.info &&
+        (await ownableService?.canConsume(consumer, consuming!.info))
+    );
   };
+
+  // Compute eligibility for all non-consuming ownables when consume mode activates
+  useEffect(() => {
+    if (!consuming) { setConsumeEligibility({}); return; }
+    const candidates = ownables.filter(({ chain }) => chain.id !== consuming.chain.id);
+    Promise.allSettled(
+      candidates.map(({ chain, package: pkg }) =>
+        canConsume({ chain, package: pkg }).then((eligible) => [chain.id, eligible] as const)
+      )
+    ).then((results) => {
+      const eligibility: Record<string, boolean> = {};
+      results.forEach((result, i) => {
+        if (result.status === "fulfilled") eligibility[candidates[i].chain.id] = result.value[1];
+      });
+      setConsumeEligibility(eligibility);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consuming]);
 
   const consume = (consumer: EventChain, consumable: EventChain) => {
     if (consumer.id === consumable.id) return;
@@ -349,12 +425,7 @@ export default function App() {
   // Show loading state while connecting
   if (isConnecting) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
+      <Box className="flex min-h-screen items-center justify-center">
         <CircularProgress />
       </Box>
     );
@@ -369,115 +440,186 @@ export default function App() {
         chainId={chainId}
         isConnected={isConnected}
       />
-      <If condition={ownables.length === 0}>
-        <Grid
-          container
-          spacing={0}
-          direction="column"
-          alignItems="center"
-          justifyContent="center"
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: -1,
-          }}
-        >
-          <Grid xs={10}>
-            <Typography variant="h3" color="text.primary" textAlign="center">
+      {ownables.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-4">
+          <div className="max-w-2xl text-center">
+            <h1 className="text-page-title">
               Let's get started!
-            </Typography>
-            <Typography
-              variant="subtitle1"
-              color="text.secondary"
-              textAlign="center"
-              sx={{ mt: 2 }}
+            </h1>
+            <p
+              className="text-body mt-4 text-base sm:text-2xl"
             >
               Read{" "}
               <Link
                 href="https://docs.ltonetwork.com/ownables/what-are-ownables"
                 target="_blank"
+                className={cn(emptyStateLink())}
               >
                 the documentation
               </Link>{" "}
               to learn how to issue an Ownable
-              <If condition={HAS_EXAMPLES}>
-                <br />
-                or try one of{" "}
-                <Link
-                  component="button"
-                  onClick={() => setShowPackages(true)}
-                  style={{ fontSize: "inherit" }}
-                >
-                  the examples
-                </Link>
-              </If>
+              {HAS_EXAMPLES && (
+                <>
+                  <br />
+                  or try one of{" "}
+                  <Link
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setSelectedChainId(ISSUE_OWNABLE_ID); setShowDetail(true); }}
+                    className={cn(emptyStateLink())}
+                  >
+                    the examples
+                  </Link>
+                </>
+              )}
               .
               <br />
-            </Typography>
-          </Grid>
-        </Grid>
-      </If>
+            </p>
+          </div>
+        </div>
+      )}
 
-      <Grid
-        container
-        sx={{ maxWidth: 1400, margin: "auto", mt: 2 }}
-        columnSpacing={6}
-        rowSpacing={4}
+      <Box
+        className="mx-auto mt-4 flex max-w-[1320px] gap-4 px-3 pb-6 lg:px-4"
       >
-        {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => (
-          <Grid
-            key={chain.id}
-            xs={12}
-            sm={6}
-            md={4}
-            sx={{ position: "relative" }}
-          >
-            <Ownable
-              chain={chain}
-              packageCid={packageCid}
-              uniqueMessageHash={uniqueMessageHash}
-              selected={consuming?.chain.id === chain.id}
-              onDelete={() => deleteOwnable(chain.id, packageCid)}
-              onRemove={() => removeOwnable(chain.id)}
-              onConsume={(info) =>
-                setConsuming({ chain, package: packageCid, info })
-              }
-              onError={showError}
-            >
-              <If condition={consuming?.chain.id === chain.id}>
-                <Overlay zIndex={1000} />
-              </If>
-              <If
-                condition={
-                  consuming !== null && consuming.chain.id !== chain.id
-                }
-              >
-                <Overlay
-                  zIndex={1000}
-                  disabled={canConsume({ chain, package: packageCid }).then(
-                    (can) => !can
-                  )}
-                  onClick={() => consume(chain, consuming!.chain)}
+        {/* Left sidebar — ownable list */}
+        <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile: showDetail }))}>
+          <Box className="space-y-2">
+            {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
+              const pkg = packageService?.info(packageCid, uniqueMessageHash);
+              return (
+                <OwnableListItem
+                  key={chain.id}
+                  chain={chain}
+                  packageCid={packageCid}
+                  metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
+                  issuer={chain.events[0]?.signerAddress}
+                  isConsumable={!!(pkg?.isConsumable)}
+                  isSelected={selectedChainId === chain.id}
+                  consumeIntent={
+                    consuming === null ? "none"
+                    : chain.id === consuming.chain.id ? "active"
+                    : consumeEligibility[chain.id] === false ? "ineligible"
+                    : consumeEligibility[chain.id] === true ? "eligible"
+                    : "none"
+                  }
+                  onClick={() => {
+                    if (consuming !== null) {
+                      if (chain.id !== consuming.chain.id) {
+                        consume(chain, consuming.chain);
+                      }
+                      return;
+                    }
+                    setSelectedChainId(chain.id);
+                    setShowDetail(true);
+                  }}
                 />
-              </If>
-            </Ownable>
-          </Grid>
-        ))}
-      </Grid>
+              );
+            })}
+          </Box>
 
-      <PackagesFab
-        open={showPackages}
-        onOpen={() => setShowPackages(true)}
-        onClose={() => setShowPackages(false)}
-        onSelect={forge}
-        onImportFR={relayImport}
-        onError={showError}
-        onCreate={() => setShowCreateOwnable(true)}
-        message={message}
-      />
+          {/* Issue an Ownable — dashed border button */}
+          <Button
+            type="button"
+            onClick={() => {
+              if (consuming !== null) return;
+              setSelectedChainId(ISSUE_OWNABLE_ID);
+              setShowDetail(true);
+            }}
+            disabled={consuming !== null}
+            className={cn(issueOwnableButton({ selected: selectedChainId === ISSUE_OWNABLE_ID, dimmed: consuming !== null }))}
+          >
+            {/* Icon tile */}
+            <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-100 to-purple-100 transition-all hover:from-indigo-200 hover:to-purple-200 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-800/40 dark:hover:to-purple-800/40">
+              <Plus className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            {/* Text */}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Issue an Ownable
+              </p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Create a new ownable from a package
+              </p>
+            </div>
+          </Button>
+        </Box>
+
+        {/* Right detail panel */}
+        {(() => {
+          const selectedOwnable = ownables.find(
+            ({ chain }) => chain.id === selectedChainId
+          );
+          return (
+            <Box
+              aria-label="Ownable detail"
+              role="region"
+              className={cn(detailPane({ showOnMobile: showDetail }), "lg:block")}
+            >
+              {/* Back button — mobile only */}
+              <Box className="mb-1 block lg:hidden">
+                <IconButton
+                  aria-label="Back"
+                  onClick={() => {
+                    setSelectedChainId(null);
+                    setShowDetail(false);
+                  }}
+                >
+                  <ArrowBack />
+                </IconButton>
+              </Box>
+
+              {selectedChainId === ISSUE_OWNABLE_ID && (
+                <IssueOwnablePanel
+                  onSelect={forge}
+                  onImportFR={relayImport}
+                  onError={showError}
+                  onCreate={() => setShowCreateOwnable(true)}
+                  message={message}
+                />
+              )}
+
+              {selectedChainId !== ISSUE_OWNABLE_ID && selectedOwnable && (
+                <Ownable
+                  key={selectedOwnable.chain.id}
+                  chain={selectedOwnable.chain}
+                  packageCid={selectedOwnable.package}
+                  uniqueMessageHash={selectedOwnable.uniqueMessageHash}
+                  selected={consuming?.chain.id === selectedOwnable.chain.id}
+                  onDelete={() =>
+                    deleteOwnable(
+                      selectedOwnable.chain.id,
+                      selectedOwnable.package
+                    )
+                  }
+                  onRemove={() => removeOwnable(selectedOwnable.chain.id)}
+                  onConsume={(info) =>
+                    setConsuming({
+                      chain: selectedOwnable.chain,
+                      package: selectedOwnable.package,
+                      info,
+                    })
+                  }
+                  onError={showError}
+                >
+                  {consuming?.chain.id === selectedOwnable.chain.id && (
+                    <Overlay zIndex={1000} />
+                  )}
+                  {consuming !== null &&
+                    consuming.chain.id !== selectedOwnable.chain.id && (
+                    <Overlay
+                      zIndex={1000}
+                      disabled={consumeEligibility[selectedOwnable.chain.id] === false}
+                      onClick={() =>
+                        consume(selectedOwnable.chain, consuming!.chain)
+                      }
+                    />
+                  )}
+                </Ownable>
+              )}
+            </Box>
+          );
+        })()}
+      </Box>
 
       <Sidebar
         open={showSidebar}
@@ -491,7 +633,6 @@ export default function App() {
         onClose={() => setShowCreateOwnable(false)}
         onSuccess={() => {
           setShowCreateOwnable(false);
-          setShowPackages(false);
         }}
       />
 
@@ -505,19 +646,16 @@ export default function App() {
       <LoginDialog key={address} open={showLogin} />
 
       <HelpDrawer open={consuming !== null}>
-        <Typography component="span" sx={{ fontWeight: 700 }}>
+        <p className="font-bold">
           Select which Ownable should consume this{" "}
           <em>
             {consuming && packageService
               ? packageService.info(consuming.package).title
               : ""}
           </em>
-        </Typography>
+        </p>
         <Box>
-          <Button
-            sx={(theme) => ({ color: theme.palette.primary.contrastText })}
-            onClick={() => setConsuming(null)}
-          >
+          <Button className="text-white" onClick={() => setConsuming(null)}>
             Cancel
           </Button>
         </Box>

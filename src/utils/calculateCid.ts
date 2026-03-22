@@ -2,7 +2,7 @@ import { importer } from "ipfs-unixfs-importer";
 import { BlackHoleBlockstore } from "blockstore-core";
 
 export default async function calculateCid(files: File[]): Promise<string> {
-  // Filter out chain.json and timestamp.txt to match oBuilder behavior
+  // Filter out chain.json and timestamp.txt to match Builder behavior
   // chain.json is separate metadata, timestamp.txt changes each time
   const filteredFiles = files.filter(
     (file) => file.name !== 'chain.json' && file.name !== 'timestamp.txt'

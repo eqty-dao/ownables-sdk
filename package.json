@@ -1,53 +1,39 @@
 {
-  "name": "@ltonetwork/ownable-sdk",
+  "name": "@ownables/sdk",
   "version": "0.1.0",
+  "packageManager": "yarn@4.10.3",
   "license": "MIT",
-  "description": "Development tools for LTO Ownables",
+  "description": "Development tools for Ownables",
   "homepage": "https://ownables.info",
   "dependencies": {
-    "@emotion/react": "^11.10.6",
-    "@emotion/styled": "^11.10.6",
-    "@fontsource/montserrat": "^4.5.14",
-    "@ltonetwork/http-message-signatures": "^0.1.12",
-    "@ltonetwork/lto": "^0.15.17",
-    "@mui/icons-material": "^5.18.0",
-    "@mui/material": "^5.11.10",
-    "@rainbow-me/rainbowkit": "^1.3.2",
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^29.4.0",
-    "@types/node": "^16.18.12",
-    "@types/react": "^18.0.28",
-    "@types/react-dom": "^18.0.11",
+    "@base-ui/react": "^1.3.0",
+    "@fontsource/montserrat": "^5.2.8",
+    "@rainbow-me/rainbowkit": "^2.2.10",
+    "@tanstack/react-query": "^5.90.5",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "all-inline": "^0.1.7",
-    "axios": "^1.7.7",
-    "blockstore-core": "^4.0.1",
+    "axios": "^1.13.6",
+    "blockstore-core": "^6.1.2",
     "buffer": "^6.0.3",
-    "craco": "^0.0.3",
-    "crypto-js": "^4.2.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "eqty-core": "^1.0.2",
-    "heic2any": "^0.0.4",
-    "ipfs-unixfs-importer": "^15.1.0",
-    "jszip": "^3.10.0",
-    "mime": "^3.0.0",
-    "notistack": "^3.0.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "ipfs-unixfs-importer": "^16.1.4",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.577.0",
+    "mime": "^4.1.0",
+    "notistack": "^3.0.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "react-json-view": "^1.21.3",
-    "react-scripts": "5.0.1",
-    "simple-iframe-rpc": "^0.1.10",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
-    "stream-browserify": "^3.0.0",
-    "tuai": "^1.0.8",
-    "typescript": "^4.9.5",
+    "tailwind-merge": "^3.5.0",
+    "typescript": "^5.9.3",
     "util": "^0.12.5",
-    "viem": "^1.21.4",
-    "wagmi": "^1.4.13",
-    "web-vitals": "^2.1.4",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.0.1"
+    "viem": "^2.47.2",
+    "wagmi": "^2.19.5",
+    "web-vitals": "^5.1.0"
   },
   "overrides": {
     "react-json-view": {
@@ -56,19 +42,20 @@
     }
   },
   "scripts": {
-    "start": "npm run build:ownable.js && craco start",
-    "build": "npm run build:ownable.js && craco build",
-    "test": "craco test",
-    "build:ownable.js": "webpack --config ownable-js.webpack.js --no-stats",
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "check:styles": "node bin/check-styles.mjs",
+    "preview": "vite preview",
+    "test:e2e": "cucumber-js",
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
-    "ownables:build": "if test -f ./ownables/$npm_config_package/Cargo.toml; then rm -rf ./ownables/$npm_config_package/pkg/ && wasm-pack build --out-name ownable --target web ./ownables/$npm_config_package/ && cd ./ownables/$npm_config_package/ && cargo schema && cd ../../ && zip -r -j ./ownables/$npm_config_package.zip ./ownables/$npm_config_package/assets/ ./ownables/$npm_config_package/pkg/*.js ./ownables/$npm_config_package/pkg/*.wasm ./ownables/$npm_config_package/pkg/package.json ./ownables/$npm_config_package/schema/*.json; else zip -r -j ./ownables/$npm_config_package.zip ./ownables/$npm_config_package/*; fi",
-    "ownables:build-all": "for DIR in $(ls ./ownables); do test -d ./ownables/$DIR && npm run ownables:build --package=$DIR; done",
+    "ownables:build": "bin/ownables-build.sh",
     "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/*/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/*/Cargo.lock",
-    "ownables:cid": "node bin/package-cid.mjs ownables/$npm_config_package.zip"
+    "ownables:cid": "node bin/package-cid.mjs"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ltonetwork/ownable-sdk.git"
+    "url": "git+https://github.com/eqty-dao/ownables-sdk.git"
   },
   "keywords": [
     "webassembly",
@@ -76,12 +63,6 @@
     "rust",
     "webpack"
   ],
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -95,8 +76,18 @@
     ]
   },
   "devDependencies": {
-    "@types/crypto-js": "^4.2.2",
-    "ajv": "^8.17.1",
-    "ajv-keywords": "^5.1.0"
+    "@babel/core": "^7.29.0",
+    "@babel/preset-typescript": "^7.28.5",
+    "@cucumber/cucumber": "^12.7.0",
+    "@letsrunit/bdd": "^0.6.0",
+    "@letsrunit/cli": "^0.6.0",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@vitejs/plugin-react": "^6.0.1",
+    "ajv": "^8.18.0",
+    "ajv-keywords": "^5.1.0",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
+    "vite": "^8.0.0"
   }
 }

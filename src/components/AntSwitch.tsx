@@ -1,45 +1,35 @@
-import {styled, Switch} from "@mui/material";
+import { Switch } from "@/components/ui";
+import { cva } from "class-variance-authority";
+import { cn } from "@/utils/cn";
 
-const AntSwitch = styled(Switch)(({ theme }) => ({
-  width: 28,
-  height: 16,
-  padding: 0,
-  display: 'flex',
-  '&:active': {
-    '& .MuiSwitch-thumb': {
-      width: 15,
-    },
-    '& .MuiSwitch-switchBase.Mui-checked': {
-      transform: 'translateX(9px)',
+const switchWrap = cva("inline-flex", {
+  variants: {
+    disabled: {
+      true: "cursor-not-allowed opacity-50",
+      false: "",
     },
   },
-  '& .MuiSwitch-switchBase': {
-    padding: 2,
-    '&.Mui-checked': {
-      transform: 'translateX(12px)',
-      color: '#fff',
-      '& + .MuiSwitch-track': {
-        opacity: 1,
-        backgroundColor: theme.palette.mode === 'dark' ? '#177ddc' : '#1890ff',
-      },
-    },
+  defaultVariants: {
+    disabled: false,
   },
-  '& .MuiSwitch-thumb': {
-    boxShadow: '0 2px 4px 0 rgb(0 35 11 / 20%)',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    transition: theme.transitions.create(['width'], {
-      duration: 200,
-    }),
-  },
-  '& .MuiSwitch-track': {
-    borderRadius: 16 / 2,
-    opacity: 1,
-    backgroundColor:
-      theme.palette.mode === 'dark' ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.25)',
-    boxSizing: 'border-box',
-  },
-}));
+});
 
-export default AntSwitch;
+interface AntSwitchProps {
+  checked?: boolean;
+  disabled?: boolean;
+  onChange?: (event: { target: { checked: boolean } }, checked: boolean) => void;
+  className?: string;
+}
+
+export default function AntSwitch({ checked, disabled, onChange, className }: AntSwitchProps) {
+  return (
+    <span className={cn(switchWrap({ disabled }), className)}>
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        onChange={(event: { target: { checked: boolean } }) => onChange?.(event, !!event.target.checked)}
+      />
+    </span>
+  );
+}
+

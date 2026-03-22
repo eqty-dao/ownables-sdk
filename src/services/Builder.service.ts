@@ -8,8 +8,12 @@ export interface UploadOptions {
 }
 
 export default class BuilderService {
-  public static URL: string = process.env.REACT_APP_OBUILDER ?? "";
-  public static SECRET?: string = process.env.REACT_APP_OBUILDER_API_SECRET_KEY;
+  public static URL: string = import.meta.env.VITE_BUILDER ?? "";
+  public static SERVER_WALLETS_ENDPOINT: string =
+    import.meta.env.VITE_BUILDER_SERVER_WALLETS_ENDPOINT ??
+    "/api/v1/ServerWalletAddresses";
+  public static NETWORK_PARAM: string =
+    import.meta.env.VITE_BUILDER_NETWORK_PARAM ?? "networkId";
 
   // Base mainnet = 8453, Base Sepolia = 84532
   private static readonly BASE_MAINNET_CHAIN_ID = 8453;
@@ -22,11 +26,11 @@ export default class BuilderService {
   }
 
   /**
-   * Infers LTO network ID from chainId
+   * Infers builder network code from chainId.
    * Base mainnet (8453) = 'L' (mainnet)
    * Base Sepolia (84532) = 'T' (testnet)
    */
-  public getLtoNetworkId(): "L" | "T" {
+  public getNetworkCode(): "L" | "T" {
     if (this.chainId === BuilderService.BASE_MAINNET_CHAIN_ID) {
       return "L";
     } else if (this.chainId === BuilderService.BASE_SEPOLIA_CHAIN_ID) {
@@ -48,22 +52,25 @@ export default class BuilderService {
     try {
       // Use the same endpoint as eqty-ownable-builder - no chainId, no API key
       const response = await axios.get(
-        `${BuilderService.URL}/api/v1/ServerLtoWalletAddresses`
+        `${BuilderService.URL}${BuilderService.SERVER_WALLETS_ENDPOINT}`
       );
 
       if (!response.data) {
         throw new Error("No data returned from server");
       }
 
-      const ltoNetworkId = this.getLtoNetworkId();
-      const address =
-        ltoNetworkId === "L"
-          ? response.data.serverLtoWalletAddress_L
-          : response.data.serverLtoWalletAddress_T;
+      const networkCode = this.getNetworkCode();
+      const networkSuffix = `_${networkCode}`;
+      const address = Object.entries(response.data).find(
+        ([key, value]) =>
+          key.toLowerCase().includes("walletaddress") &&
+          key.endsWith(networkSuffix) &&
+          typeof value === "string"
+      )?.[1] as string | undefined;
 
       if (!address) {
         throw new Error(
-          `Server wallet address not found for network ${ltoNetworkId}`
+          `Server wallet address not found for network ${networkCode}`
         );
       }
 
@@ -92,17 +99,12 @@ export default class BuilderService {
     }
 
     try {
-      const ltoNetworkId = this.getLtoNetworkId();
+      const networkCode = this.getNetworkCode();
       const response = await axios.get(
-        `${BuilderService.URL}/api/v1/templateCost?templateId=${templateId}`,
-        {
-          headers: {
-            "X-API-Key": BuilderService.SECRET,
-          },
-        }
+        `${BuilderService.URL}/api/v1/templateCost?templateId=${templateId}`
       );
 
-      const costData = response.data[ltoNetworkId]?.base;
+      const costData = response.data[networkCode]?.base;
       if (!costData) {
         throw new Error("Template cost not found");
       }
@@ -134,7 +136,7 @@ export default class BuilderService {
       throw new Error("Builder service URL not configured");
     }
 
-    const ltoNetworkId = this.getLtoNetworkId();
+    const networkCode = this.getNetworkCode();
     const formData = new FormData();
 
     // Convert Uint8Array to Blob if needed
@@ -166,12 +168,14 @@ export default class BuilderService {
     }
 
     try {
+      const params = new URLSearchParams({
+        [BuilderService.NETWORK_PARAM]: networkCode,
+      });
       const response = await axios.post(
-        `${BuilderService.URL}/api/v1/upload?ltoNetworkId=${ltoNetworkId}`,
+        `${BuilderService.URL}/api/v1/upload?${params.toString()}`,
         formData,
         {
           headers: {
-            "X-API-Key": BuilderService.SECRET,
             "Content-Type": "multipart/form-data",
           },
         }

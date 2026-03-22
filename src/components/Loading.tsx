@@ -1,8 +1,8 @@
-import {Backdrop, CircularProgress} from "@mui/material";
+import {Backdrop, CircularProgress} from "@/components/ui";
 import React from "react";
 
 export default function Loading(props: {show: boolean}) {
-  return <Backdrop open={props.show} sx={{zIndex: (theme) => theme.zIndex.modal + 100 }} invisible>
-    <CircularProgress color="primary" size={80} />
+  return <Backdrop open={props.show} style={{ zIndex: 1400 }} invisible>
+    <CircularProgress size={80} />
   </Backdrop>
 }

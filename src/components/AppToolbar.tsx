@@ -1,9 +1,10 @@
 import React from "react";
-import { AppBar, Box, IconButton, Toolbar, Badge, Alert, Chip } from "@mui/material";
+import { Alert } from "@/components/ui";
 import logo from "../assets/logo.svg";
-import MenuIcon from "@mui/icons-material/Menu";
-import MailOutlinedIcon from "@mui/icons-material/MailOutlined";
-import WarningIcon from "@mui/icons-material/Warning";
+import { Menu as MenuIcon, Mail as MailOutlinedIcon, TriangleAlert as WarningIcon } from "lucide-react";
+import { IconButton } from "@/components/ui";
+import { cva } from "class-variance-authority";
+import { cn } from "../utils/cn";
 
 interface AppToolbarProps {
   onMenuClick: () => void;
@@ -14,6 +15,40 @@ interface AppToolbarProps {
 }
 
 const BASE_SEPOLIA_CHAIN_ID = 84532; // Base Sepolia
+
+const networkPill = cva(
+  "rounded-lg px-3 py-1.5 text-xs font-semibold text-white",
+  {
+    variants: {
+      state: {
+        ok: "bg-green-600",
+        bad: "bg-red-600",
+      },
+    },
+    defaultVariants: {
+      state: "ok",
+    },
+  }
+);
+
+const warningStrip = cva(
+  "flex items-center gap-2 rounded-none border-b px-4 py-2 text-sm",
+  {
+    variants: {
+      tone: {
+        warning: "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-200",
+      },
+    },
+    defaultVariants: {
+      tone: "warning",
+    },
+  }
+);
+
+const toolbarIconButton = cva("relative text-white hover:bg-white/20");
+const notificationBadge = cva(
+  "absolute -right-0.5 -top-0.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white"
+);
 
 export default function AppToolbar({
   onMenuClick,
@@ -30,81 +65,49 @@ export default function AppToolbar({
       {showNetworkWarning && (
         <Alert
           severity="warning"
-          icon={<WarningIcon />}
-          sx={{
-            borderRadius: 0,
-            py: 0.5,
-            "& .MuiAlert-message": {
-              fontSize: "0.875rem",
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-            },
-          }}
+          icon={<WarningIcon className="h-4 w-4" />}
+          className={cn(warningStrip())}
         >
           Please switch to <strong>Base Sepolia</strong> network to use this application.
         </Alert>
       )}
-      <AppBar position="static">
-        <Toolbar variant="dense">
+      <header className="relative z-10 bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-3 shadow-lg sm:px-6">
+        <div className="flex items-center justify-between gap-3">
           <img
             src={logo}
-            style={{
-              width: 300,
-              maxWidth: "calc(100% - 140px)",
-              height: "auto",
-              padding: "10px 15px",
-            }}
+            className="h-8 w-auto max-w-[min(55vw,300px)]"
             alt="Ownables Logo"
           />
+          <div className="flex items-center gap-2">
+            {isConnected && (
+              <span className={cn(networkPill({ state: isOnBaseSepolia ? "ok" : "bad" }))}>
+                {isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
+              </span>
+            )}
 
-          <Box component="div" sx={{ flexGrow: 1 }}></Box>
-
-          {isConnected && (
-            <Chip
-              label={isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
-              color={isOnBaseSepolia ? "success" : "error"}
-              size="small"
-              sx={{
-                mr: 1,
-                height: 24,
-                fontSize: "0.7rem",
-                fontWeight: 500,
-              }}
-            />
-          )}
-
-          <IconButton
-            size="large"
-            color="inherit"
-            aria-label="messages"
-            onClick={onNotificationClick}
-          >
-            <Badge
-              badgeContent={messagesCount}
-              sx={{
-                "& .MuiBadge-badge": {
-                  fontSize: 8,
-                  height: 15,
-                  minWidth: 15,
-                },
-              }}
-              color="error"
+            <IconButton
+              aria-label="messages"
+              className={cn(toolbarIconButton())}
+              onClick={onNotificationClick}
             >
               <MailOutlinedIcon />
-            </Badge>
-          </IconButton>
+              {messagesCount > 0 ? (
+                <span className={cn(notificationBadge())}>
+                  {messagesCount}
+                </span>
+              ) : null}
+            </IconButton>
 
-          <IconButton
-            size="large"
-            color="inherit"
-            aria-label="menu"
-            onClick={onMenuClick}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+            <IconButton
+              aria-label="menu"
+              className={cn(toolbarIconButton())}
+              onClick={onMenuClick}
+            >
+              <MenuIcon />
+            </IconButton>
+          </div>
+        </div>
+      </header>
     </>
   );
 }

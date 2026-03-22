@@ -1,13 +1,11 @@
-import { Menu, MenuItem, IconButton, SxProps, Theme } from "@mui/material";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import MoreVert from "@mui/icons-material/MoreVert";
+import { IconButton, ListItemIcon, Menu, MenuItem } from "@/components/ui";
+import { EllipsisVertical as MoreVert, Trash2 as Delete, Wrench as PrecisionManufacturing, ArrowLeftRight as SwapHoriz } from "lucide-react";
 import { useState, MouseEvent } from "react";
-import { Delete, PrecisionManufacturing, SwapHoriz } from "@mui/icons-material";
 import PromptDialog from "./PromptDialog";
 import { useAccount } from "wagmi";
 
 interface OwnableActionsProps {
-  sx?: SxProps<Theme>;
+  className?: string;
   title: string;
   isConsumable: boolean;
   isTransferable: boolean;
@@ -33,7 +31,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
 
   return (
     <>
-      <IconButton sx={props.sx} onClick={open}>
+      <IconButton className={props.className} onClick={open}>
         <MoreVert />
       </IconButton>
       <Menu
@@ -41,28 +39,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
         open={!!anchorEl}
         onClose={close}
         onClick={close}
-        PaperProps={{
-          elevation: 0,
-          sx: {
-            overflow: "visible",
-            filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.32))",
-            mt: 1.5,
-            "&:before": {
-              content: '""',
-              display: "block",
-              position: "absolute",
-              top: 0,
-              right: 14,
-              width: 10,
-              height: 10,
-              bgcolor: "background.paper",
-              transform: "translateY(-50%) rotate(45deg)",
-              zIndex: 0,
-            },
-          },
-        }}
-        transformOrigin={{ horizontal: "right", vertical: "top" }}
-        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        className="min-w-40"
       >
         <MenuItem
           disabled={!isConsumable}
@@ -72,7 +49,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
           }}
         >
           <ListItemIcon>
-            <PrecisionManufacturing fontSize="small" />
+            <PrecisionManufacturing className="h-4 w-4" />
           </ListItemIcon>
           Consume
         </MenuItem>
@@ -84,7 +61,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
           }}
         >
           <ListItemIcon>
-            <SwapHoriz fontSize="small" />
+            <SwapHoriz className="h-4 w-4" />
           </ListItemIcon>
           Transfer
         </MenuItem>
@@ -95,7 +72,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
           }}
         >
           <ListItemIcon>
-            <Delete fontSize="small" />
+            <Delete className="h-4 w-4" />
           </ListItemIcon>
           Delete
         </MenuItem>
@@ -128,7 +105,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
         }}
         TextFieldProps={{
           label: "Recipient address",
-          sx: { width: "380px", maxWidth: "100%" },
+          className: "w-[380px] max-w-full",
         }}
         actionType="transfer"
       />

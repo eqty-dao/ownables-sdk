@@ -9,10 +9,10 @@ use crate::msg::{ExternalEvent, OwnershipResponse, QueryMsg};
 use crate::state::NFT;
 use crate::utils::{EmptyApi, EmptyQuerier};
 
-const LTO_USER: &str = "2bJ69cFXzS8AJTcCmzjc9oeHZmBrmMVUr8svJ1mTGpho9izYrbZjrMr9q1YwvY";
+const OWNABLE_USER: &str = "2bJ69cFXzS8AJTcCmzjc9oeHZmBrmMVUr8svJ1mTGpho9izYrbZjrMr9q1YwvY";
 const PUBLIC_KEY: &str = "v3KjemAaDRYztCiwdT9X72waHdpTq6tHBxyqqCBfFCf7";
-const LTO_PUBLIC_KEY_ALT: &str = "GjSbdB6a5DFNEHjDSmn724QsrRStKYzkahPH67wyrhAY";
-const LTO_ADDRESS: &str = "3NBd71MErsjwmStnj8PQECHP1JL2jvuY2HW";
+const OWNABLE_PUBLIC_KEY_ALT: &str = "GjSbdB6a5DFNEHjDSmn724QsrRStKYzkahPH67wyrhAY";
+const OWNABLE_ADDRESS: &str = "3NBd71MErsjwmStnj8PQECHP1JL2jvuY2HW";
 
 struct CommonTest {
     deps: OwnedDeps<MemoryStorage, EmptyApi, EmptyQuerier>,
@@ -135,7 +135,7 @@ fn test_drink_locked() {
     let err = execute(
         deps.as_mut(),
         create_env(),
-        mock_info(LTO_USER, &[]),
+        mock_info(OWNABLE_USER, &[]),
         ExecuteMsg::Consume {
             amount: 10,
         },
@@ -200,7 +200,7 @@ fn test_transfer_locked() {
         create_env(),
         mock_info("sender-1", &[]),
         ExecuteMsg::Transfer {
-            to: Addr::unchecked(LTO_USER)
+            to: Addr::unchecked(OWNABLE_USER)
         },
     ).unwrap_err();
 
@@ -313,7 +313,7 @@ fn test_lock_unauthorized() {
     let err = execute(
         deps.as_mut(),
         create_env(),
-        mock_info(LTO_PUBLIC_KEY_ALT, &[]),
+        mock_info(OWNABLE_PUBLIC_KEY_ALT, &[]),
         ExecuteMsg::Lock {},
     ).unwrap_err();
 
@@ -435,7 +435,7 @@ fn test_register_external_lock_event_unknown_chain_id() {
 }
 
 #[test]
-fn test_release_ownable_lto_address() {
+fn test_release_ownable_address() {
     let CommonTest {
         mut deps,
         info,
@@ -477,7 +477,7 @@ fn test_release_ownable_lto_address() {
     // validate that the owner is eip155:1 representation of pub key used
     // to register the external event
     let ownership_config: OwnershipResponse = from_binary(&resp).unwrap();
-    assert_eq!(ownership_config.owner, LTO_ADDRESS);
+    assert_eq!(ownership_config.owner, OWNABLE_ADDRESS);
 
     let resp = query(
         deps.as_ref(),
@@ -549,7 +549,7 @@ fn test_release_ownable_eth_address() {
     // validate that the owner is eip155:1 representation of pub key used
     // to register the external event
     let ownership_config: OwnershipResponse = from_binary(&resp).unwrap();
-    assert_eq!(ownership_config.owner, LTO_ADDRESS);
+    assert_eq!(ownership_config.owner, OWNABLE_ADDRESS);
 
     let resp = query(
         deps.as_ref(),

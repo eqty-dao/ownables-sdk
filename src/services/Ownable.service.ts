@@ -3,14 +3,13 @@ import EQTYService from "./EQTY.service";
 import IDBService from "./IDB.service";
 import TypedDict from "../interfaces/TypedDict";
 import PackageService from "./Package.service";
-import { Cancelled } from "simple-iframe-rpc";
 import JSZip from "jszip";
 import { TypedPackage } from "../interfaces/TypedPackage";
 import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
 import EventChainService from "./EventChain.service";
+import WorkerRPC from "./WorkerRPC";
 
-// @ts-ignore - Loaded as string, see `craco.config.js`
-import workerJsSource from "../assets/worker.js";
+import workerJsSource from "../assets/worker.js?raw";
 import { LogProgress, withProgress } from "../contexts/Progress.context";
 
 export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;
@@ -18,41 +17,6 @@ export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;
 interface MessageInfo {
   sender: string;
   funds: Array<{}>;
-}
-
-interface CosmWasmEvent {
-  type: string;
-  attributes: TypedDict<string>;
-}
-
-export interface OwnableRPC {
-  init: (id: string, js: string, wasm: Uint8Array) => Promise<any>;
-  instantiate: (
-    msg: TypedDict,
-    info: MessageInfo
-  ) => Promise<{ attributes: TypedDict<string>; state: StateDump }>;
-  execute: (
-    msg: TypedDict,
-    info: MessageInfo,
-    state: StateDump
-  ) => Promise<{
-    attributes: TypedDict<string>;
-    events: Array<CosmWasmEvent>;
-    data: string;
-    state: StateDump;
-  }>;
-  externalEvent: (
-    msg: TypedDict,
-    info: TypedDict,
-    state: StateDump
-  ) => Promise<{
-    attributes: TypedDict<string>;
-    events: Array<CosmWasmEvent>;
-    data: string;
-    state: StateDump;
-  }>;
-  query: (msg: TypedDict, state: StateDump) => Promise<any>;
-  refresh: (state: StateDump) => Promise<void>;
 }
 
 interface StateSnapshot {
@@ -72,7 +36,7 @@ export default class OwnableService {
     private readonly packages: PackageService
   ) {}
 
-  private readonly _rpc = new Map<string, OwnableRPC>();
+  private readonly _rpc = new Map<string, WorkerRPC>();
 
   get anchoring(): boolean {
     return this.eventChains.anchoring;
@@ -94,7 +58,7 @@ export default class OwnableService {
     return this._rpc.has(id);
   }
 
-  rpc(id: string): OwnableRPC {
+  rpc(id: string): WorkerRPC {
     const rpc = this._rpc.get(id);
     if (!rpc) throw new Error(`No RPC for ownable ${id}`);
     return rpc;
@@ -103,14 +67,29 @@ export default class OwnableService {
   clearRpc(id: string) {
     const rpc = this._rpc.get(id);
     if (!rpc) return;
-
-    try {
-      delete (rpc as any).handler;
-    } catch (e) {
-      if (e instanceof Cancelled) return;
-      console.warn("Unexpected error clearing RPC:", e);
-    }
+    rpc.terminate();
     this._rpc.delete(id);
+  }
+
+  setWidgetWindow(id: string, win: Window | null): void {
+    const rpc = this._rpc.get(id);
+    if (rpc) rpc.setWidgetWindow(win);
+  }
+
+  async initWorker(id: string, cid: string): Promise<void> {
+    if (this._rpc.has(id)) return;
+
+    const moduleJs = await this.packages.getAssetAsText(cid, "ownable.js");
+    const js = workerJsSource + moduleJs;
+    const wasm = (await this.packages.getAsset(
+      cid,
+      "ownable_bg.wasm",
+      (fr, file) => fr.readAsArrayBuffer(file)
+    )) as ArrayBuffer;
+
+    const workerRpc = new WorkerRPC(id);
+    await workerRpc.initialize(js, new Uint8Array(wasm));
+    this._rpc.set(id, workerRpc);
   }
 
   async create(
@@ -156,23 +135,11 @@ export default class OwnableService {
   async init(
     chain: any,
     cid: string,
-    rpc: OwnableRPC,
     uniqueMessageHash?: string
   ): Promise<void> {
-    if (this._rpc.has(chain.id)) {
-      this.clearRpc(chain.id);
+    if (!this._rpc.has(chain.id)) {
+      await this.initWorker(chain.id, cid);
     }
-
-    this._rpc.set(chain.id, rpc);
-    const moduleJs = await this.packages.getAssetAsText(cid, "ownable.js");
-    const js = workerJsSource + moduleJs;
-
-    const wasm = (await this.packages.getAsset(
-      cid,
-      "ownable_bg.wasm",
-      (fr, file) => fr.readAsArrayBuffer(file)
-    )) as ArrayBuffer;
-    await rpc.init(chain.id, js, new Uint8Array(wasm));
 
     const stateDump = await this.apply(chain, []);
     await this.initStore(chain, cid, uniqueMessageHash, stateDump);
@@ -273,7 +240,7 @@ export default class OwnableService {
   }
 
   private async applyEvent(
-    rpc: OwnableRPC,
+    rpc: WorkerRPC,
     event: Event,
     stateDump: StateDump,
     chain: EventChain,
@@ -414,28 +381,23 @@ export default class OwnableService {
   ): Promise<boolean> {
     if (!this.packages.info(consumer.package).isConsumer) return false;
 
-    try {
-      const state = await this.eventChains.getStateDump(
-        consumer.chain.id,
-        consumer.chain.state.hex
-      );
-      if (!state) return false;
+    const state = await this.eventChains.getStateDump(
+      consumer.chain.id,
+      consumer.chain.state.hex
+    );
+    if (!state) return false;
 
-      const result = await this.rpc(consumer.chain.id).query(
-        {
-          is_consumer_of: {
-            consumable_type: info.ownable_type,
-            issuer: info.issuer,
-          },
+    const result = await this.rpc(consumer.chain.id).query(
+      {
+        is_consumer_of: {
+          consumable_type: info.ownable_type,
+          issuer: info.issuer,
         },
-        state
-      );
+      },
+      state
+    );
 
-      return result === true;
-    } catch (error) {
-      console.warn("Error checking canConsume:", error);
-      return false;
-    }
+    return result === true;
   }
 
   async consume(

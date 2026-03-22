@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 
 import "@fontsource/montserrat/300.css";
@@ -9,88 +9,84 @@ import "./index.css";
 
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
-import { createTheme, ThemeProvider } from "@mui/material";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import {
-  RainbowKitProvider,
-  connectorsForWallets,
-} from "@rainbow-me/rainbowkit";
-import {
-  metaMaskWallet,
-  walletConnectWallet,
-  coinbaseWallet,
-  ledgerWallet,
-  safeWallet,
-} from "@rainbow-me/rainbowkit/wallets";
-import { WagmiConfig, configureChains, createConfig } from "wagmi";
+import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { WagmiProvider, createConfig, http, mock, useConnect, useAccount } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
-import { publicProvider } from "wagmi/providers/public";
 import { ServicesProvider } from "./contexts/Services.context";
 import { ProgressProvider } from "./contexts/Progress.context";
+import { getE2EAccount } from "./services/E2EWallet";
+import { isE2E } from "./utils/isE2E";
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#1caaff",
-      contrastText: "#ffffff",
+const chains = [baseSepolia, base] as const;
+const queryClient = new QueryClient();
+
+let wagmiConfig;
+
+if (isE2E) {
+  const e2eAccount = getE2EAccount();
+  wagmiConfig = createConfig({
+    chains,
+    connectors: [mock({ accounts: [e2eAccount.address] })],
+    transports: {
+      [baseSepolia.id]: http(import.meta.env.VITE_BASE_SEPOLIA_RPC_URL || undefined),
+      [base.id]: http(import.meta.env.VITE_BASE_MAINNET_RPC_URL || undefined),
     },
-    secondary: {
-      main: "#666666",
+  });
+} else {
+  const walletConnectProjectId = (
+    import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || ""
+  ).trim();
+  if (!walletConnectProjectId) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "RainbowKit: VITE_WALLETCONNECT_PROJECT_ID is not set. WalletConnect may be unavailable."
+    );
+  }
+  wagmiConfig = getDefaultConfig({
+    appName: "Ownable SDK",
+    projectId: walletConnectProjectId,
+    chains,
+    transports: {
+      [baseSepolia.id]: http(import.meta.env.VITE_BASE_SEPOLIA_RPC_URL || undefined),
+      [base.id]: http(import.meta.env.VITE_BASE_MAINNET_RPC_URL || undefined),
     },
-  },
-});
-
-const { chains, publicClient } = configureChains(
-  [baseSepolia, base],
-  [publicProvider()]
-);
-
-// Use RainbowKit's default wallet connectors to populate the wallet list (WalletConnect, MetaMask, Coinbase, Ledger, etc.)
-const walletConnectProjectId = (
-  process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || ""
-).trim();
-if (!walletConnectProjectId) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "RainbowKit: REACT_APP_WALLETCONNECT_PROJECT_ID is not set. WalletConnect may be unavailable."
-  );
+  });
 }
-const connectors = connectorsForWallets([
-  {
-    groupName: "Popular",
-    wallets: [
-      metaMaskWallet({ projectId: walletConnectProjectId, chains }),
-      walletConnectWallet({ projectId: walletConnectProjectId, chains }),
-      coinbaseWallet({ appName: "Ownable SDK", chains }),
-      ledgerWallet({ projectId: walletConnectProjectId, chains }),
-      safeWallet({ chains }),
-    ],
-  },
-]);
 
-const wagmiConfig = createConfig({
-  autoConnect: true,
-  connectors,
-  publicClient,
-});
+function E2EAutoConnect() {
+  const { connect, connectors } = useConnect();
+  const { isConnected } = useAccount();
+
+  useEffect(() => {
+    if (!isConnected && connectors.length > 0) {
+      connect({ connector: connectors[0] });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <WagmiConfig config={wagmiConfig}>
-      <RainbowKitProvider chains={chains}>
-        <ServicesProvider>
-          <ThemeProvider theme={theme}>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider>
+          <ServicesProvider>
             <ProgressProvider>
+              {isE2E && <E2EAutoConnect />}
               <App />
             </ProgressProvider>
-          </ThemeProvider>
-        </ServicesProvider>
-      </RainbowKitProvider>
-    </WagmiConfig>
+          </ServicesProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   </React.StrictMode>
 );
 

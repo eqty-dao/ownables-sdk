@@ -1,0 +1,45 @@
+[workspace]
+members = [
+  "antenna",
+  "armor",
+  "basic",
+  "paint",
+  "potion",
+  "robot",
+  "speakers",
+]
+resolver = "2"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "abort"
+incremental = false
+overflow-checks = true
+
+[workspace.dependencies]
+wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4.30"
+wasm-bindgen-test = "*"
+cosmwasm-std = "1.0.0"
+cosmwasm-storage = "1.0.0"
+cosmwasm-schema = "1.0.0"
+cw-storage-plus = "0.13.2"
+cw-multi-test = "0.13.2"
+cw2 = "0.13.2"
+schemars = "0.8.8"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+thiserror = "1.0.31"
+js-sys = "0.3.56"
+serde_json = "1.0.59"
+serde-wasm-bindgen = "0.4.2"
+indexed_db_futures = "0.2.3"
+futures = "0.3.21"
+rand = "0.8"
+web-sys = { version = "0.3", features = ["Storage", "Window"] }
+ownable-std = "0.3.1"
+ownable-std-macros = "0.1.1"

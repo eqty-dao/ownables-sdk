@@ -3,17 +3,17 @@
 ![ownables](https://user-images.githubusercontent.com/100821/177121121-a1c3dc8c-8108-4c07-9e15-b83ebfdf8f98.png)
 
 Ownables are CosmWasm smart contracts that define ownership. In addition to running on a Cosmos blockchain, Ownables
-can run directly in a wallet using the [LTO Network](https://ltonetwork.com) private layer.
+can run directly in a wallet and integrate with Base.
 
 The SDK contains examples and tools for developing Ownables.
 
 ## Quickstart
 
 ```
-npm i
-npm run rustup
-npm run ownables:build-all
-npm start
+yarn install
+yarn rustup
+yarn ownables:build
+yarn start
 ```
 
 Once that is done, navigate to http://localhost:3000/ and you should see an empty wallet that is ready to import Ownable
@@ -32,17 +32,16 @@ The wallet is a React application that can be used to test Ownables.
 
 In the project directory, you can run:
 
-### `npm start`
+### `yarn start`
 
 Runs the app in the development mode. Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits. You will also see any lint errors in the console.
 
-### `npm test`
+### `yarn test:e2e`
 
-Launches the test runner in the interactive watch mode. See the section about
-[running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Runs the Cucumber-based end-to-end tests.
 
-### `npm run build`
+### `yarn build`
 
 Builds the app for production to the `build` folder. It correctly bundles React in production mode and optimizes the
 build for the best performance.
@@ -72,12 +71,18 @@ rustup target list --installed
 rustup target add wasm32-unknown-unknown
 ```
 
-Alternatively run `npm run rustup`.
+Alternatively run `yarn rustup`.
 
 ## Build
 
+Build a single package:
 ```
-npm run ownables:build --package=car
+yarn ownables:build car
+```
+
+Build all packages:
+```
+yarn ownables:build
 ```
 
 ## Examples
@@ -132,15 +137,17 @@ Adds armor to the robot. Only one shield can be added.
 
 Create a .env file in the project root (or use your existing one) and ensure the following variables are set:
 
-- REACT_APP_LTO_API_URL
-- REACT_APP_LTO_NETWORK_ID
-- REACT_APP_LTO_EXPLORER_URL
-- REACT_APP_LTO_WALLET_URL
-- REACT_APP_RELAY
-- REACT_APP_SECURE_KEY
-- REACT_APP_OBUILDER
-- REACT_APP_OBUILDER_API_SECRET_KEY
-- REACT_APP_WALLETCONNECT_PROJECT_ID
+- VITE_E2E
+- VITE_E2E_MNEMONIC
+- VITE_E2E_ACCOUNT_INDEX
+- VITE_E2E_RPC_URL
+- VITE_RELAY
+- VITE_LOCAL
+- VITE_OWNABLE_EXAMPLES_URL
+- VITE_BUILDER
+- VITE_BUILDER_SERVER_WALLETS_ENDPOINT (optional, default: `/api/v1/ServerWalletAddresses`)
+- VITE_BUILDER_NETWORK_PARAM (optional, default: `networkId`)
+- VITE_WALLETCONNECT_PROJECT_ID
 
 RainbowKit requires a WalletConnect Cloud Project ID to enable WalletConnect and to display the full list of popular wallets in the connect modal (MetaMask, Coinbase, Ledger, etc.).
 
@@ -148,9 +155,9 @@ RainbowKit requires a WalletConnect Cloud Project ID to enable WalletConnect and
 2) Copy the Project ID and set it in your .env:
 
 ```
-REACT_APP_WALLETCONNECT_PROJECT_ID=your-project-id-here
+VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 ```
 
 Notes:
-- This is a Create React App project. Environment variables must be prefixed with REACT_APP_ to be available in the browser.
-- If you change .env while the dev server is running, you may need to restart npm start to pick up the changes.
+- This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
+- If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.

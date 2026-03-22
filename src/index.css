@@ -1,13 +1,65 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer components {
+  .text-page-title {
+    @apply text-4xl font-semibold text-slate-900 sm:text-5xl dark:text-white;
+  }
+
+  .text-section-title {
+    @apply text-xl font-bold text-slate-900 dark:text-white;
+  }
+
+  .text-body {
+    @apply text-sm leading-relaxed text-slate-700 dark:text-slate-300;
+  }
+
+  .text-meta {
+    @apply text-sm text-slate-500 dark:text-slate-400;
+  }
+
+  .text-caption {
+    @apply text-xs text-slate-500 dark:text-slate-400;
+  }
+
+  .link-primary {
+    @apply text-indigo-600 visited:text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:visited:text-indigo-400 dark:hover:text-indigo-300;
+  }
+
+  .link-muted {
+    @apply text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200;
+  }
+
+  .surface-card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#2a2a2a] dark:bg-[#1a1a1a];
+  }
+
+  .surface-muted {
+    @apply rounded-xl border border-slate-200 bg-slate-50 text-slate-600 dark:border-[#333333] dark:bg-[#252525] dark:text-slate-300;
+  }
+
+  .surface-widget {
+    @apply relative overflow-hidden rounded-2xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-indigo-50 to-purple-50 dark:border-gray-600 dark:from-indigo-950/20 dark:to-purple-950/20;
+  }
+}
+
+/* Raise notistack above the HelpDrawer (z-1400) */
+.notistack-SnackbarContainer {
+  z-index: 1500 !important;
+}
+
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
 
-  background-image: url("assets/background.svg");
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-size: cover;
+.dark body {
+  background-color: oklch(0.145 0 0);
+  color: oklch(0.985 0 0);
 }
 
 div::-webkit-scrollbar {
@@ -18,6 +70,10 @@ div::-webkit-scrollbar-track {
 }
 div::-webkit-scrollbar-thumb {
   background-color: rgba(0,0,0,.1);
+}
+
+.dark div::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
 }
 
 code {
