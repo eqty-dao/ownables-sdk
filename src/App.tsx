@@ -32,11 +32,11 @@ import { cva } from "class-variance-authority";
 import { cn } from "./utils/cn";
 
 const listPane = cva(
-  "w-full flex-shrink-0 px-4 md:w-[384px]",
+  "w-full flex-shrink-0 px-4 lg:w-[384px]",
   {
     variants: {
       hiddenOnMobile: {
-        true: "hidden md:block",
+        true: "hidden lg:block",
         false: "block",
       },
     },
@@ -479,7 +479,7 @@ export default function App() {
       )}
 
       <Box
-        className="mx-auto mt-4 flex max-w-[1320px] gap-4 px-3 pb-6 md:px-4"
+        className="mx-auto mt-4 flex max-w-[1320px] gap-4 px-3 pb-6 lg:px-4"
       >
         {/* Left sidebar — ownable list */}
         <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile: showDetail }))}>
@@ -553,10 +553,10 @@ export default function App() {
             <Box
               aria-label="Ownable detail"
               role="region"
-              className={cn(detailPane({ showOnMobile: showDetail }), "md:block")}
+              className={cn(detailPane({ showOnMobile: showDetail }), "lg:block")}
             >
               {/* Back button — mobile only */}
-              <Box className="mb-1 block md:hidden">
+              <Box className="mb-1 block lg:hidden">
                 <IconButton
                   aria-label="Back"
                   onClick={() => {
