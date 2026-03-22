@@ -27,6 +27,7 @@ export default class WorkerRPC {
   private worker!: Worker;
   private readonly ownableId: string;
   private widgetWindow: Window | null = null;
+  private _queue: Promise<any> = Promise.resolve();
 
   constructor(id: string) {
     this.ownableId = id;
@@ -68,7 +69,8 @@ export default class WorkerRPC {
 
   /**
    * Send a message to the worker and await its response.
-   * Uses a {once:true} listener — calls must be sequential per worker.
+   * Calls are serialized through a queue so only one message is in-flight
+   * at a time — the {once:true} listener pattern requires strict sequencing.
    */
   private workerCall<T extends Response | string>(
     type: string,
@@ -76,41 +78,46 @@ export default class WorkerRPC {
     info: TypedDict,
     state?: StateDump
   ): Promise<{ response: T; state: StateDump }> {
-    return new Promise((resolve, reject) => {
-      if (!this.worker) {
-        reject(`Unable to ${type}: not initialized`);
-        return;
-      }
+    const call = () =>
+      new Promise<{ response: T; state: StateDump }>((resolve, reject) => {
+        if (!this.worker) {
+          reject(`Unable to ${type}: not initialized`);
+          return;
+        }
 
-      this.worker.addEventListener(
-        "message",
-        (event: MessageEvent<Map<string, any> | { err: any }>) => {
-          if ("err" in event.data) {
-            reject(
-              new Error(`Ownable ${type} failed`, { cause: event.data.err })
-            );
-            return;
-          }
+        this.worker.addEventListener(
+          "message",
+          (event: MessageEvent<Map<string, any> | { err: any }>) => {
+            if ("err" in event.data) {
+              reject(
+                new Error(`Ownable ${type} failed`, { cause: event.data.err })
+              );
+              return;
+            }
 
-          const result = event.data.get("result");
-          const response = JSON.parse(result) as T;
-          const nextState: StateDump = event.data.has("mem")
-            ? JSON.parse(event.data.get("mem")).state_dump
-            : state;
+            const result = event.data.get("result");
+            const response = JSON.parse(result) as T;
+            const nextState: StateDump = event.data.has("mem")
+              ? JSON.parse(event.data.get("mem")).state_dump
+              : state;
 
-          resolve({ response, state: nextState });
-        },
-        { once: true }
-      );
+            resolve({ response, state: nextState });
+          },
+          { once: true }
+        );
 
-      this.worker.postMessage({
-        type,
-        ownable_id: this.ownableId,
-        msg,
-        info,
-        mem: { state_dump: state },
+        this.worker.postMessage({
+          type,
+          ownable_id: this.ownableId,
+          msg,
+          info,
+          mem: { state_dump: state },
+        });
       });
-    });
+
+    const next = this._queue.then(call, call);
+    this._queue = next.catch(() => {});
+    return next;
   }
 
   async instantiate(
