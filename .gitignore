@@ -33,7 +33,7 @@ yarn-debug.log*
 yarn-error.log*
 .yarn/install-state.gz
 
-# Cargo+Git helper file (https://github.com/rust-lang/cargo/blob/0.44.1/src/cargo/sources/git/utils.rs#L320-L327)
+# Cargo+Git helper file
 .cargo-ok
 
 # Text file backups
@@ -44,7 +44,20 @@ yarn-error.log*
 .idea
 .claude
 
+# AI sandbox root
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.mcp.json
+.profile
+.ripgreprc
+.vscode
+.zprofile
+.zshrc
+
 # Local
 /public/ownables
 /public/ownable.js
 /public/ownable.js.map
+
