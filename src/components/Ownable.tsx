@@ -164,7 +164,6 @@ export default function Ownable(props: OwnableProps) {
       const consumed = pkg.isConsumable
         ? await ownables.rpc(chain.id).query({ is_consumed: {} }, effective).catch(() => false) as boolean
         : false;
-
       setInfo(infoResp);
       setMetadata(metadataResp);
       setIsConsumed(consumed);
