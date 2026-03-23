@@ -9,7 +9,7 @@ import { cn } from "@/utils/cn";
 const primaryWalletButton = cva("w-full");
 
 export default function WalletConnectControls({ children }: PropsWithChildren) {
-  const { disconnect, isLoading } = useDisconnect();
+  const { disconnect, isPending: isLoading } = useDisconnect();
 
   return (
     <ConnectButton.Custom>

@@ -52,7 +52,8 @@
     "ownables:build": "bin/ownables-build.sh",
     "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/*/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/*/Cargo.lock",
     "ownables:deploy": "cp ./ownables/*.zip ./public/ownables/",
-    "ownables:cid": "node bin/package-cid.mjs"
+    "ownables:cid": "node bin/package-cid.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

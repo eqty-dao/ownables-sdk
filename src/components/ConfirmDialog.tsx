@@ -16,7 +16,7 @@ interface ConfirmDialogProps {
 export default function ConfirmDialog(props: ConfirmDialogProps) {
   const {open, onClose, onConfirm} = props;
 
-  return <Dialog open={open} onClose={onClose} transitionDuration={0}>
+  return <Dialog open={open} onClose={onClose}>
     <DialogTitle>{props.title}</DialogTitle>
     <DialogContent>
       <DialogContentText>

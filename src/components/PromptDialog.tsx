@@ -58,7 +58,7 @@ export default function PromptDialog(props: PromptDialogProps) {
   };
 
   return (
-    <Dialog open={open} onClose={close} transitionDuration={0}>
+    <Dialog open={open} onClose={close}>
       <DialogTitle>{props.title}</DialogTitle>
       <DialogContent
         style={{

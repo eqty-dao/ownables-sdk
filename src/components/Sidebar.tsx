@@ -154,8 +154,8 @@ export default function Sidebar(props: SidebarProps) {
               <Box>
                 <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">EQTY Balance</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  {eqtyBalance !== undefined
-                    ? `${Number(eqtyBalance.formatted).toFixed(2)} EQTY`
+                  {eqtyBalance != null
+                    ? `${(Number(eqtyBalance.value) / 10 ** eqtyBalance.decimals).toFixed(2)} EQTY`
                     : "— EQTY"}
                 </p>
               </Box>

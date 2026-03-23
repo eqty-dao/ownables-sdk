@@ -1,14 +1,13 @@
-import { ReportHandler } from 'web-vitals';
+import { onCLS, onFCP, onLCP, onTTFB, type CLSMetric, type FCPMetric, type LCPMetric, type TTFBMetric } from 'web-vitals';
 
-const reportWebVitals = (onPerfEntry?: ReportHandler) => {
+type Metric = CLSMetric | FCPMetric | LCPMetric | TTFBMetric;
+
+const reportWebVitals = (onPerfEntry?: (metric: Metric) => void) => {
   if (onPerfEntry && onPerfEntry instanceof Function) {
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(onPerfEntry);
-      getFID(onPerfEntry);
-      getFCP(onPerfEntry);
-      getLCP(onPerfEntry);
-      getTTFB(onPerfEntry);
-    });
+    onCLS(onPerfEntry);
+    onFCP(onPerfEntry);
+    onLCP(onPerfEntry);
+    onTTFB(onPerfEntry);
   }
 };
 
