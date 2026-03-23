@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Box, Button, Tile } from "@/components/ui";
 import { Box as BoxIcon, Zap as BoltOutlined } from "lucide-react";
 import { EventChain } from "eqty-core";
-import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
+import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
 import shortId from "../utils/shortId";
 
 const itemCard = cva(

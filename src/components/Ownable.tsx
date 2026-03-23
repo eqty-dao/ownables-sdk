@@ -342,6 +342,7 @@ export default function Ownable(props: OwnableProps) {
   }, [chain.id, ownables]);
 
   // Effect for applying partial chains and refreshing
+  const chainLatestHex = chain.latestHash.hex;
   const prev = useRef({ initialized, appliedHex: applied.hex });
   useEffect(() => {
     if (isApplying || error) return;
@@ -359,7 +360,10 @@ export default function Ownable(props: OwnableProps) {
       refresh().then();
     }
     prev.current = { initialized, appliedHex: applied.hex };
-  }, [apply, applied, chain, error, initialized, isApplying, refresh]);
+  // chainLatestHex ensures the effect re-runs when the chain is mutated externally
+  // (e.g. after a consume operation mutates the chain in-place)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apply, applied, chainLatestHex, error, initialized, isApplying, refresh]);
 
   // If services or package not ready yet, don't render
   if (!ownables || !packages || !idb || !eventChains || !relay || !pkg)

@@ -12,7 +12,7 @@ import { useAccount, useBalance, useDisconnect } from "wagmi"
 import { useChainModal } from "@rainbow-me/rainbowkit"
 import useEqtyToken from "../hooks/useEqtyToken"
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
 
 interface SidebarProps {
   open: boolean;
@@ -60,7 +60,7 @@ export default function Sidebar(props: SidebarProps) {
   const { disconnect } = useDisconnect();
   const { openChainModal } = useChainModal();
   const { data: ethBalance } = useBalance({ address, query: { refetchInterval: open ? 10000 : false } });
-  const { balance: eqtyBalance } = useEqtyToken({ address, watch: open });
+  const { balance: eqtyBalance } = useEqtyToken({ address });
 
   useEffect(() => {
     EventChainService.anchoring = anchoring;
