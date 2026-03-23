@@ -11,6 +11,7 @@ import {
   Info,
   Lock,
   LockOpen,
+  PackageCheck,
   Zap,
 } from "lucide-react";
 import { EventChain } from "eqty-core";
@@ -28,6 +29,7 @@ interface OwnableDetailProps {
   metadata: TypedMetadata;
   issuer?: string;
   isConsumable: boolean;
+  isConsumed: boolean;
   isTransferred: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
   isApplying: boolean;
@@ -52,6 +54,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     metadata,
     issuer,
     isConsumable,
+    isConsumed,
     isTransferred,
     iframeRef,
     isApplying,
@@ -67,9 +70,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       : issuer;
   const statusTag = isTransferred
     ? { value: "Locked", variant: "locked" as const, icon: <Lock className="h-3 w-3" /> }
-    : isConsumable
-      ? { value: "Consumable", variant: "consumable" as const, icon: <Zap className="h-3 w-3" /> }
-      : { value: "Unlocked", variant: "unlocked" as const, icon: <LockOpen className="h-3 w-3" /> };
+    : isConsumed
+      ? { value: "Consumed", variant: "consumed" as const, icon: <PackageCheck className="h-3 w-3" /> }
+      : isConsumable
+        ? { value: "Consumable", variant: "consumable" as const, icon: <Zap className="h-3 w-3" /> }
+        : { value: "Unlocked", variant: "unlocked" as const, icon: <LockOpen className="h-3 w-3" /> };
 
   const aboutSection = (
     <Box className="px-4 pb-8 lg:px-2 lg:pb-0">

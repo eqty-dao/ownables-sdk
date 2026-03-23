@@ -10,6 +10,7 @@ import EventChainService from "./EventChain.service";
 import WorkerRPC from "./WorkerRPC";
 
 import workerJsSource from "../assets/worker.js?raw";
+import ownableJsSource from "../assets/ownable.js?raw";
 import { LogProgress, withProgress } from "../contexts/Progress.context";
 
 export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;
@@ -79,8 +80,7 @@ export default class OwnableService {
   async initWorker(id: string, cid: string): Promise<void> {
     if (this._rpc.has(id)) return;
 
-    const moduleJs = await this.packages.getAssetAsText(cid, "ownable.js");
-    const js = workerJsSource + moduleJs;
+    const js = workerJsSource + ownableJsSource;
     const wasm = (await this.packages.getAsset(
       cid,
       "ownable_bg.wasm",

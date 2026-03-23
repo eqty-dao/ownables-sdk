@@ -4,7 +4,7 @@ artifacts/
 node_modules/
 ownables/*/target
 ownables/*/schema
-ownables/*/Cargo.lock
+Cargo.lock
 ownables/*.zip
 ownables/car
 ownables/storiedApes
