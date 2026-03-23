@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { EventChain } from "eqty-core";
-import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
+import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { useService } from "./useService";
-import { useProgress } from "../contexts/Progress.context";
-import { useDialogs } from "../contexts/Dialogs.context";
+import { useProgress } from "@/contexts/Progress.context";
+import { useDialogs } from "@/contexts/Dialogs.context";
 import { enqueueSnackbar } from "notistack";
-import ownableErrorMessage from "../utils/ownableErrorMessage";
+import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { OwnableEntry } from "./useOwnables";
 
 interface ConsumingState {

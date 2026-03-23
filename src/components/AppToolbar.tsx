@@ -1,7 +1,6 @@
-import React from "react";
 import { Alert } from "@/components/ui";
-import logo from "../assets/logo.svg";
-import { Menu as MenuIcon, Mail as MailOutlinedIcon, TriangleAlert as WarningIcon, Bell } from "lucide-react";
+import logo from "@/assets/logo.svg";
+import { Menu as MenuIcon, TriangleAlert as WarningIcon, Bell } from "lucide-react";
 import { IconButton } from "@/components/ui";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";

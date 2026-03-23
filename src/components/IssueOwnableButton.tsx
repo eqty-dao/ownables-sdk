@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui";
 import { Plus } from "lucide-react";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
 
 const issueOwnableButton = cva(
   "mt-2 flex w-full items-start justify-start gap-3 rounded-[14px] border-2 p-4 border-dashed text-left transition-all",

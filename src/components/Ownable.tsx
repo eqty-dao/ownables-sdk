@@ -1,10 +1,10 @@
 import { ReactNode, useMemo } from "react";
 import { EventChain } from "eqty-core";
-import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
-import { TypedPackage } from "../interfaces/TypedPackage";
-import { useService } from "../hooks/useService";
-import { useOwnableState } from "../hooks/useOwnableState";
-import { useOwnableTransfer } from "../hooks/useOwnableTransfer";
+import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
+import { TypedPackage } from "@/interfaces/TypedPackage";
+import { useService } from "@/hooks/useService";
+import { useOwnableState } from "@/hooks/useOwnableState";
+import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 import OwnableDetail from "./OwnableDetail";
 
 interface OwnableProps {

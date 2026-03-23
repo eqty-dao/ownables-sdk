@@ -5,7 +5,7 @@ import { EventChain } from "eqty-core";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
-import shortId from "../utils/shortId";
+import shortId from "@/utils/shortId";
 
 const itemCard = cva(
   "flex w-full items-start justify-start rounded-[14px] border p-4 text-left transition-all active:scale-[0.99]",
@@ -47,7 +47,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
 
   const loadThumbnail = useCallback(async () => {
     try {
-      const globalIdb = await import("../services/IDB.service").then((m) =>
+      const globalIdb = await import("@/services/IDB.service").then((m) =>
         m.default.main()
       );
       const thumbnailFile = await globalIdb.get(

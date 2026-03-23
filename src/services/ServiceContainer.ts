@@ -1,5 +1,5 @@
 import IDBService from "./IDB.service";
-import { isE2E } from "../utils/isE2E";
+import { isE2E } from "@/utils/isE2E";
 import EventChainService from "./EventChain.service";
 import OwnableService from "./Ownable.service";
 import PackageService from "./Package.service";

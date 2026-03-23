@@ -1,10 +1,10 @@
 import { EventChain, Message, Relay, Binary, IMessageMeta } from "eqty-core";
 import JSZip from "jszip";
 import mime from "mime/lite";
-import { MessageExt } from "../interfaces/MessageInfo";
+import { MessageExt } from "@/interfaces/MessageInfo";
 import EQTYService from "./EQTY.service";
 import { SIWEClient, SIWEAuthResult } from "./SIWE.service";
-import { LogProgress, withProgress } from "../contexts/Progress.context";
+import { LogProgress, withProgress } from "@/contexts/Progress.context";
 
 const getMimeType = (filename: string): string | null | undefined =>
   (mime as any)?.getType?.(filename);

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { EventChain } from "eqty-core";
-import { TypedPackage } from "../interfaces/TypedPackage";
+import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
-import { useProgress } from "../contexts/Progress.context";
-import { useDialogs } from "../contexts/Dialogs.context";
+import { useProgress } from "@/contexts/Progress.context";
+import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
-import ownableErrorMessage from "../utils/ownableErrorMessage";
-import LocalStorageService from "../services/LocalStorage.service";
+import ownableErrorMessage from "@/utils/ownableErrorMessage";
+import LocalStorageService from "@/services/LocalStorage.service";
 import { Button } from "@/components/ui";
 
 export interface OwnableEntry {

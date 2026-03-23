@@ -1,17 +1,17 @@
 import { EventChain, Event, Binary } from "eqty-core";
 import EQTYService from "./EQTY.service";
 import IDBService from "./IDB.service";
-import TypedDict from "../interfaces/TypedDict";
+import TypedDict from "@/interfaces/TypedDict";
 import PackageService from "./Package.service";
 import JSZip from "jszip";
-import { TypedPackage } from "../interfaces/TypedPackage";
-import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
+import { TypedPackage } from "@/interfaces/TypedPackage";
+import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import EventChainService from "./EventChain.service";
 import WorkerRPC from "./WorkerRPC";
 
-import workerJsSource from "../assets/worker.js?raw";
-import ownableJsSource from "../assets/ownable.js?raw";
-import { LogProgress, withProgress } from "../contexts/Progress.context";
+import workerJsSource from "@/assets/worker.js?raw";
+import ownableJsSource from "@/assets/ownable.js?raw";
+import { LogProgress, withProgress } from "@/contexts/Progress.context";
 
 export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;
 

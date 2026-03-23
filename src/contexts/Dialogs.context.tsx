@@ -1,7 +1,7 @@
 import React, { createContext, ReactNode, useCallback, useContext, useState } from "react";
 import { AlertColor } from "@/components/ui";
-import AlertDialog from "../components/AlertDialog";
-import ConfirmDialog from "../components/ConfirmDialog";
+import AlertDialog from "@/components/AlertDialog";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface ConfirmOptions {
   title: string;

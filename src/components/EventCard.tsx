@@ -4,7 +4,7 @@ import AntSwitch from "./AntSwitch";
 import { useState } from "react";
 import ReactJson from "react-json-view";
 import { CircleX as Cancel, CircleCheck as CheckCircle } from "lucide-react";
-import shortId from "../utils/shortId";
+import shortId from "@/utils/shortId";
 import { useChainId } from "wagmi";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";

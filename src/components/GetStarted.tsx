@@ -1,7 +1,7 @@
 import { Link } from "@/components/ui";
-import { HAS_EXAMPLES } from "../services/Package.service";
+import { HAS_EXAMPLES } from "@/services/Package.service";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
 
 const emptyStateLink = cva("pointer-events-auto link-primary underline");
 

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import { StateDump } from "../services/Ownable.service";
-import { TypedMetadata, TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
-import { TypedPackage } from "../interfaces/TypedPackage";
-import TypedDict from "../interfaces/TypedDict";
-import isObject from "../utils/isObject";
-import ownableErrorMessage from "../utils/ownableErrorMessage";
+import { StateDump } from "@/services/Ownable.service";
+import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
+import { TypedPackage } from "@/interfaces/TypedPackage";
+import TypedDict from "@/interfaces/TypedDict";
+import isObject from "@/utils/isObject";
+import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { useService } from "./useService";
 import { useAccount } from "wagmi";
-import { useProgress, LogProgress } from "../contexts/Progress.context";
+import { useProgress, LogProgress } from "@/contexts/Progress.context";
 
 export function useOwnableState(
   chain: EventChain,

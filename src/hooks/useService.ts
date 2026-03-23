@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useContainer } from '../contexts/Services.context';
-import { ServiceKey, ServiceMap } from '../services/ServiceContainer';
+import { useContainer } from '@/contexts/Services.context';
+import { ServiceKey, ServiceMap } from '@/services/ServiceContainer';
 
 export function useService<K extends ServiceKey>(key: K): ServiceMap[K] | null {
   const container = useContainer();

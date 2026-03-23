@@ -11,7 +11,7 @@ import {
   Alert,
 } from "@/components/ui";
 import { enqueueSnackbar } from "notistack";
-import { useService } from "../hooks/useService";
+import { useService } from "@/hooks/useService";
 import { useAccount, useChainId } from "wagmi";
 import { parseEther, formatEther } from "viem";
 

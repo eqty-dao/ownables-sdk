@@ -15,8 +15,8 @@ import {
   Zap,
 } from "lucide-react";
 import { EventChain } from "eqty-core";
-import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
-import { TypedPackage } from "../interfaces/TypedPackage";
+import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
+import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
 import Overlay, { OverlayBanner } from "./Overlay";

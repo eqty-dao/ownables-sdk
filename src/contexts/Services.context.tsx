@@ -5,16 +5,16 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import ServiceContainer from "../services/ServiceContainer";
-import { RelayService } from "../services/Relay.service";
+import ServiceContainer from "@/services/ServiceContainer";
+import { RelayService } from "@/services/Relay.service";
 import {
   useAccount,
   useChainId,
   useWalletClient,
   usePublicClient,
 } from "wagmi";
-import { getE2EAccount } from "../services/E2EWallet";
-import { isE2E } from "../utils/isE2E";
+import { getE2EAccount } from "@/services/E2EWallet";
+import { isE2E } from "@/utils/isE2E";
 
 type Ctx = { container: ServiceContainer | null };
 const ServicesContext = createContext<Ctx>({ container: null });

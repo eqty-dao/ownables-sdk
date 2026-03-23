@@ -1,9 +1,9 @@
 import { Box } from "@/components/ui";
 import { EventChain } from "eqty-core";
-import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
-import { useService } from "../hooks/useService";
+import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
+import { useService } from "@/hooks/useService";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
 import OwnableListItem from "./OwnableListItem";
 import IssueOwnableButton from "./IssueOwnableButton";
 

@@ -6,14 +6,14 @@ import {
 } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint, Info as InfoOutlined } from "lucide-react";
-import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
+import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { Dialog } from "@/components/ui";
 import { EventChain } from "eqty-core";
 import EventCard from "./EventCard";
-import shortId from "../utils/shortId";
+import shortId from "@/utils/shortId";
 import Tooltip from "./Tooltip";
-import useInterval from "../hooks/useInterval";
-import { useService } from "../hooks/useService"
+import useInterval from "@/hooks/useInterval";
+import { useService } from "@/hooks/useService"
 
 interface OwnableInfoProps {
   className?: string;

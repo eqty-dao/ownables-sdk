@@ -6,11 +6,11 @@ import {
 import { useEffect, useState } from "react";
 import { X as CloseIcon, Sun, Moon, Monitor, Copy } from "lucide-react";
 import { Drawer, DrawerClose } from "@/components/ui";
-import EventChainService from "../services/EventChain.service";
+import EventChainService from "@/services/EventChain.service";
 import WalletConnectControls from "./WalletConnectControls";
 import { useAccount, useBalance, useDisconnect } from "wagmi"
 import { useChainModal } from "@rainbow-me/rainbowkit"
-import useEqtyToken from "../hooks/useEqtyToken"
+import useEqtyToken from "@/hooks/useEqtyToken"
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 

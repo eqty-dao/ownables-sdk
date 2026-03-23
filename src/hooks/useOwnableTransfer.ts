@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { Binary, EventChain, IMessageMeta } from "eqty-core";
-import { TypedPackage } from "../interfaces/TypedPackage";
-import TypedDict from "../interfaces/TypedDict";
-import { LogProgress } from "../contexts/Progress.context";
+import { TypedPackage } from "@/interfaces/TypedPackage";
+import TypedDict from "@/interfaces/TypedDict";
+import { LogProgress } from "@/contexts/Progress.context";
 import { useService } from "./useService";
-import { useProgress } from "../contexts/Progress.context";
+import { useProgress } from "@/contexts/Progress.context";
 import { enqueueSnackbar } from "notistack";
-import { PACKAGE_TYPE } from "../constants";
+import { PACKAGE_TYPE } from "@/constants";
 
 type ExecuteFn = (msg: TypedDict, onProgress?: LogProgress, submitAnchors?: boolean) => Promise<void>;
 
@@ -47,7 +47,7 @@ export function useOwnableTransfer(
 
     let thumbnail: Binary | undefined;
     try {
-      const globalIdb = await import("../services/IDB.service").then((m) => m.default.main());
+      const globalIdb = await import("@/services/IDB.service").then((m) => m.default.main());
       const thumbnailFile = await globalIdb.get(`package:${pkg.cid}`, "thumbnail.webp");
       if (thumbnailFile) {
         const resized = await resizeToThumbnail(thumbnailFile);

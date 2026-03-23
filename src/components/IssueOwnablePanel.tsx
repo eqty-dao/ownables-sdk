@@ -4,7 +4,7 @@ import { ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
 import { enqueueSnackbar } from "notistack";
-import selectFile from "../utils/selectFile";
+import selectFile from "@/utils/selectFile";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import Loading from "./Loading";

@@ -3,7 +3,7 @@ import EQTYService from "./EQTY.service";
 import IDBService from "./IDB.service";
 import { StateDump } from "./Ownable.service";
 import LocalStorageService from "./LocalStorage.service";
-import TypedDict from "../interfaces/TypedDict";
+import TypedDict from "@/interfaces/TypedDict";
 
 interface StoredChainInfo {
   chain: IEventChainJSON;

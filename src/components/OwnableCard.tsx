@@ -1,10 +1,10 @@
 import { Box, IconButton } from "@/components/ui";
 import { ArrowLeft as ArrowBack } from "lucide-react";
 import { EventChain } from "eqty-core";
-import { TypedOwnableInfo } from "../interfaces/TypedOwnableInfo";
-import { TypedPackage } from "../interfaces/TypedPackage";
+import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
+import { TypedPackage } from "@/interfaces/TypedPackage";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
 import Ownable from "./Ownable";
 import Overlay from "./Overlay";
 import IssueOwnablePanel from "./IssueOwnablePanel";
