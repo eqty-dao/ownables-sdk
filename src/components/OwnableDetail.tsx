@@ -1,6 +1,6 @@
 import { RefObject } from "react";
 import { Box, Button, IconButton, Link } from "@/components/ui";
-import { ArrowLeft, ExternalLink as OpenInNew, Info } from "lucide-react";
+import { ArrowLeft, ExternalLink, ExternalLink as OpenInNew, Info } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -82,6 +82,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   className={cn(issuerLink())}
                 >
                   {shortIssuer}
+                  <ExternalLink size={16} className="inline ml-1.5" style={{ verticalAlign: "-2px" }} />
                 </Link>
               </p>
             )}

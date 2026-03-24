@@ -38,8 +38,6 @@ export default function CreateOwnableDialog({
     usd?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const builderService = useService("builder");
@@ -70,28 +68,6 @@ export default function CreateOwnableDialog({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const sanitized = inputValue.replace(/[^a-zA-Z0-9]/g, "");
-    setName(sanitized);
-    if (inputValue !== sanitized) {
-      setNameError("Name can only contain letters and numbers (no spaces, emojis, or special characters)");
-    } else {
-      setNameError(null);
-    }
-  };
-
-  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const sanitized = inputValue.replace(/[^\w\s.,!?'-]/g, "");
-    setDescription(sanitized);
-    if (inputValue !== sanitized) {
-      setDescriptionError("Description cannot contain emojis or special characters");
-    } else {
-      setDescriptionError(null);
-    }
-  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -230,8 +206,6 @@ export default function CreateOwnableDialog({
       setImageFile(null);
       setImagePreview(null);
       setError(null);
-      setNameError(null);
-      setDescriptionError(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       onClose();
     }
@@ -240,7 +214,7 @@ export default function CreateOwnableDialog({
   const busy = isUploading || isProcessingPayment;
 
   return (
-    <Dialog open={open} onClose={handleClose} className="w-[min(560px,calc(100vw-32px))]">
+    <Dialog open={open} onClose={handleClose}>
       <DialogHeader title="Create Ownable" />
       <DialogContent>
         <Box className="flex flex-col gap-4 pt-2">
@@ -253,24 +227,20 @@ export default function CreateOwnableDialog({
           <TextField
             label="Name *"
             value={name}
-            onChange={handleNameChange}
+            onChange={(e) => setName(e.target.value)}
             className="w-full"
             required
             disabled={busy}
-            helperText={nameError || "Only letters and numbers allowed"}
-            error={!!nameError}
           />
 
           <TextField
             label="Description"
             value={description}
-            onChange={handleDescriptionChange}
+            onChange={(e) => setDescription(e.target.value)}
             className="w-full"
             multiline
             rows={3}
             disabled={busy}
-            helperText={descriptionError || "Letters, numbers, spaces, and basic punctuation only"}
-            error={!!descriptionError}
           />
 
           <Box>
