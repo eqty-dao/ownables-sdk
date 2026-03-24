@@ -97,7 +97,7 @@ export function Menu({
         anchor="top"
         open={open}
         onClose={onClose}
-        className={cn("rounded-b-2xl pb-2 !z-[1600]", className)}
+        className={cn("rounded-b-2xl pb-2 z-1600!", className)}
       >
         {children}
       </Drawer>
@@ -138,7 +138,7 @@ export function MenuItem({
       role="menuitem"
       disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-6 py-5 text-left text-base font-medium transition-colors lg:px-2 lg:py-1.5 lg:text-sm lg:font-normal",
+        "flex w-full items-center gap-2 rounded-lg px-6 py-4 text-left text-base font-bold transition-colors lg:px-2 lg:py-1.5 lg:text-sm lg:font-normal",
         variant === "default" && "text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800",
         variant === "danger" && "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20",
         disabled && "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
