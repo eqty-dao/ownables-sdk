@@ -1,8 +1,7 @@
-import { ReactNode, RefObject } from "react";
+import { RefObject } from "react";
 import {
   Box,
   Button,
-  CircularProgress,
   Link,
   Tag,
 } from "@/components/ui";
@@ -19,10 +18,8 @@ import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
-import Overlay from "./Overlay";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
-import { OverlayBanner } from "@/components/OverlayBanner"
 
 interface OwnableDetailProps {
   chain: EventChain;
@@ -33,17 +30,14 @@ interface OwnableDetailProps {
   isConsumed: boolean;
   isTransferred: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
-  isApplying: boolean;
   onLoad: () => void;
   onConsume: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
-  children?: ReactNode;
 }
 
 const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
 const issuerLink = cva("font-mono link-primary hover:underline");
-const overlayCenter = cva("flex h-full w-full items-center justify-center overflow-hidden");
 const consumeButton = cva(
   "w-full rounded-xl bg-orange-500 px-6 font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700 py-3 lg:py-4 lg:text-lg"
 );
@@ -58,12 +52,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     isConsumed,
     isTransferred,
     iframeRef,
-    isApplying,
     onLoad,
     onConsume,
     onDelete,
     onTransfer,
-    children,
   } = props;
   const shortIssuer =
     issuer && issuer.length > 10
@@ -148,22 +140,6 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             iframeRef={iframeRef}
             onLoad={onLoad}
           />
-          {children}
-          {isApplying && (
-            <Overlay>
-              <div className={cn(overlayCenter())}>
-                <div className="w-full text-center"><CircularProgress /></div>
-              </div>
-            </Overlay>
-          )}
-          {isTransferred && (
-            <Overlay
-              className="bg-white/80 dark:bg-slate-900/70"
-              title="You're unable to interact with this Ownable, because it has been transferred to a different account."
-            >
-              <OverlayBanner>Transferred</OverlayBanner>
-            </Overlay>
-          )}
         </Box>
 
         {isConsumable && !isTransferred && (

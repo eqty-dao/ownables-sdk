@@ -18,6 +18,7 @@ import { base, baseSepolia } from "wagmi/chains";
 import { ServicesProvider } from "@/contexts/Services.context";
 import { ProgressProvider } from "@/contexts/Progress.context";
 import { DialogsProvider } from "@/contexts/Dialogs.context";
+import { OverlayProvider } from "@/contexts/Overlay.context";
 import { getE2EAccount } from "@/services/E2EWallet";
 import { isE2E } from "@/utils/isE2E";
 
@@ -82,8 +83,10 @@ root.render(
           <ServicesProvider>
             <ProgressProvider>
               <DialogsProvider>
-                {isE2E && <E2EAutoConnect />}
-                <App />
+                <OverlayProvider>
+                  {isE2E && <E2EAutoConnect />}
+                  <App />
+                </OverlayProvider>
               </DialogsProvider>
             </ProgressProvider>
           </ServicesProvider>

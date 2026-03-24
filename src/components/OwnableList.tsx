@@ -13,8 +13,12 @@ const listPane = cva("w-full flex-shrink-0 px-4 lg:w-[384px]", {
       true: "hidden lg:block",
       false: "block",
     },
+    elevated: {
+      true: "relative z-[200]",
+      false: "",
+    },
   },
-  defaultVariants: { hiddenOnMobile: false },
+  defaultVariants: { hiddenOnMobile: false, elevated: false },
 });
 
 interface OwnableEntry {
@@ -55,7 +59,7 @@ export default function OwnableList({
   const packageService = useService("packages");
 
   return (
-    <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile }))}>
+    <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile, elevated: consuming !== null }))}>
       <Box className="space-y-2">
         {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
           const pkg = packageService?.info(packageCid, uniqueMessageHash);

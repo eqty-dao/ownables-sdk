@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from "react";
+import { useMemo } from "react";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -16,11 +16,10 @@ interface OwnableProps {
   onConsume: (info: TypedOwnableInfo) => void;
   onRemove: () => void;
   onError: (title: string, message: string) => void;
-  children?: ReactNode;
 }
 
 export default function Ownable(props: OwnableProps) {
-  const { chain, packageCid, uniqueMessageHash, children } = props;
+  const { chain, packageCid, uniqueMessageHash } = props;
 
   const packages = useService("packages");
   const idb = useService("idb");
@@ -33,7 +32,7 @@ export default function Ownable(props: OwnableProps) {
     return packages.info(packageCid, uniqueMessageHash);
   }, [packages, packageCid, uniqueMessageHash]);
 
-  const { iframeRef, info, metadata, isConsumed, isTransferred, isApplying, execute, onLoad } =
+  const { iframeRef, info, metadata, isConsumed, isTransferred, execute, onLoad } =
     useOwnableState(chain, pkg, props.onError);
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute);
@@ -50,13 +49,10 @@ export default function Ownable(props: OwnableProps) {
       isConsumed={isConsumed}
       isTransferred={isTransferred}
       iframeRef={iframeRef}
-      isApplying={isApplying}
       onLoad={() => onLoad()}
       onConsume={() => !!info && props.onConsume(info)}
       onDelete={props.onDelete}
       onTransfer={(address) => transfer(address)}
-    >
-      {children}
-    </OwnableDetail>
+    />
   );
 }

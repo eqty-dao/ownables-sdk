@@ -4,6 +4,7 @@ import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
+import { useOverlay } from "@/contexts/Overlay.context";
 import { enqueueSnackbar } from "notistack";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { OwnableEntry } from "./useOwnables";
@@ -26,6 +27,7 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
   const ownableService = useService("ownables");
   const progress = useProgress();
   const { showError } = useDialogs();
+  const overlay = useOverlay();
 
   useEffect(() => {
     if (!consuming) { setConsumeEligibility({}); return; }
@@ -47,11 +49,13 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
 
   const startConsuming = useCallback((chain: EventChain, pkg: string, info: TypedOwnableInfo) => {
     setConsuming({ chain, package: pkg, info });
-  }, []);
+    overlay.show();
+  }, [overlay]);
 
   const cancelConsuming = useCallback(() => {
     setConsuming(null);
-  }, []);
+    overlay.hide();
+  }, [overlay]);
 
   const consume = useCallback((consumer: EventChain, consumable: EventChain) => {
     if (consumer.id === consumable.id) return;
@@ -66,6 +70,7 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
       .consume(consumer, consumable, onProgress)
       .then(() => {
         setConsuming(null);
+        overlay.hide();
         onConsumed();
         enqueueSnackbar("Consumed", { variant: "success" });
         ctrl.close();

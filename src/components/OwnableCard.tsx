@@ -6,7 +6,6 @@ import { TypedPackage } from "@/interfaces/TypedPackage";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import Ownable from "./Ownable";
-import Overlay from "./Overlay";
 import IssueOwnablePanel from "./IssueOwnablePanel";
 
 const detailPane = cva("min-w-0 flex-1", {
@@ -103,18 +102,7 @@ export default function OwnableCard({
           onRemove={() => onRemove(selectedOwnable.chain.id)}
           onConsume={onConsume}
           onError={onError}
-        >
-          {consuming?.chain.id === selectedOwnable.chain.id && (
-            <Overlay zIndex={1000} />
-          )}
-          {consuming !== null && consuming.chain.id !== selectedOwnable.chain.id && (
-            <Overlay
-              zIndex={1000}
-              disabled={consumeEligibility[selectedOwnable.chain.id] === false}
-              onClick={() => onConsumeComplete(selectedOwnable.chain, consuming.chain)}
-            />
-          )}
-        </Ownable>
+        />
       )}
     </Box>
   );
