@@ -1,4 +1,4 @@
-import { IconButton, ListItemIcon, Menu, MenuItem } from "@/components/ui";
+import { IconButton, Menu, MenuItem } from "@/components/ui";
 import { EllipsisVertical as MoreVert, Trash2 as Delete, Wrench as PrecisionManufacturing, ArrowLeftRight as SwapHoriz, Lock, LockOpen } from "lucide-react";
 import { useState, MouseEvent } from "react";
 import PromptDialog from "./PromptDialog";
@@ -53,13 +53,11 @@ export default function OwnableActions(props: OwnableActionsProps) {
         </MenuItem>
         {isLockable && !isLocked && (
           <MenuItem onClick={() => { close(); onLock(); }}>
-            <Lock className="h-4 w-4" />
             Lock
           </MenuItem>
         )}
         {isLockable && isLocked && (
           <MenuItem onClick={() => { close(); onUnlock(); }}>
-            <LockOpen className="h-4 w-4" />
             Unlock
           </MenuItem>
         )}
