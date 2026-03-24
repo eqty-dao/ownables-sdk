@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_WALLETCONNECT_PROJECT_ID?: string;
   readonly VITE_BASE_SEPOLIA_RPC_URL?: string;
   readonly VITE_BASE_MAINNET_RPC_URL?: string;
+  readonly VITE_BASE_SEPOLIA_EXPLORER_URL?: string;
+  readonly VITE_BASE_MAINNET_EXPLORER_URL?: string;
 }
 
 interface ImportMeta {
