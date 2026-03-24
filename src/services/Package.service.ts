@@ -73,6 +73,7 @@ const capabilitiesStaticOwnable = {
   hasWidgetState: false,
   isConsumable: false,
   isConsumer: false,
+  isLockable: false,
   isTransferable: false,
 };
 
@@ -338,6 +339,7 @@ export default class PackageService {
       hasWidgetState: hasMethod(query, "get_widget_state"),
       isConsumable: hasMethod(execute, "consume"),
       isConsumer: hasMethod(query, "is_consumer_of"),
+      isLockable: hasMethod(execute, "lock"),
       isTransferable: hasMethod(execute, "transfer"),
     };
   }

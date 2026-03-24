@@ -25,6 +25,9 @@ interface OwnableEntry {
   chain: EventChain;
   package: string;
   uniqueMessageHash?: string;
+  isConsumed?: boolean;
+  isLocked?: boolean;
+  isTransferred?: boolean;
 }
 
 interface ConsumingState {
@@ -61,7 +64,7 @@ export default function OwnableList({
   return (
     <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile, elevated: consuming !== null }))}>
       <Box className="space-y-2">
-        {ownables.map(({ chain, package: packageCid, uniqueMessageHash }) => {
+        {ownables.map(({ chain, package: packageCid, uniqueMessageHash, isConsumed, isLocked, isTransferred }) => {
           const pkg = packageService?.info(packageCid, uniqueMessageHash);
           return (
             <OwnableListItem
@@ -71,6 +74,10 @@ export default function OwnableList({
               metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
               issuer={chain.events[0]?.signerAddress}
               isConsumable={!!(pkg?.isConsumable)}
+              isConsumed={!!isConsumed}
+              isLockable={!!(pkg?.isLockable)}
+              isLocked={!!isLocked}
+              isTransferred={!!isTransferred}
               isSelected={selectedChainId === chain.id}
               consumeIntent={
                 consuming === null ? "none"

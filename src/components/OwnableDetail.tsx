@@ -1,23 +1,12 @@
 import { RefObject } from "react";
-import {
-  Box,
-  Button,
-  Link,
-  Tag,
-} from "@/components/ui";
-import {
-  ExternalLink as OpenInNew,
-  Info,
-  Lock,
-  LockOpen,
-  PackageCheck,
-  Zap,
-} from "lucide-react";
+import { Box, Button, Link } from "@/components/ui";
+import { ExternalLink as OpenInNew, Info } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
+import OwnableTags from "./OwnableTags";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
@@ -28,6 +17,8 @@ interface OwnableDetailProps {
   issuer?: string;
   isConsumable: boolean;
   isConsumed: boolean;
+  isLockable: boolean;
+  isLocked: boolean;
   isTransferred: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
   onLoad: () => void;
@@ -50,6 +41,8 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     issuer,
     isConsumable,
     isConsumed,
+    isLockable,
+    isLocked,
     isTransferred,
     iframeRef,
     onLoad,
@@ -61,14 +54,6 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     issuer && issuer.length > 10
       ? `${issuer.slice(0, 6)}...${issuer.slice(-4)}`
       : issuer;
-  const statusTag = isTransferred
-    ? { value: "Locked", variant: "locked" as const, icon: <Lock className="h-3 w-3" /> }
-    : isConsumed
-      ? { value: "Consumed", variant: "consumed" as const, icon: <PackageCheck className="h-3 w-3" /> }
-      : isConsumable
-        ? { value: "Consumable", variant: "consumable" as const, icon: <Zap className="h-3 w-3" /> }
-        : { value: "Unlocked", variant: "unlocked" as const, icon: <LockOpen className="h-3 w-3" /> };
-
   const aboutSection = (
     <Box className="px-4 pb-8 lg:px-2 lg:pb-0">
       <h2 className="text-caption mb-2 uppercase tracking-wide">About</h2>
@@ -76,7 +61,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         <p className="text-body mb-3">{metadata.description}</p>
       )}
       <Box className="mb-3 flex items-center gap-2">
-        <Tag icon={statusTag.icon} value={statusTag.value} variant={statusTag.variant} />
+        <OwnableTags display="ghost" isLockable={isLockable} isLocked={isLocked} isConsumable={isConsumable} isConsumed={isConsumed} isTransferred={isTransferred} />
       </Box>
       {metadata.external_url && (
         <Link

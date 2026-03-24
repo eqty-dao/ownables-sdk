@@ -4,6 +4,7 @@ export interface TypedPackageCapabilities {
   hasWidgetState: boolean;
   isConsumable: boolean;
   isConsumer: boolean;
+  isLockable: boolean;
   isTransferable: boolean;
 }
 

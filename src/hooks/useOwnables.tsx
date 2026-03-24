@@ -14,6 +14,9 @@ export interface OwnableEntry {
   chain: EventChain;
   package: string;
   uniqueMessageHash?: string;
+  isConsumed?: boolean;
+  isLocked?: boolean;
+  isTransferred?: boolean;
 }
 
 interface UseOwnablesOptions {

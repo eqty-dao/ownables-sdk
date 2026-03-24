@@ -32,7 +32,7 @@ export default function Ownable(props: OwnableProps) {
     return packages.info(packageCid, uniqueMessageHash);
   }, [packages, packageCid, uniqueMessageHash]);
 
-  const { iframeRef, info, metadata, isConsumed, isTransferred, execute, onLoad } =
+  const { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, execute, onLoad } =
     useOwnableState(chain, pkg, props.onError);
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute);
@@ -47,6 +47,8 @@ export default function Ownable(props: OwnableProps) {
       issuer={info?.issuer}
       isConsumable={pkg.isConsumable && !isTransferred && !isConsumed}
       isConsumed={isConsumed}
+      isLockable={pkg.isLockable}
+      isLocked={isLocked}
       isTransferred={isTransferred}
       iframeRef={iframeRef}
       onLoad={() => onLoad()}

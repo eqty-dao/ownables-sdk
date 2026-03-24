@@ -33,6 +33,7 @@ export function useOwnableState(
     description: pkg?.description,
   });
   const [isConsumed, setIsConsumed] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -68,9 +69,14 @@ export function useOwnableState(
         ? await ownables.rpc(chain.id).query({ is_consumed: {} }, effective).catch(() => false) as boolean
         : false;
 
+      const locked = pkg.isLockable
+        ? await ownables.rpc(chain.id).query({ is_locked: {} }, effective).catch(() => false) as boolean
+        : false;
+
       setInfo(infoResp);
       setMetadata(metadataResp);
       setIsConsumed(consumed);
+      setIsLocked(locked);
     },
     [chain.id, metadata, ownables, pkg, stateDump]
   );
@@ -186,5 +192,5 @@ export function useOwnableState(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apply, applied, chainLatestHex, error, initialized, isApplying, refresh]);
 
-  return { iframeRef, info, metadata, isConsumed, isTransferred, isApplying, execute, onLoad };
+  return { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, isApplying, execute, onLoad };
 }
