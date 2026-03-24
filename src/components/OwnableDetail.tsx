@@ -74,7 +74,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <span>Visit external link</span>
         </Link>
       )}
-      <Button className={cn(aboutLink())}>
+      <Button className={cn(aboutLink(), "px-0")}>
         <Info className="h-4 w-4" />
         <span>More information</span>
       </Button>
@@ -83,7 +83,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-8">
-      <Box className="lg:surface-card lg:mb-6 lg:p-8">
+      <Box className="lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
 
         {/* Header */}
         <Box className="flex items-start gap-3 p-4 lg:mx-auto lg:mb-6 lg:max-w-[500px] lg:gap-4 lg:p-0">

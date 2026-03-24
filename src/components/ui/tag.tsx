@@ -23,7 +23,7 @@ const tagVariants = cva(
       },
       display: {
         badge: "border px-2 py-0.5",
-        ghost: "",
+        ghost: "bg-transparent dark:bg-transparent",
       },
     },
     defaultVariants: {
