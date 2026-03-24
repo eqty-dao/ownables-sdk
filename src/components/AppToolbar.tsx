@@ -1,7 +1,6 @@
-import { Alert } from "@/components/ui";
+import { Alert, IconButton, Tag } from "@/components/ui";
 import logo from "@/assets/logo.svg";
 import { Menu as MenuIcon, TriangleAlert as WarningIcon, Bell } from "lucide-react";
-import { IconButton } from "@/components/ui";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
@@ -14,21 +13,6 @@ interface AppToolbarProps {
 }
 
 const BASE_SEPOLIA_CHAIN_ID = 84532; // Base Sepolia
-
-const networkPill = cva(
-  "rounded-lg px-3 py-1.5 text-xs font-semibold text-white",
-  {
-    variants: {
-      state: {
-        ok: "bg-green-600",
-        bad: "bg-red-600",
-      },
-    },
-    defaultVariants: {
-      state: "ok",
-    },
-  }
-);
 
 const warningStrip = cva(
   "flex items-center gap-2 rounded-none border-b px-4 py-2 text-sm",
@@ -79,9 +63,11 @@ export default function AppToolbar({
           />
           <div className="flex items-center gap-2">
             {isConnected && (
-              <span className={cn(networkPill({ state: isOnBaseSepolia ? "ok" : "bad" }), 'hidden', 'lg:block')}>
-                {isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
-              </span>
+              <Tag
+                color={isOnBaseSepolia ? "success" : "danger"}
+                value={isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
+                className="hidden px-3 py-1.5 font-semibold lg:inline-flex"
+              />
             )}
 
             <IconButton
