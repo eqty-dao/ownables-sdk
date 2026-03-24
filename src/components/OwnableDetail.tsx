@@ -59,11 +59,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       : issuer;
 
   return (
-    <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-8">
+    <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-5">
       <Box className="lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
 
         {/* Header */}
-        <Box className="flex items-center gap-3 p-4 lg:mx-auto lg:mb-6 lg:max-w-125 lg:items-start lg:gap-4 lg:p-0">
+        <Box className="flex items-center gap-3 border-b border-slate-200 p-4 dark:border-[#2a2a2a] lg:mx-auto lg:mb-6 lg:max-w-125 lg:items-start lg:gap-4 lg:border-b-0 lg:p-0">
           <IconButton aria-label="Back" onClick={onBack} className="shrink-0 lg:hidden">
             <ArrowLeft className="h-5 w-5" />
           </IconButton>
@@ -83,7 +83,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             )}
           </Box>
           <OwnableActions
-            className="mr-[-12px]"
+            className="-mr-3"
             title={pkg.title}
             isConsumable={isConsumable && !isTransferred && !isConsumed}
             isTransferable={pkg.isTransferable && !isTransferred}

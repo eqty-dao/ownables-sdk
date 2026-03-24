@@ -16,7 +16,7 @@ interface OwnableActionsProps {
 }
 
 export default function OwnableActions(props: OwnableActionsProps) {
-  const { onDelete, onConsume, onTransfer, isConsumable, isTransferable } =
+  const { onDelete, onTransfer, isTransferable } =
     props;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -42,29 +42,14 @@ export default function OwnableActions(props: OwnableActionsProps) {
         className="min-w-40"
       >
         <MenuItem
-          disabled={!isConsumable}
-          onClick={() => {
-            close();
-            onConsume();
-          }}
-        >
-          Consume
-        </MenuItem>
-        <MenuItem
           disabled={!isTransferable}
-          onClick={() => {
-            close();
-            setShowTransferDialog(true);
-          }}
+          onClick={() => { close(); setShowTransferDialog(true); }}
         >
           Transfer
         </MenuItem>
         <MenuItem
           variant="danger"
-          onClick={() => {
-            close();
-            onDelete();
-          }}
+          onClick={() => { close(); onDelete(); }}
         >
           Delete
         </MenuItem>

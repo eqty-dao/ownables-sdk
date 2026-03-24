@@ -88,7 +88,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   return (
     <>
       {/* Mobile header */}
-      <div className="flex items-center gap-2 p-4 lg:hidden">
+      <div className="flex items-center gap-2 border-b border-slate-200 p-4 dark:border-[#2a2a2a] lg:hidden">
         <IconButton aria-label="Back" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </IconButton>

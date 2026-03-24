@@ -84,8 +84,9 @@ export default function App() {
 
       {ownables.length === 0 && <GetStarted onExamples={selectIssuePanel} />}
 
-      <Box className="mx-auto mt-4 flex max-w-330 gap-4 px-3 pb-6 lg:px-4">
+      <Box className="mx-auto lg:mt-4 flex max-w-330 gap-4 lg:pb-6 lg:px-4">
         <OwnableList
+          className="mt-4"
           ownables={ownables}
           selectedChainId={selectedChainId}
           issueSelected={selectedChainId === ISSUE_OWNABLE_ID}

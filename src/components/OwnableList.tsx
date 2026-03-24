@@ -39,6 +39,7 @@ interface ConsumingState {
 interface OwnableListProps {
   ownables: OwnableEntry[];
   selectedChainId: string | null;
+  className?: string;
   issueSelected: boolean;
   hiddenOnMobile: boolean;
   consuming: ConsumingState | null;
@@ -51,6 +52,7 @@ interface OwnableListProps {
 export default function OwnableList({
   ownables,
   selectedChainId,
+  className,
   issueSelected,
   hiddenOnMobile,
   consuming,
@@ -62,7 +64,7 @@ export default function OwnableList({
   const packageService = useService("packages");
 
   return (
-    <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile, elevated: consuming !== null }))}>
+    <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile, elevated: consuming !== null }), className)}>
       <Box className="space-y-2">
         {ownables.map(({ chain, package: packageCid, uniqueMessageHash, isConsumed, isLocked, isTransferred }) => {
           const pkg = packageService?.info(packageCid, uniqueMessageHash);

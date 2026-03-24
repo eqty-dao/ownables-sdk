@@ -34,7 +34,7 @@ function popupClass(anchor: Anchor) {
 
 export function DrawerHeader({ title, closeAriaLabel = "Close" }: DrawerHeaderProps) {
   return (
-    <div className="flex shrink-0 items-center justify-between p-6">
+    <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-6 dark:border-[#2a2a2a]">
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
       <DrawerClose
         aria-label={closeAriaLabel}
