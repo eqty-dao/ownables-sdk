@@ -133,8 +133,8 @@ export function useOwnableState(
     }
 
     try {
-      ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
       await ownables.init(chain, pkg.cid, pkg.uniqueMessageHash);
+      ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
       setInitialized(true);
     } catch (e) {
       onError("Failed to forge Ownable", ownableErrorMessage(e));
