@@ -15,7 +15,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
     <OverlayContext.Provider value={{ active, show: () => setActive(true), hide: () => setActive(false) }}>
       {children}
       {active && (
-        <div className="fixed inset-0 z-[100] bg-black/50" />
+        <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm" />
       )}
     </OverlayContext.Provider>
   );

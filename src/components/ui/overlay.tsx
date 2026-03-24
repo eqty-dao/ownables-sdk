@@ -23,7 +23,7 @@ function Overlay(props: OverlayProps, ref: Ref<HTMLDivElement>) {
       {...rest}
       ref={ref}
       onClick={isEnabled ? onClick : undefined}
-      className={cn(!isEnabled && "bg-white/80 dark:bg-slate-900/65", className)}
+      className={cn(!isEnabled && "bg-white/60 backdrop-blur-sm dark:bg-slate-900/50", className)}
       style={{
         position: "absolute",
         inset: 0,

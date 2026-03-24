@@ -24,7 +24,7 @@ export function Drawer({ anchor = "left", hideBackdrop, onClose, open, className
   return (
     <BaseDrawer.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
       <BaseDrawer.Portal>
-        {!hideBackdrop ? <BaseDrawer.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/40" /> : null}
+        {!hideBackdrop ? <BaseDrawer.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/30 backdrop-blur-sm" /> : null}
         <BaseDrawer.Popup className={cn(popupClass(anchor), className)} {...rest}>
           {children}
         </BaseDrawer.Popup>
