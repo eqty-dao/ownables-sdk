@@ -8,6 +8,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
+import { Drawer } from "./drawer";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 type MenuProps = Omit<ComponentPropsWithoutRef<"div">, "onClose"> & {
   anchorEl?: HTMLElement | null;
@@ -15,7 +17,8 @@ type MenuProps = Omit<ComponentPropsWithoutRef<"div">, "onClose"> & {
   onClose?: () => void;
 };
 
-type MenuItemProps = ComponentPropsWithoutRef<"button">;
+type MenuItemVariant = "default" | "danger";
+type MenuItemProps = ComponentPropsWithoutRef<"button"> & { variant?: MenuItemVariant };
 
 export function Menu({
   anchorEl,
@@ -25,6 +28,7 @@ export function Menu({
   className,
   ...rest
 }: MenuProps) {
+  const isLg = useBreakpoint("lg");
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number }>({
     top: 0,
@@ -32,7 +36,7 @@ export function Menu({
   });
 
   useEffect(() => {
-    if (!open || !anchorEl) return;
+    if (!open || !anchorEl || !isLg) return;
 
     const updatePosition = () => {
       const rect = anchorEl.getBoundingClientRect();
@@ -49,10 +53,10 @@ export function Menu({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, anchorEl]);
+  }, [open, anchorEl, isLg]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !isLg) return;
 
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node;
@@ -74,7 +78,7 @@ export function Menu({
       document.removeEventListener("touchstart", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, anchorEl, onClose]);
+  }, [open, anchorEl, onClose, isLg]);
 
   const menuStyle = useMemo<CSSProperties>(
     () => ({
@@ -86,6 +90,21 @@ export function Menu({
     [position]
   );
 
+  // Mobile: top drawer
+  if (!isLg) {
+    return (
+      <Drawer
+        anchor="top"
+        open={open}
+        onClose={onClose}
+        className={cn("rounded-b-2xl pb-2 !z-[1600]", className)}
+      >
+        {children}
+      </Drawer>
+    );
+  }
+
+  // Desktop: positioned portal menu
   if (!open || !anchorEl) return null;
 
   return createPortal(
@@ -94,7 +113,7 @@ export function Menu({
       role="menu"
       style={menuStyle}
       className={cn(
-        "z-[1600] min-w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900",
+        "z-1600 min-w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900",
         className
       )}
       {...rest}
@@ -110,6 +129,7 @@ export function MenuItem({
   onClick,
   className,
   disabled,
+  variant = "default",
   ...rest
 }: MenuItemProps) {
   return (
@@ -118,7 +138,9 @@ export function MenuItem({
       role="menuitem"
       disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-slate-800 transition-colors hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800",
+        "flex w-full items-center gap-2 rounded-lg px-6 py-5 text-left text-base font-medium transition-colors lg:px-2 lg:py-1.5 lg:text-sm lg:font-normal",
+        variant === "default" && "text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800",
+        variant === "danger" && "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20",
         disabled && "cursor-not-allowed opacity-50 hover:bg-transparent dark:hover:bg-transparent",
         className
       )}

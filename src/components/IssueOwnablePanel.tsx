@@ -10,7 +10,7 @@ import { cn } from "@/utils/cn";
 import Loading from "./Loading";
 
 const actionButton = cva(
-  "inline-flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-gray-200 bg-white px-4 py-4 text-base font-medium text-slate-900 transition-colors hover:border-indigo-500 hover:shadow-md dark:border-[#333333] dark:bg-[#252525] dark:text-slate-100 dark:hover:border-indigo-500",
+  "inline-flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-gray-200 bg-white px-4 py-4 text-sm font-medium text-slate-900 transition-colors hover:border-indigo-500 hover:shadow-md dark:border-[#333333] dark:bg-[#252525] dark:text-slate-100 dark:hover:border-indigo-500",
   {
     variants: {
       disabled: {
@@ -101,7 +101,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
               onClick={importAll}
             >
               <FolderUp size={20} className="text-slate-600 dark:text-slate-400" />
-              Upload<span className="hidden lg:inline"> Package</span>
+              <span>Upload<span className="hidden md:inline"> Package</span></span>
             </Button>
             {message > 0 ? (
               <Button
@@ -120,7 +120,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                 disabled={!hasBuilder}
               >
                 <Sparkles size={20} className="text-slate-600 dark:text-slate-400" />
-                <span className="hidden lg:inline">Ownable </span>Builder
+                <span><span className="hidden md:inline">Ownable </span>Builder</span>
               </Button>
             )}
           </div>
@@ -134,10 +134,10 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {isLoading ? (
               <>
-                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
-                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
-                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
-                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
+                <Skeleton className="h-15 rounded-xl lg:h-30" />
+                <Skeleton className="h-15 rounded-xl lg:h-30" />
+                <Skeleton className="h-15 rounded-xl lg:h-30" />
+                <Skeleton className="h-15 rounded-xl lg:h-30" />
               </>
             ) : filteredPackages.length === 0 ? (
               <div className="surface-muted px-3 py-4 text-sm lg:col-span-2">
@@ -153,7 +153,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                 >
                   {/* Icon + chevron row — desktop only */}
                   <div className="hidden w-full items-center justify-between lg:flex">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
                       <Package size={20} className="text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <ChevronRight size={20} className="text-slate-300 dark:text-slate-600" />
@@ -168,7 +168,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                     </p>
                   </div>
                   {/* Chevron — mobile only */}
-                  <ChevronRight size={20} className="flex-shrink-0 text-slate-300 dark:text-slate-600 lg:hidden" />
+                  <ChevronRight size={20} className="shrink-0 text-slate-300 dark:text-slate-600 lg:hidden" />
                 </Button>
               ))
             )}

@@ -77,6 +77,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             )}
           </Box>
           <OwnableActions
+            className="mr-[-12px]"
             title={pkg.title}
             isConsumable={isConsumable && !isTransferred && !isConsumed}
             isTransferable={pkg.isTransferable && !isTransferred}

@@ -48,9 +48,6 @@ export default function OwnableActions(props: OwnableActionsProps) {
             onConsume();
           }}
         >
-          <ListItemIcon>
-            <PrecisionManufacturing className="h-4 w-4" />
-          </ListItemIcon>
           Consume
         </MenuItem>
         <MenuItem
@@ -60,20 +57,15 @@ export default function OwnableActions(props: OwnableActionsProps) {
             setShowTransferDialog(true);
           }}
         >
-          <ListItemIcon>
-            <SwapHoriz className="h-4 w-4" />
-          </ListItemIcon>
           Transfer
         </MenuItem>
         <MenuItem
+          variant="danger"
           onClick={() => {
             close();
             onDelete();
           }}
         >
-          <ListItemIcon>
-            <Delete className="h-4 w-4" />
-          </ListItemIcon>
           Delete
         </MenuItem>
       </Menu>
