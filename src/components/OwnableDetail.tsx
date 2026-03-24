@@ -19,9 +19,10 @@ import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
-import Overlay, { OverlayBanner } from "./Overlay";
+import Overlay from "./Overlay";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
+import { OverlayBanner } from "@/components/OverlayBanner"
 
 interface OwnableDetailProps {
   chain: EventChain;
