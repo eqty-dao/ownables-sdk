@@ -201,7 +201,8 @@ export default class WorkerRPC {
   async query(msg: TypedDict, state: StateDump): Promise<any> {
     const resultB64 = await this.queryRaw(msg, state);
     try {
-      return JSON.parse(atob(resultB64));
+      const bytes = Uint8Array.from(atob(resultB64), (c) => c.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
     } catch (error) {
       console.error("Failed to decode base64 result:", error);
       throw new Error(
