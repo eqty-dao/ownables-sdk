@@ -19,9 +19,8 @@ export default function OwnableTags({ isLockable, isLocked, isConsumable, isCons
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2.5', className)}>
-      {isConsumable && (isConsumed
-          ? <Tag display={display} variant="consumed" icon={<Zap className="h-3 w-3" />} value="Consumed" />
-          : <Tag display={display} variant="consumable" icon={<Zap className="h-3 w-3" />} value="Consumable" />
+      {isConsumable && (
+        <Tag display={display} variant={isConsumed ? "consumed" : "consumable"} icon={<Zap className="h-3 w-3" />} value={isConsumed ? "Consumed" : "Consumable"} />
       )}
       {isTransferred && (
         <Tag display={display} variant="transferred" icon={<ArrowRightLeft className="h-3 w-3" />} value="Transferred" />
