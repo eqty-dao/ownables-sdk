@@ -3,6 +3,7 @@ import logo from "@/assets/logo.svg";
 import { Menu as MenuIcon, TriangleAlert as WarningIcon, Bell } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
+import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core"
 
 interface AppToolbarProps {
   onMenuClick: () => void;
@@ -11,8 +12,6 @@ interface AppToolbarProps {
   chainId?: number;
   isConnected: boolean;
 }
-
-const BASE_SEPOLIA_CHAIN_ID = 84532; // Base Sepolia
 
 const warningStrip = cva(
   "flex items-center gap-2 rounded-none border-b px-4 py-2 text-sm",
@@ -40,8 +39,7 @@ export default function AppToolbar({
   chainId,
   isConnected,
 }: AppToolbarProps) {
-  const isOnBaseSepolia = chainId === BASE_SEPOLIA_CHAIN_ID;
-  const showNetworkWarning = isConnected && !isOnBaseSepolia;
+  const showNetworkWarning = isConnected && chainId !== BASE_SEPOLIA_CHAIN_ID;
 
   return (
     <>
@@ -62,13 +60,8 @@ export default function AppToolbar({
             alt="Ownables Logo"
           />
           <div className="flex items-center gap-2">
-            {isConnected && (
-              <Tag
-                color={isOnBaseSepolia ? "success" : "danger"}
-                value={isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
-                className="hidden px-3 py-1.5 font-semibold lg:inline-flex"
-              />
-            )}
+            {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
+            {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
 
             <IconButton
               aria-label="messages"

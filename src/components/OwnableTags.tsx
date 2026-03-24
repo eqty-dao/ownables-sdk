@@ -26,7 +26,7 @@ export default function OwnableTags({ isLockable, isLocked, isConsumable, isCons
         : <Tag display={display} variant="unlocked" icon={<LockOpen className="h-3 w-3" />} value="Unlocked" />
       )}
       {isConsumable && (isConsumed
-        ? <Tag display={display} variant="consumed" icon={<PackageCheck className="h-3 w-3" />} value="Consumed" />
+        ? <Tag display={display} variant="consumed" icon={<Zap className="h-3 w-3" />} value="Consumed" />
         : <Tag display={display} variant="consumable" icon={<Zap className="h-3 w-3" />} value="Consumable" />
       )}
     </div>

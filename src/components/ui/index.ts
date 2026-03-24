@@ -31,7 +31,7 @@ export { Skeleton } from "./skeleton";
 export { Tooltip, type TooltipProps } from "./tooltip";
 export { Menu, MenuItem } from "./menu";
 
-export { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "./dialog";
+export { Dialog, DialogClose, DialogTitle, DialogContent, DialogContentText, DialogActions } from "./dialog";
 
 export { Drawer, DrawerClose, DrawerHeader } from "./drawer";
 export { Tag, type TagProps } from "./tag";

@@ -1,7 +1,7 @@
 import { useAccount } from "wagmi";
 import { useChainModal } from "@rainbow-me/rainbowkit";
 
-export default function NetworkBadge() {
+export default function NetworkBadge({ danger }: { danger?: boolean }) {
   const { chain } = useAccount();
   const { openChainModal } = useChainModal();
 

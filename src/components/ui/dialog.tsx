@@ -2,6 +2,8 @@ import { Dialog as BaseDialog } from "@base-ui/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "@/utils/cn";
 
+export const DialogClose = BaseDialog.Close;
+
 export interface DialogProps extends Omit<ComponentPropsWithoutRef<"div">, "onClose"> {
   open?: boolean;
   onClose?: () => void;
@@ -14,7 +16,9 @@ export function Dialog({ open, onClose, className, children, ...rest }: DialogPr
         <BaseDialog.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/40" />
         <BaseDialog.Popup
           className={cn(
-            "fixed left-1/2 top-1/2 z-[1400] max-h-[calc(100vh-32px)] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900",
+            "fixed z-[1400] overflow-auto bg-white shadow-xl dark:bg-slate-900",
+            "inset-0 max-h-screen w-full rounded-none border-0",
+            "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100vh-32px)] sm:w-[min(640px,calc(100vw-32px))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:border sm:border-slate-200 sm:dark:border-slate-700",
             className
           )}
           {...rest}

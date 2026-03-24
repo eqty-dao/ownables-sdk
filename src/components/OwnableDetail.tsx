@@ -7,6 +7,7 @@ import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
 import OwnableTags from "./OwnableTags";
+import OwnableInfo from "./OwnableInfo";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
@@ -138,10 +139,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             <span>Visit external link</span>
           </Link>
         )}
-        <Button className={cn(aboutLink(), "px-0")}>
+        <OwnableInfo chain={chain} metadata={metadata} className={cn(aboutLink(), "px-0")}>
           <Info className="h-4 w-4" />
           <span>More information</span>
-        </Button>
+        </OwnableInfo>
       </Box>
     </Box>
   );

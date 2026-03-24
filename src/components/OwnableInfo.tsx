@@ -2,10 +2,13 @@ import {
   Tag,
   DialogContent,
   DialogTitle,
+  DialogClose,
   IconButton,
+  Button,
 } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
-import { Fingerprint, Info as InfoOutlined } from "lucide-react";
+import type React from "react";
+import { Fingerprint, Info as InfoOutlined, X } from "lucide-react";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { Dialog } from "@/components/ui";
 import { EventChain } from "eqty-core";
@@ -19,6 +22,7 @@ interface OwnableInfoProps {
   className?: string;
   chain: EventChain;
   metadata?: TypedMetadata;
+  children?: React.ReactNode;
 }
 
 export default function OwnableInfo(props: OwnableInfoProps) {
@@ -49,27 +53,43 @@ export default function OwnableInfo(props: OwnableInfoProps) {
 
   return (
     <>
-      <IconButton className={props.className} onClick={() => setOpen(true)}>
-        <InfoOutlined />
-      </IconButton>
+      {props.children ? (
+        <Button className={props.className} onClick={() => setOpen(true)}>
+          {props.children}
+        </Button>
+      ) : (
+        <IconButton className={props.className} onClick={() => setOpen(true)}>
+          <InfoOutlined />
+        </IconButton>
+      )}
       <Dialog
         onClose={() => setOpen(false)}
         open={open}
-        className="w-[min(900px,calc(100vw-32px))]"
+        className="sm:w-[min(900px,calc(100vw-32px))]"
       >
-        <DialogTitle className="flex items-center gap-2 pb-0 pt-4 text-xs font-semibold text-sky-700">
-          <Tooltip title={chain.id}>
-            <Tag value={shortId(chain.id)} icon={<Fingerprint className="h-3.5 w-3.5" />} color="info" />
-          </Tooltip>
-          {verified && (
-            <Tag value="Anchors verified" color="success" />
-          )}
-        </DialogTitle>
-        <DialogTitle className="pb-1 pt-1 text-xl font-semibold">{metadata?.name}</DialogTitle>
-        <DialogTitle className="pb-2 pt-0 text-sm text-slate-500 dark:text-slate-400">
+        <div className="flex items-start justify-between px-4 pt-4 sm:px-6">
+          <div>
+            <DialogTitle className="flex items-center gap-2 pb-0 pt-0 text-xs font-semibold text-sky-700">
+              <Tooltip title={chain.id}>
+                <Tag value={shortId(chain.id)} icon={<Fingerprint className="h-3.5 w-3.5" />} color="info" />
+              </Tooltip>
+              {verified && (
+                <Tag value="Anchors verified" color="success" />
+              )}
+            </DialogTitle>
+            <DialogTitle className="pb-1 pt-1 text-xl font-semibold">{metadata?.name}</DialogTitle>
+          </div>
+          <DialogClose
+            aria-label="Close"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
+          >
+            <X className="h-5 w-5" />
+          </DialogClose>
+        </div>
+        <DialogTitle className="px-4 pb-2 pt-0 mb-2 text-sm text-slate-500 dark:text-slate-400 sm:px-6">
           {metadata?.description}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent className="px-4 pb-4 sm:px-6 sm:pb-6">
           {chain.events.length === 0 && (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               This is a static ownable. It does not contain any events.
