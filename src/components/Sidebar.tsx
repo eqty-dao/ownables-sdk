@@ -93,7 +93,7 @@ export default function Sidebar(props: SidebarProps) {
     <>
       <Drawer anchor="right" open={open} onClose={onClose} className="flex w-[384px] flex-col overflow-hidden">
         {/* Header */}
-        <Box className="flex flex-shrink-0 items-center justify-between p-6">
+        <Box className="flex shrink-0 items-center justify-between p-6">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Settings</h2>
           <DrawerClose
             aria-label="Close settings"
@@ -228,7 +228,7 @@ export default function Sidebar(props: SidebarProps) {
         </Box>
 
         {/* Danger section (pinned to bottom) */}
-        <Box className="flex-shrink-0 p-6 pt-0">
+        <Box className="shrink-0 p-6 pt-0">
           <Box className="flex flex-col gap-3">
             {isConnected && (
               <Button
