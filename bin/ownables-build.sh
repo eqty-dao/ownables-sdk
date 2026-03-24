@@ -19,6 +19,8 @@ if [ -n "$1" ]; then
   build_package "$1"
 else
   for dir in ./ownables/*/; do
-    build_package "$(basename "$dir")"
+    name="$(basename "$dir")"
+    [ "$name" = "target" ] && continue
+    build_package "$name"
   done
 fi
