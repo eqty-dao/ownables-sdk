@@ -1,5 +1,5 @@
 import { IconButton, ListItemIcon, Menu, MenuItem } from "@/components/ui";
-import { EllipsisVertical as MoreVert, Trash2 as Delete, Wrench as PrecisionManufacturing, ArrowLeftRight as SwapHoriz } from "lucide-react";
+import { EllipsisVertical as MoreVert, Trash2 as Delete, Wrench as PrecisionManufacturing, ArrowLeftRight as SwapHoriz, Lock, LockOpen } from "lucide-react";
 import { useState, MouseEvent } from "react";
 import PromptDialog from "./PromptDialog";
 import { useAccount } from "wagmi";
@@ -9,14 +9,18 @@ interface OwnableActionsProps {
   title: string;
   isConsumable: boolean;
   isTransferable: boolean;
+  isLockable: boolean;
+  isLocked: boolean;
   chain: any;
   onDelete: () => void;
   onConsume: () => void;
   onTransfer: (address: string) => void;
+  onLock: () => void;
+  onUnlock: () => void;
 }
 
 export default function OwnableActions(props: OwnableActionsProps) {
-  const { onDelete, onTransfer, isTransferable } =
+  const { onDelete, onTransfer, isTransferable, isLockable, isLocked, onLock, onUnlock } =
     props;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -47,6 +51,18 @@ export default function OwnableActions(props: OwnableActionsProps) {
         >
           Transfer
         </MenuItem>
+        {isLockable && !isLocked && (
+          <MenuItem onClick={() => { close(); onLock(); }}>
+            <Lock className="h-4 w-4" />
+            Lock
+          </MenuItem>
+        )}
+        {isLockable && isLocked && (
+          <MenuItem onClick={() => { close(); onUnlock(); }}>
+            <LockOpen className="h-4 w-4" />
+            Unlock
+          </MenuItem>
+        )}
         <MenuItem
           variant="danger"
           onClick={() => { close(); onDelete(); }}

@@ -27,6 +27,8 @@ interface OwnableDetailProps {
   onConsume: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
+  onLock: () => void;
+  onUnlock: () => void;
 }
 
 const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
@@ -52,6 +54,8 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     onConsume,
     onDelete,
     onTransfer,
+    onLock,
+    onUnlock,
   } = props;
   const shortIssuer =
     issuer && issuer.length > 10
@@ -87,10 +91,14 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             title={pkg.title}
             isConsumable={isConsumable && !isTransferred && !isConsumed}
             isTransferable={pkg.isTransferable && !isTransferred}
+            isLockable={isLockable}
+            isLocked={isLocked}
             onDelete={onDelete}
             chain={chain}
             onConsume={onConsume}
             onTransfer={onTransfer}
+            onLock={onLock}
+            onUnlock={onUnlock}
           />
         </Box>
 
