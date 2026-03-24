@@ -25,7 +25,7 @@ const actionButton = cva(
 );
 
 const packageCard = cva(
-  "flex w-full flex-col items-start justify-start gap-0 p-4 rounded-xl border border-gray-200 dark:border-[#333333] bg-white dark:bg-[#252525] hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-md transition-all text-left group"
+  "flex w-full items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-[#333333] bg-white dark:bg-[#252525] hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-md transition-all text-left group lg:flex-col lg:items-start lg:justify-start"
 );
 
 interface IssueOwnablePanelProps {
@@ -86,8 +86,8 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
 
   return (
     <>
-      <Box className="mx-auto max-w-2xl p-8">
-        <Box className="surface-card p-8">
+      <Box className="lg:mx-auto lg:max-w-2xl lg:p-8">
+        <Box className="p-4 lg:surface-card lg:p-8">
           {/* Heading */}
           <h2 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">
             Issue an Ownable
@@ -101,7 +101,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
               onClick={importAll}
             >
               <FolderUp size={20} className="text-slate-600 dark:text-slate-400" />
-              Upload Package
+              Upload<span className="hidden lg:inline"> Package</span>
             </Button>
             {message > 0 ? (
               <Button
@@ -120,7 +120,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                 disabled={!hasBuilder}
               >
                 <Sparkles size={20} className="text-slate-600 dark:text-slate-400" />
-                Ownable Builder
+                <span className="hidden lg:inline">Ownable </span>Builder
               </Button>
             )}
           </div>
@@ -130,17 +130,17 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
             Available Packages
           </h3>
 
-          {/* Package grid — 2 columns */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Package grid — 1 column on mobile, 2 on desktop */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {isLoading ? (
               <>
-                <Skeleton className="h-[120px] rounded-xl" />
-                <Skeleton className="h-[120px] rounded-xl" />
-                <Skeleton className="h-[120px] rounded-xl" />
-                <Skeleton className="h-[120px] rounded-xl" />
+                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
+                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
+                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
+                <Skeleton className="h-[60px] rounded-xl lg:h-[120px]" />
               </>
             ) : filteredPackages.length === 0 ? (
-              <div className="surface-muted col-span-2 px-3 py-4 text-sm">
+              <div className="surface-muted px-3 py-4 text-sm lg:col-span-2">
                 No packages available yet.
               </div>
             ) : (
@@ -151,21 +151,24 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                   onClick={() => selectPackage(pkg)}
                   className={cn(packageCard())}
                 >
-                  {/* Top row: icon + chevron */}
-                  <div className="flex w-full items-center justify-between">
+                  {/* Icon + chevron row — desktop only */}
+                  <div className="hidden w-full items-center justify-between lg:flex">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
                       <Package size={20} className="text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <ChevronRight size={20} className="text-slate-300 dark:text-slate-600" />
                   </div>
-                  {/* Title */}
-                  <p className="mt-2 text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
-                    {pkg.title}
-                  </p>
-                  {/* Description */}
-                  <p className="mt-0.5 text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">
-                    {pkg.description}
-                  </p>
+                  {/* Text block */}
+                  <div className="min-w-0 flex-1 lg:mt-2 lg:flex-none">
+                    <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
+                      {pkg.title}
+                    </p>
+                    <p className="truncate text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">
+                      {pkg.description}
+                    </p>
+                  </div>
+                  {/* Chevron — mobile only */}
+                  <ChevronRight size={20} className="flex-shrink-0 text-slate-300 dark:text-slate-600 lg:hidden" />
                 </Button>
               ))
             )}
