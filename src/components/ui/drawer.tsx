@@ -24,12 +24,12 @@ const BASE_POPUP =
 
 function popupClass(anchor: Anchor) {
   if (anchor === "right")
-    return `${BASE_POPUP} right-0 top-0 bottom-0 border-l data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full`;
+    return `${BASE_POPUP} right-0 top-0 bottom-0 border-l max-sm:w-full data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full`;
   if (anchor === "top")
     return `${BASE_POPUP} top-0 left-0 right-0 border-b data-[starting-style]:-translate-y-full data-[ending-style]:-translate-y-full`;
   if (anchor === "bottom")
     return `${BASE_POPUP} bottom-0 left-0 right-0 border-t data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full`;
-  return `${BASE_POPUP} left-0 top-0 bottom-0 border-r data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full`;
+  return `${BASE_POPUP} left-0 top-0 bottom-0 border-r max-sm:w-full data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full`;
 }
 
 export function DrawerHeader({ title, closeAriaLabel = "Close" }: DrawerHeaderProps) {
