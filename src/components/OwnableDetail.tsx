@@ -1,6 +1,6 @@
 import { RefObject } from "react";
-import { Box, Button, Link } from "@/components/ui";
-import { ExternalLink as OpenInNew, Info } from "lucide-react";
+import { Box, Button, IconButton, Link } from "@/components/ui";
+import { ArrowLeft, ExternalLink as OpenInNew, Info } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -21,6 +21,7 @@ interface OwnableDetailProps {
   isLocked: boolean;
   isTransferred: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
+  onBack: () => void;
   onLoad: () => void;
   onConsume: () => void;
   onDelete: () => void;
@@ -45,6 +46,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     isLocked,
     isTransferred,
     iframeRef,
+    onBack,
     onLoad,
     onConsume,
     onDelete,
@@ -60,7 +62,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       <Box className="lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
 
         {/* Header */}
-        <Box className="flex items-start gap-3 p-4 lg:mx-auto lg:mb-6 lg:max-w-125 lg:gap-4 lg:p-0">
+        <Box className="flex items-center gap-3 p-4 lg:mx-auto lg:mb-6 lg:max-w-125 lg:items-start lg:gap-4 lg:p-0">
+          <IconButton aria-label="Back" onClick={onBack} className="shrink-0 lg:hidden">
+            <ArrowLeft className="h-5 w-5" />
+          </IconButton>
           <Box className="min-w-0 flex-1">
             <h2 className="text-section-title mb-0.5 text-lg lg:mb-1 lg:text-xl">{metadata.name}</h2>
             {issuer && (

@@ -1,6 +1,6 @@
 import { TypedPackage, TypedPackageStub } from "@/interfaces/TypedPackage";
-import { Box, Button, Skeleton } from "@/components/ui";
-import { ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
+import { Box, Button, IconButton, Skeleton } from "@/components/ui";
+import { ArrowLeft, ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
 import { enqueueSnackbar } from "notistack";
@@ -29,6 +29,7 @@ const packageCard = cva(
 );
 
 interface IssueOwnablePanelProps {
+  onBack: () => void;
   onSelect: (pkg: TypedPackage) => void;
   onImportFR: (pkg: TypedPackage[], triggerRefresh: boolean) => void;
   onError: (title: string, message: string) => void;
@@ -37,7 +38,7 @@ interface IssueOwnablePanelProps {
 }
 
 export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
-  const { onSelect, onImportFR, onError, onCreate, message } = props;
+  const { onBack, onSelect, onImportFR, onError, onCreate, message } = props;
   const { packages, isLoading, importPackages, importInbox, downloadExample } = usePackageManager();
   const builderService = useService("builder");
   const hasBuilder = !!builderService;
@@ -86,10 +87,18 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
 
   return (
     <>
+      {/* Mobile header */}
+      <div className="flex items-center gap-2 p-4 lg:hidden">
+        <IconButton aria-label="Back" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+        </IconButton>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Issue an Ownable</h2>
+      </div>
+
       <Box className="lg:mx-auto lg:max-w-2xl lg:p-8">
         <Box className="p-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
-          {/* Heading */}
-          <h2 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">
+          {/* Heading — desktop only */}
+          <h2 className="mb-6 hidden text-2xl font-bold text-slate-900 dark:text-white lg:block">
             Issue an Ownable
           </h2>
 

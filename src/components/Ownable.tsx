@@ -12,6 +12,7 @@ interface OwnableProps {
   packageCid: string;
   selected: boolean;
   uniqueMessageHash?: string;
+  onBack: () => void;
   onDelete: () => void;
   onConsume: (info: TypedOwnableInfo) => void;
   onRemove: () => void;
@@ -51,6 +52,7 @@ export default function Ownable(props: OwnableProps) {
       isLocked={isLocked}
       isTransferred={isTransferred}
       iframeRef={iframeRef}
+      onBack={props.onBack}
       onLoad={() => onLoad()}
       onConsume={() => !!info && props.onConsume(info)}
       onDelete={props.onDelete}

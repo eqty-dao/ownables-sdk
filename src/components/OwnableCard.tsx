@@ -1,5 +1,4 @@
-import { Box, IconButton } from "@/components/ui";
-import { ArrowLeft as ArrowBack } from "lucide-react";
+import { Box } from "@/components/ui";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -75,12 +74,6 @@ export default function OwnableCard({
       role="region"
       className={cn(detailPane({ showOnMobile: showDetail }), "lg:block")}
     >
-      <Box className="mb-1 block lg:hidden">
-        <IconButton aria-label="Back" onClick={onBack}>
-          <ArrowBack />
-        </IconButton>
-      </Box>
-
       {showIssuePanel && (
         <IssueOwnablePanel
           onSelect={onForge}
@@ -88,6 +81,7 @@ export default function OwnableCard({
           onError={onError}
           onCreate={onCreate}
           message={message}
+          onBack={onBack}
         />
       )}
 
@@ -102,6 +96,7 @@ export default function OwnableCard({
           onRemove={() => onRemove(selectedOwnable.chain.id)}
           onConsume={onConsume}
           onError={onError}
+          onBack={onBack}
         />
       )}
     </Box>
