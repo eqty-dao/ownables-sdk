@@ -70,7 +70,7 @@ export default function AppToolbar({
           Please switch to <strong>Base Sepolia</strong> network to use this application.
         </Alert>
       )}
-      <header className="relative z-10 bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-3 shadow-lg sm:px-6">
+      <header className="relative z-10 bg-linear-to-r from-sky-500 to-indigo-600 px-4 py-3 shadow-lg sm:px-6">
         <div className="flex items-center justify-between gap-3">
           <img
             src={logo}
@@ -79,7 +79,7 @@ export default function AppToolbar({
           />
           <div className="flex items-center gap-2">
             {isConnected && (
-              <span className={cn(networkPill({ state: isOnBaseSepolia ? "ok" : "bad" }))}>
+              <span className={cn(networkPill({ state: isOnBaseSepolia ? "ok" : "bad" }), 'hidden', 'lg:block')}>
                 {isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
               </span>
             )}

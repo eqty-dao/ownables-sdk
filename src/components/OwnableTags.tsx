@@ -1,6 +1,7 @@
 import { Tag } from "@/components/ui";
 import { ArrowRightLeft, Lock, LockOpen, PackageCheck, Zap } from "lucide-react";
 import type { TagProps } from "@/components/ui/tag";
+import { cn } from "@/utils/cn"
 
 interface OwnableTagsProps {
   isLockable: boolean;
@@ -9,13 +10,14 @@ interface OwnableTagsProps {
   isConsumed: boolean;
   isTransferred: boolean;
   display?: TagProps["display"];
+  className?: string;
 }
 
-export default function OwnableTags({ isLockable, isLocked, isConsumable, isConsumed, isTransferred, display = "badge" }: OwnableTagsProps) {
+export default function OwnableTags({ isLockable, isLocked, isConsumable, isConsumed, isTransferred, display = "badge", className }: OwnableTagsProps) {
   if (!isTransferred && !isLockable && !isConsumable) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
       {isTransferred && (
         <Tag display={display} variant="transferred" icon={<ArrowRightLeft className="h-3 w-3" />} value="Transferred" />
       )}

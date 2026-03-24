@@ -54,36 +54,13 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     issuer && issuer.length > 10
       ? `${issuer.slice(0, 6)}...${issuer.slice(-4)}`
       : issuer;
-  const aboutSection = (
-    <Box className="px-4 pb-8 lg:px-2 lg:pb-0">
-      <h2 className="text-caption mb-2 uppercase tracking-wide">About</h2>
-      {metadata.description && (
-        <p className="text-body mb-3">{metadata.description}</p>
-      )}
-      {metadata.external_url && (
-        <Link
-          href={metadata.external_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(aboutLink(), "mb-3")}
-        >
-          <OpenInNew className="h-4 w-4" />
-          <span>Visit external link</span>
-        </Link>
-      )}
-      <Button className={cn(aboutLink(), "px-0")}>
-        <Info className="h-4 w-4" />
-        <span>More information</span>
-      </Button>
-    </Box>
-  );
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-8">
       <Box className="lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
 
         {/* Header */}
-        <Box className="flex items-start gap-3 p-4 lg:mx-auto lg:mb-6 lg:max-w-[500px] lg:gap-4 lg:p-0">
+        <Box className="flex items-start gap-3 p-4 lg:mx-auto lg:mb-6 lg:max-w-125 lg:gap-4 lg:p-0">
           <Box className="min-w-0 flex-1">
             <h2 className="text-section-title mb-0.5 text-lg lg:mb-1 lg:text-xl">{metadata.name}</h2>
             {issuer && (
@@ -112,7 +89,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
         {/* Widget — single iframe, responsive sizing */}
         <Box
-          className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-[500px]"
+          className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125"
           style={{ aspectRatio: "3 / 4" }}
         >
           <OwnableFrame
@@ -125,7 +102,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         </Box>
 
         {isConsumable && !isTransferred && !isConsumed && (
-          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-[500px]">
+          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
             <Button
               aria-label="Use Item"
               className={cn(consumeButton())}
@@ -137,11 +114,29 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         )}
       </Box>
 
-      <Box className="px-4 pt-4 lg:px-2 lg:pt-0">
-        <OwnableTags display="ghost" isLockable={isLockable} isLocked={isLocked} isConsumable={isConsumable} isConsumed={isConsumed} isTransferred={isTransferred} />
-      </Box>
+      <Box className="px-4 pb-8 lg:px-2 lg:pb-0">
+        <h2 className="text-caption mb-2 uppercase tracking-wide">About</h2>
+        {metadata.description && (
+          <p className="text-body mb-3">{metadata.description}</p>
+        )}
+        <OwnableTags className="mb-2" display="ghost" isLockable={isLockable} isLocked={isLocked} isConsumable={isConsumable} isConsumed={isConsumed} isTransferred={isTransferred} />
 
-      {(metadata.description || metadata.external_url) && aboutSection}
+        {metadata.external_url && (
+          <Link
+            href={metadata.external_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(aboutLink(), "mb-3")}
+          >
+            <OpenInNew className="h-4 w-4" />
+            <span>Visit external link</span>
+          </Link>
+        )}
+        <Button className={cn(aboutLink(), "px-0")}>
+          <Info className="h-4 w-4" />
+          <span>More information</span>
+        </Button>
+      </Box>
     </Box>
   );
 }
