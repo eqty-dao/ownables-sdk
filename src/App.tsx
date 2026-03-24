@@ -48,7 +48,7 @@ export default function App() {
     useOwnables({ onSelect: (id) => { setSelectedChainId(id); setShowDetail(true); } });
 
   const { consuming, consumeEligibility, startConsuming, cancelConsuming, consume } =
-    useConsuming({ ownables, onConsumed: () => setOwnables((prev) => [...prev]) });
+    useConsuming({ ownables, onConsumed: (id) => setOwnables((prev) => prev.map((o) => o.chain.id === id ? { ...o, isConsumed: true } : o)) });
 
   useEffect(() => {
     setShowLogin(!isConnected && !isE2E);

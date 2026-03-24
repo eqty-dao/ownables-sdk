@@ -60,9 +60,6 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       {metadata.description && (
         <p className="text-body mb-3">{metadata.description}</p>
       )}
-      <Box className="mb-3 flex items-center gap-2">
-        <OwnableTags display="ghost" isLockable={isLockable} isLocked={isLocked} isConsumable={isConsumable} isConsumed={isConsumed} isTransferred={isTransferred} />
-      </Box>
       {metadata.external_url && (
         <Link
           href={metadata.external_url}
@@ -104,7 +101,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           </Box>
           <OwnableActions
             title={pkg.title}
-            isConsumable={isConsumable && !isTransferred}
+            isConsumable={isConsumable && !isTransferred && !isConsumed}
             isTransferable={pkg.isTransferable && !isTransferred}
             onDelete={onDelete}
             chain={chain}
@@ -127,7 +124,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           />
         </Box>
 
-        {isConsumable && !isTransferred && (
+        {isConsumable && !isTransferred && !isConsumed && (
           <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-[500px]">
             <Button
               aria-label="Use Item"
@@ -138,6 +135,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             </Button>
           </Box>
         )}
+      </Box>
+
+      <Box className="px-4 pt-4 lg:px-2 lg:pt-0">
+        <OwnableTags display="ghost" isLockable={isLockable} isLocked={isLocked} isConsumable={isConsumable} isConsumed={isConsumed} isTransferred={isTransferred} />
       </Box>
 
       {(metadata.description || metadata.external_url) && aboutSection}

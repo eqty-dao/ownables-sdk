@@ -18,7 +18,7 @@ interface ConsumingState {
 
 interface UseConsumingOptions {
   ownables: OwnableEntry[];
-  onConsumed: () => void;
+  onConsumed: (consumedChainId: string) => void;
 }
 
 export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
@@ -73,7 +73,7 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
       .then(() => {
         setConsuming(null);
         overlay.hide();
-        onConsumed();
+        onConsumed(consumable.id);
         enqueueSnackbar("Consumed", { variant: "success" });
         ctrl.close();
       })

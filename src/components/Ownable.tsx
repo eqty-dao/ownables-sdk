@@ -45,7 +45,7 @@ export default function Ownable(props: OwnableProps) {
       pkg={pkg}
       metadata={metadata}
       issuer={info?.issuer}
-      isConsumable={pkg.isConsumable && !isTransferred && !isConsumed}
+      isConsumable={pkg.isConsumable}
       isConsumed={isConsumed}
       isLockable={pkg.isLockable}
       isLocked={isLocked}

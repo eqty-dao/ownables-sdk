@@ -12,6 +12,8 @@ interface OwnableTagsProps {
 }
 
 export default function OwnableTags({ isLockable, isLocked, isConsumable, isConsumed, isTransferred, display = "badge" }: OwnableTagsProps) {
+  if (!isTransferred && !isLockable && !isConsumable) return null;
+
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {isTransferred && (
