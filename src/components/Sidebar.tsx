@@ -1,5 +1,4 @@
-import { Box, Switch, Button, Drawer, DrawerClose } from "@/components/ui";
-import { X as CloseIcon } from "lucide-react";
+import { Box, Switch, Button, Drawer, DrawerHeader } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import EventChainService from "@/services/EventChain.service";
@@ -28,16 +27,7 @@ export default function Sidebar(props: SidebarProps) {
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} className="flex w-[384px] flex-col overflow-hidden">
-      {/* Header */}
-      <Box className="flex shrink-0 items-center justify-between p-6">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Settings</h2>
-        <DrawerClose
-          aria-label="Close settings"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
-        >
-          <CloseIcon className="h-5 w-5" />
-        </DrawerClose>
-      </Box>
+      <DrawerHeader title="Settings" closeAriaLabel="Close settings" />
 
       {/* Scrollable content */}
       <Box className="flex flex-1 flex-col overflow-y-auto p-6">
