@@ -5,6 +5,7 @@ import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useOverlay } from "@/contexts/Overlay.context";
+import { useBreakpoint } from "./useBreakpoint";
 import { enqueueSnackbar } from "notistack";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { OwnableEntry } from "./useOwnables";
@@ -28,6 +29,7 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
   const progress = useProgress();
   const { showError } = useDialogs();
   const overlay = useOverlay();
+  const isLg = useBreakpoint("lg");
 
   useEffect(() => {
     if (!consuming) { setConsumeEligibility({}); return; }
@@ -49,8 +51,8 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
 
   const startConsuming = useCallback((chain: EventChain, pkg: string, info: TypedOwnableInfo) => {
     setConsuming({ chain, package: pkg, info });
-    overlay.show();
-  }, [overlay]);
+    if (isLg) overlay.show();
+  }, [isLg, overlay]);
 
   const cancelConsuming = useCallback(() => {
     setConsuming(null);

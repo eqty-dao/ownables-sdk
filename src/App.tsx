@@ -108,7 +108,7 @@ export default function App() {
           onBack={() => { setSelectedChainId(null); setShowDetail(false); }}
           onConsume={(info) => {
             const o = ownables.find((o) => o.chain.id === selectedChainId);
-            if (o) startConsuming(o.chain, o.package, info);
+            if (o) { startConsuming(o.chain, o.package, info); setShowDetail(false); }
           }}
           onConsumeComplete={consume}
           onDelete={deleteOwnable}
@@ -149,7 +149,7 @@ export default function App() {
       <ConsumingDrawer
         open={consuming !== null}
         packageTitle={consuming && packageService ? packageService.info(consuming.package).title : ""}
-        onCancel={cancelConsuming}
+        onCancel={() => { cancelConsuming(); setShowDetail(true); }}
       />
 
       <SnackbarProvider />
