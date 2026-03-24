@@ -9,7 +9,7 @@ const issueOwnableButton = cva(
     variants: {
       selected: {
         true: "border-indigo-500 bg-indigo-50 shadow-md dark:bg-indigo-950/30",
-        false: "border-slate-300 bg-transparent hover:border-indigo-400 dark:border-[#333333] dark:hover:border-indigo-500",
+        false: "border-slate-300 bg-white hover:border-indigo-400 dark:border-[#333333] dark:bg-slate-800/60 dark:hover:border-indigo-500",
       },
       dimmed: {
         true: "cursor-not-allowed opacity-40",
