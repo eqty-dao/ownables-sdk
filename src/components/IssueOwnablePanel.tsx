@@ -95,7 +95,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">Issue an Ownable</h2>
       </div>
 
-      <Box className="lg:mx-auto lg:max-w-2xl lg:p-8">
+      <Box className="lg:mx-auto lg:max-w-2xl lg:px-8 py-5">
         <Box className="p-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
           {/* Heading — desktop only */}
           <h2 className="mb-6 hidden text-2xl font-bold text-slate-900 dark:text-white lg:block">

@@ -1,4 +1,3 @@
-import { Box } from "@/components/ui";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -7,7 +6,7 @@ import { cn } from "@/utils/cn";
 import Ownable from "./Ownable";
 import IssueOwnablePanel from "./IssueOwnablePanel";
 
-const detailPane = cva("min-w-0 flex-1", {
+const main = cva("min-w-0 flex-1", {
   variants: {
     showOnMobile: {
       true: "block",
@@ -29,7 +28,7 @@ interface ConsumingState {
   info: TypedOwnableInfo;
 }
 
-interface OwnableCardProps {
+interface MainSectionProps {
   ownables: OwnableEntry[];
   selectedChainId: string | null;
   showIssuePanel: boolean;
@@ -48,31 +47,29 @@ interface OwnableCardProps {
   onCreate: () => void;
 }
 
-export default function OwnableCard({
+export default function MainSection({
   ownables,
   selectedChainId,
   showIssuePanel,
   showDetail,
   consuming,
-  consumeEligibility,
   message,
   onBack,
   onConsume,
-  onConsumeComplete,
   onDelete,
   onRemove,
   onError,
   onForge,
   onImportFR,
   onCreate,
-}: OwnableCardProps) {
+}: MainSectionProps) {
   const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedChainId);
 
   return (
-    <Box
-      aria-label="Ownable detail"
+    <main
+      aria-label="main"
       role="region"
-      className={cn(detailPane({ showOnMobile: showDetail }), "lg:block")}
+      className={cn(main({ showOnMobile: showDetail }), "lg:block")}
     >
       {showIssuePanel && (
         <IssueOwnablePanel
@@ -99,6 +96,6 @@ export default function OwnableCard({
           onBack={onBack}
         />
       )}
-    </Box>
+    </main>
   );
 }

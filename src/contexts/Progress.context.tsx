@@ -155,7 +155,7 @@ const ProgressModal: React.FC<{
       open={open}
       onClose={isBusy ? undefined : onClose}
       aria-labelledby="progress-dialog-title"
-      className="w-[min(420px,calc(100vw-32px))]"
+      className="sm:w-[min(420px,calc(100vw-32px))]"
     >
       <div className="flex items-center justify-between">
         <DialogTitle id="progress-dialog-title">{title}</DialogTitle>

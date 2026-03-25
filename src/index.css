@@ -53,8 +53,13 @@ body {
   font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc;
   color: #0f172a;
+}
+
+@media (min-device-width: 1024px) {
+  body {
+    background-color: #f8fafc;
+  }
 }
 
 .dark body {

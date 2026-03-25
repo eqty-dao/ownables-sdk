@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { isE2E } from "@/utils/isE2E";
 import { Box } from "@/components/ui";
 import LoginDialog from "@/components/LoginDialog";
-import Loading from "@/components/Loading";
 import { ViewMessagesBar } from "@/components/ViewMessagesBar";
 import AppToolbar from "@/components/AppToolbar";
 import { SnackbarProvider } from "notistack";
@@ -13,7 +12,7 @@ import CreateOwnableDialog from "@/components/CreateOwnableDialog";
 import Sidebar from "@/components/Sidebar";
 import GetStarted from "@/components/GetStarted";
 import OwnableList from "@/components/OwnableList";
-import OwnableCard from "@/components/OwnableCard";
+import MainSection from "@/components/MainSection";
 import ConsumingDrawer from "@/components/ConsumingDrawer";
 import { useOwnables } from "@/hooks/useOwnables";
 import { useConsuming } from "@/hooks/useConsuming";
@@ -21,6 +20,7 @@ import { useDialogs } from "@/contexts/Dialogs.context";
 import { useService } from "@/hooks/useService";
 import { LoaderCircle } from "lucide-react"
 const ISSUE_OWNABLE_ID = "issue";
+const EMBEDDED = import.meta.env.VITE_EMBEDDED;
 
 export default function App() {
   const [showLogin, setShowLogin] = useState(false);
@@ -75,15 +75,17 @@ export default function App() {
 
   return (
     <>
-      <AppToolbar
-        onMenuClick={() => setShowSidebar(true)}
-        onNotificationClick={() => setShowViewMessagesBar(true)}
-        messagesCount={message}
-        chainId={chainId}
-        isConnected={isConnected}
-      />
+      {!EMBEDDED && (
+        <AppToolbar
+          onMenuClick={() => setShowSidebar(true)}
+          onNotificationClick={() => setShowViewMessagesBar(true)}
+          messagesCount={message}
+          chainId={chainId}
+          isConnected={isConnected}
+        />
+      )}
 
-      {ownables.length === 0 && !showDetail && <GetStarted onExamples={selectIssuePanel} />}
+      {ownables.length === 0 && !showDetail && !EMBEDDED && <GetStarted onExamples={selectIssuePanel} />}
 
       <Box className="mx-auto lg:mt-4 flex max-w-330 gap-4 lg:pb-6 lg:px-4">
         <OwnableList
@@ -99,7 +101,7 @@ export default function App() {
           onIssue={selectIssuePanel}
         />
 
-        <OwnableCard
+        <MainSection
           ownables={ownables}
           selectedChainId={selectedChainId}
           showIssuePanel={selectedChainId === ISSUE_OWNABLE_ID}
@@ -126,27 +128,31 @@ export default function App() {
         />
       </Box>
 
-      <Sidebar
-        open={showSidebar}
-        onClose={() => setShowSidebar(false)}
-        onReset={() => { setShowSidebar(false); reset(); }}
-        onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
-      />
+      {!EMBEDDED && (
+        <>
+          <Sidebar
+            open={showSidebar}
+            onClose={() => setShowSidebar(false)}
+            onReset={() => { setShowSidebar(false); reset(); }}
+            onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
+          />
+
+          <ViewMessagesBar
+            open={showViewMessagesBar}
+            onClose={() => setShowViewMessagesBar(false)}
+            messagesCount={message}
+            setOwnables={setOwnables}
+          />
+
+          <LoginDialog key={address} open={showLogin} />
+        </>
+      )}
 
       <CreateOwnableDialog
         open={showCreateOwnable}
         onClose={() => setShowCreateOwnable(false)}
         onSuccess={() => setShowCreateOwnable(false)}
       />
-
-      <ViewMessagesBar
-        open={showViewMessagesBar}
-        onClose={() => setShowViewMessagesBar(false)}
-        messagesCount={message}
-        setOwnables={setOwnables}
-      />
-
-      <LoginDialog key={address} open={showLogin} />
 
       <ConsumingDrawer
         open={consuming !== null}

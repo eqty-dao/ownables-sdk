@@ -11,7 +11,7 @@ interface GetStartedProps {
 
 export default function GetStarted({ onExamples }: GetStartedProps) {
   return (
-    <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center px-4">
+    <div className="pointer-events-none absolute inset-0 -z-10 items-center justify-center px-4 hidden lg:flex">
       <div className="max-w-2xl text-center">
         <h1 className="text-page-title">Let's get started!</h1>
         <p className="text-body mt-4 text-base sm:text-2xl">
