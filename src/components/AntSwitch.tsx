@@ -25,6 +25,7 @@ export default function AntSwitch({ checked, disabled, onChange, className }: An
   return (
     <span className={cn(switchWrap({ disabled }), className)}>
       <Switch
+        size="small"
         checked={checked}
         disabled={disabled}
         onChange={(event: { target: { checked: boolean } }) => onChange?.(event, !!event.target.checked)}

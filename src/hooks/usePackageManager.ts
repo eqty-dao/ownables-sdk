@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { TypedPackage, TypedPackageStub } from "../interfaces/TypedPackage";
+import { TypedPackage, TypedPackageStub } from "@/interfaces/TypedPackage";
 import { useService } from "./useService"
 
 export const usePackageManager = () => {

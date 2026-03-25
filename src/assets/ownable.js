@@ -188,6 +188,9 @@ function __wbg_get_imports() {
             const ret = arg0.length;
             return ret;
         },
+        __wbg_log_6f3a51c037a51321: function(arg0, arg1) {
+            console.log(getStringFromWasm0(arg0, arg1));
+        },
         __wbg_new_49d5571bd3f0c4d4: function() {
             const ret = new Map();
             return ret;

@@ -1,5 +1,5 @@
 import IDBService from "./IDB.service";
-import { isE2E } from "../utils/isE2E";
+import { isE2E } from "@/utils/isE2E";
 import EventChainService from "./EventChain.service";
 import OwnableService from "./Ownable.service";
 import PackageService from "./Package.service";
@@ -14,7 +14,7 @@ import { createE2EViemClients } from "./E2EWallet";
 export interface ServiceMap {
   relay: RelayService;
   localStorage: LocalStorageService;
-  eqty: EQTYService | MockEQTYService;
+  eqty: EQTYService;
   idb: IDBService;
   eventChains: EventChainService;
   packages: PackageService;

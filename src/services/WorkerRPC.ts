@@ -1,4 +1,4 @@
-import TypedDict from "../interfaces/TypedDict";
+import TypedDict from "@/interfaces/TypedDict";
 import { StateDump } from "./Ownable.service";
 
 interface MessageInfo {

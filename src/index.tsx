@@ -15,10 +15,12 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { WagmiProvider, createConfig, http, mock, useConnect, useAccount } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
-import { ServicesProvider } from "./contexts/Services.context";
-import { ProgressProvider } from "./contexts/Progress.context";
-import { getE2EAccount } from "./services/E2EWallet";
-import { isE2E } from "./utils/isE2E";
+import { ServicesProvider } from "@/contexts/Services.context";
+import { ProgressProvider } from "@/contexts/Progress.context";
+import { DialogsProvider } from "@/contexts/Dialogs.context";
+import { OverlayProvider } from "@/contexts/Overlay.context";
+import { getE2EAccount } from "@/services/E2EWallet";
+import { isE2E } from "@/utils/isE2E";
 
 const chains = [baseSepolia, base] as const;
 const queryClient = new QueryClient();
@@ -80,8 +82,12 @@ root.render(
         <RainbowKitProvider>
           <ServicesProvider>
             <ProgressProvider>
-              {isE2E && <E2EAutoConnect />}
-              <App />
+              <DialogsProvider>
+                <OverlayProvider>
+                  {isE2E && <E2EAutoConnect />}
+                  <App />
+                </OverlayProvider>
+              </DialogsProvider>
             </ProgressProvider>
           </ServicesProvider>
         </RainbowKitProvider>

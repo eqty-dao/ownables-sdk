@@ -9,7 +9,7 @@ import { cn } from "@/utils/cn";
 const primaryWalletButton = cva("w-full");
 
 export default function WalletConnectControls({ children }: PropsWithChildren) {
-  const { disconnect, isLoading } = useDisconnect();
+  const { disconnect, isPending: isDisconnectPending } = useDisconnect();
 
   return (
     <ConnectButton.Custom>
@@ -51,8 +51,8 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
               {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
             </p>
             {children}
-            <Button className={cn(primaryWalletButton())} onClick={() => disconnect()} disabled={isLoading}>
-              {isLoading ? 'Disconnecting…' : 'Disconnect'}
+            <Button className={cn(primaryWalletButton())} onClick={() => disconnect()} disabled={isDisconnectPending}>
+              {isDisconnectPending ? 'Disconnecting…' : 'Disconnect'}
             </Button>
           </>
         );

@@ -1,7 +1,7 @@
 import allInline from 'all-inline';
 import React, { RefObject, useLayoutEffect, useRef } from 'react';
-import { useService } from '../hooks/useService';
-import PackageService from '../services/Package.service';
+import { useService } from '@/hooks/useService';
+import PackageService from '@/services/Package.service';
 
 async function generateWidgetHTML(
   packageService: PackageService,

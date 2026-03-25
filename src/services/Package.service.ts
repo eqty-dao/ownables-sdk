@@ -3,17 +3,17 @@ import {
   TypedPackageCapabilities,
   TypedPackage,
   TypedPackageStub,
-} from "../interfaces/TypedPackage";
+} from "@/interfaces/TypedPackage";
 import JSZip from "jszip";
 import mime from "mime/lite";
 import IDBService from "./IDB.service";
-import calculateCid from "../utils/calculateCid";
-import { TypedCosmWasmMsg } from "../interfaces/TypedCosmWasmMsg";
-import TypedDict from "../interfaces/TypedDict";
+import calculateCid from "@/utils/calculateCid";
+import { TypedCosmWasmMsg } from "@/interfaces/TypedCosmWasmMsg";
+import TypedDict from "@/interfaces/TypedDict";
 import { RelayService } from "./Relay.service";
 import { Buffer } from "buffer";
 import { EventChain } from "eqty-core";
-import { MessageExt } from "../interfaces/MessageInfo";
+import { MessageExt } from "@/interfaces/MessageInfo";
 
 const getMimeType = (filename: string): string | null | undefined =>
   (mime as any)?.getType?.(filename);
@@ -73,6 +73,7 @@ const capabilitiesStaticOwnable = {
   hasWidgetState: false,
   isConsumable: false,
   isConsumer: false,
+  isLockable: false,
   isTransferable: false,
 };
 
@@ -338,6 +339,7 @@ export default class PackageService {
       hasWidgetState: hasMethod(query, "get_widget_state"),
       isConsumable: hasMethod(execute, "consume"),
       isConsumer: hasMethod(query, "is_consumer_of"),
+      isLockable: hasMethod(execute, "lock"),
       isTransferable: hasMethod(execute, "transfer"),
     };
   }

@@ -1,10 +1,9 @@
-import React from "react";
-import { Alert } from "@/components/ui";
-import logo from "../assets/logo.svg";
-import { Menu as MenuIcon, Mail as MailOutlinedIcon, TriangleAlert as WarningIcon } from "lucide-react";
-import { IconButton } from "@/components/ui";
+import { Alert, IconButton, Tag } from "@/components/ui";
+import logo from "@/assets/logo.svg";
+import { Menu as MenuIcon, TriangleAlert as WarningIcon, Bell } from "lucide-react";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
+import { cn } from "@/utils/cn";
+import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core"
 
 interface AppToolbarProps {
   onMenuClick: () => void;
@@ -13,23 +12,6 @@ interface AppToolbarProps {
   chainId?: number;
   isConnected: boolean;
 }
-
-const BASE_SEPOLIA_CHAIN_ID = 84532; // Base Sepolia
-
-const networkPill = cva(
-  "rounded-lg px-3 py-1.5 text-xs font-semibold text-white",
-  {
-    variants: {
-      state: {
-        ok: "bg-green-600",
-        bad: "bg-red-600",
-      },
-    },
-    defaultVariants: {
-      state: "ok",
-    },
-  }
-);
 
 const warningStrip = cva(
   "flex items-center gap-2 rounded-none border-b px-4 py-2 text-sm",
@@ -57,8 +39,7 @@ export default function AppToolbar({
   chainId,
   isConnected,
 }: AppToolbarProps) {
-  const isOnBaseSepolia = chainId === BASE_SEPOLIA_CHAIN_ID;
-  const showNetworkWarning = isConnected && !isOnBaseSepolia;
+  const showNetworkWarning = isConnected && chainId !== BASE_SEPOLIA_CHAIN_ID;
 
   return (
     <>
@@ -71,7 +52,7 @@ export default function AppToolbar({
           Please switch to <strong>Base Sepolia</strong> network to use this application.
         </Alert>
       )}
-      <header className="relative z-10 bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-3 shadow-lg sm:px-6">
+      <header className="relative z-10 bg-linear-to-r from-sky-500 to-indigo-600 px-4 py-3 shadow-lg sm:px-6">
         <div className="flex items-center justify-between gap-3">
           <img
             src={logo}
@@ -79,18 +60,15 @@ export default function AppToolbar({
             alt="Ownables Logo"
           />
           <div className="flex items-center gap-2">
-            {isConnected && (
-              <span className={cn(networkPill({ state: isOnBaseSepolia ? "ok" : "bad" }))}>
-                {isOnBaseSepolia ? "Base Sepolia" : "Wrong Network"}
-              </span>
-            )}
+            {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
+            {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
 
             <IconButton
               aria-label="messages"
               className={cn(toolbarIconButton())}
               onClick={onNotificationClick}
             >
-              <MailOutlinedIcon />
+              <Bell />
               {messagesCount > 0 ? (
                 <span className={cn(notificationBadge())}>
                   {messagesCount}

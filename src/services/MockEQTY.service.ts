@@ -1,4 +1,7 @@
-import { Binary, Event, Message, type ITypedDataDomain, type ITypedDataField } from "eqty-core";
+import { Binary, Event, Message } from "eqty-core";
+
+type ITypedDataDomain = { name?: string; version?: string; chainId?: number; verifyingContract?: string };
+type ITypedDataField = { name: string; type: string };
 
 const DUMMY_SIG = `0x${"1".repeat(130)}`;
 

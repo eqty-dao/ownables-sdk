@@ -1,7 +1,8 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 
-type CircularProgressProps = ComponentPropsWithoutRef<"span">;
+type CircularProgressProps = ComponentPropsWithoutRef<"span"> & { size?: number | string };
 
-export function CircularProgress(props: CircularProgressProps) {
-  return <span role="progressbar" {...props} />;
+export function CircularProgress({ size, style, ...rest }: CircularProgressProps) {
+  const sizeStyle: CSSProperties = size != null ? { width: size, height: size } : {};
+  return <span role="progressbar" style={{ ...sizeStyle, ...style }} {...rest} />;
 }

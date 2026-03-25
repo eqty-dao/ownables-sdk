@@ -1,9 +1,9 @@
 import {
   Button,
   Dialog,
-  DialogActions,
+  DialogHeader,
   DialogContent,
-  DialogTitle,
+  DialogActions,
   IconButton,
 } from "@/components/ui";
 import { useState } from "react";
@@ -42,7 +42,6 @@ export default function PromptDialog(props: PromptDialogProps) {
       setError(validationError);
       return;
     }
-
     onSubmit(address, fee);
     close();
   };
@@ -58,21 +57,22 @@ export default function PromptDialog(props: PromptDialogProps) {
   };
 
   return (
-    <Dialog open={open} onClose={close} transitionDuration={0}>
-      <DialogTitle>{props.title}</DialogTitle>
-      <DialogContent
-        style={{
-          paddingBottom: "0px",
-        }}
-      >
-        {props.TextFieldProps ? (
+    <Dialog open={open} onClose={close}>
+      <DialogHeader title={props.title} />
+      <DialogContent className="pt-0">
+        {props.TextFieldProps && (
           <label className="block">
-            {props.TextFieldProps.label ? (
-              <span className="mb-1 block text-sm text-slate-700">{props.TextFieldProps.label}</span>
-            ) : null}
+            {props.TextFieldProps.label && (
+              <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {props.TextFieldProps.label}
+              </span>
+            )}
             <div className="relative">
               <input
-                className={props.TextFieldProps.className || "w-full rounded-md border border-slate-300 px-3 py-2 pr-10"}
+                className={
+                  props.TextFieldProps.className ||
+                  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm text-slate-900 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-[#333] dark:bg-[#252525] dark:text-slate-100"
+                }
                 placeholder={props.TextFieldProps.placeholder}
                 autoFocus
                 required
@@ -82,22 +82,23 @@ export default function PromptDialog(props: PromptDialogProps) {
                   setAddress(e.target.value);
                 }}
               />
-              <IconButton onClick={handlePaste} className="absolute right-1 top-1">
+              <IconButton onClick={handlePaste} className="absolute right-1 top-1/2 -translate-y-1/2">
                 <Paste />
               </IconButton>
             </div>
-            {error ? <small className="mt-1 block text-xs text-red-600">{error}</small> : null}
+            {error && (
+              <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{error}</p>
+            )}
           </label>
-        ) : null}
+        )}
       </DialogContent>
-
       <DialogActions>
-        <Button onClick={close}>
+        <Button variant="ghost" onClick={close}>
           {props.cancel || "Cancel"}
         </Button>
         <Button
+          variant={props.severity === "error" ? "danger" : "primary"}
           onClick={submit}
-          className={props.severity === "error" ? "bg-red-600 text-white hover:bg-red-700" : "bg-slate-900 text-white hover:bg-slate-800"}
         >
           {props.ok || "Ok"}
         </Button>

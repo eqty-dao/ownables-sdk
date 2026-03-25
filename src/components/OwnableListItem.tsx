@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Box, Button, Tile } from "@/components/ui";
-import { Box as BoxIcon, Zap as BoltOutlined } from "lucide-react";
+import { Box as BoxIcon } from "lucide-react";
+import OwnableTags from "@/components/OwnableTags";
 import { EventChain } from "eqty-core";
-import { TypedMetadata } from "../interfaces/TypedOwnableInfo";
+import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { cva } from "class-variance-authority";
-import { cn } from "../utils/cn";
-import shortId from "../utils/shortId";
+import { cn } from "@/utils/cn";
+import shortId from "@/utils/shortId";
 
 const itemCard = cva(
   "flex w-full items-start justify-start rounded-[14px] border p-4 text-left transition-all active:scale-[0.99]",
@@ -35,19 +36,23 @@ interface OwnableListItemProps {
   metadata: TypedMetadata;
   issuer?: string;
   isConsumable: boolean;
+  isConsumed: boolean;
+  isLockable: boolean;
+  isLocked: boolean;
+  isTransferred: boolean;
   isSelected: boolean;
   consumeIntent?: "none" | "active" | "eligible" | "ineligible";
   onClick: () => void;
 }
 
 export default function OwnableListItem(props: OwnableListItemProps) {
-  const { packageCid, metadata, issuer, isConsumable, isSelected, consumeIntent = "none", onClick } = props;
+  const { packageCid, metadata, issuer, isConsumable, isConsumed, isLockable, isLocked, isTransferred, isSelected, consumeIntent = "none", onClick } = props;
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const shortIssuer = issuer ? shortId(issuer, 10, "...") : undefined;
 
   const loadThumbnail = useCallback(async () => {
     try {
-      const globalIdb = await import("../services/IDB.service").then((m) =>
+      const globalIdb = await import("@/services/IDB.service").then((m) =>
         m.default.main()
       );
       const thumbnailFile = await globalIdb.get(
@@ -100,12 +105,16 @@ export default function OwnableListItem(props: OwnableListItemProps) {
               {shortIssuer}
             </p>
           )}
-          {isConsumable && (
-            <div className="mt-1 flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
-              <BoltOutlined className="h-3 w-3" />
-              <span>Consumable</span>
-            </div>
-          )}
+          <div className="mt-1">
+            <OwnableTags
+              display="ghost"
+              isLockable={isLockable}
+              isLocked={isLocked}
+              isConsumable={isConsumable}
+              isConsumed={isConsumed}
+              isTransferred={isTransferred}
+            />
+          </div>
         </Box>
       </div>
     </Button>

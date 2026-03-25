@@ -1,8 +1,7 @@
 import { useAccount, useBalance, useChainId } from 'wagmi';
 import { BASE_EQTY_TOKEN, BASE_SEPOLIA_EQTY_TOKEN, BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from 'eqty-core';
-import { FetchBalanceResult } from "@wagmi/core"
 
-export type EqtyTokenBalance = { address?: string; balance?: FetchBalanceResult };
+export type EqtyTokenBalance = { address?: string; balance?: { value: bigint; decimals: number; symbol: string } };
 type UseBalanceParameters = Parameters<typeof useBalance>[0];
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -36,10 +35,12 @@ export default function useEqtyToken(params?: UseBalanceParameters): EqtyTokenBa
     address: account as `0x${string}`,
     chainId: effectiveChainId,
     token: tokenAddress as `0x${string}` | undefined,
-    enabled: isSupported,
+    query: { enabled: isSupported },
   });
 
   if (!isSupported) return {};
 
-  return { address: tokenAddress!, balance: balanceQuery.data };
+  const data = balanceQuery.data;
+  const balance = data ? { value: data.value, decimals: data.decimals, symbol: data.symbol } : undefined;
+  return { address: tokenAddress!, balance };
 };

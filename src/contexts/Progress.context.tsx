@@ -135,7 +135,7 @@ const ProgressModal: React.FC<{ title: string; steps: ProgressStep[]; open: bool
       <DialogContent>
         <List>
           {steps.map((step) => (
-            <ListItem key={step.id} disableGutters>
+            <ListItem key={step.id}>
               <ListItemIcon style={{ minWidth: 36 }}>
                 {step.status === 'active' && <CircularProgress size={20} />}
                 {step.status === 'done' && <CheckCircleOutlineIcon />}

@@ -1,4 +1,4 @@
-import TypedDict from "../interfaces/TypedDict";
+import TypedDict from "@/interfaces/TypedDict";
 
 // Default base DB name; per-address DBs will suffix this with the address
 const DEFAULT_DB_NAME = "ownables";

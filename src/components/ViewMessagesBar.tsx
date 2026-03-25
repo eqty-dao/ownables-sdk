@@ -1,21 +1,20 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Box,
-  IconButton,
   List,
   ListItem,
   ListItemText,
   Button,
   Badge,
   Skeleton,
+  Drawer,
+  DrawerHeader,
 } from "@/components/ui";
-import { ArrowLeft as ArrowBack } from "lucide-react";
-import { Drawer } from "@/components/ui";
 import { EventChain } from "eqty-core";
 import { enqueueSnackbar } from "notistack";
-import placeholderImage from "../assets/cube.png";
-import { useMessageCount } from "../hooks/useMessageCount";
-import { useService } from "../hooks/useService";
+import placeholderImage from "@/assets/cube.png";
+import { useMessageCount } from "@/hooks/useMessageCount";
+import { useService } from "@/hooks/useService";
 import { useChainId } from "wagmi";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
@@ -182,17 +181,9 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
   }, [open, fetchMessages, fetchImportedHashes]);
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box style={{ width: 350, padding: 8 }}>
-        <Box className="flex items-center justify-between">
-          <span className="text-body font-semibold">
-            Messages
-          </span>
-          <IconButton onClick={onClose}>
-            <ArrowBack />
-          </IconButton>
-        </Box>
-
+    <Drawer anchor="right" open={open} onClose={onClose} className="w-[350px]">
+      <DrawerHeader title="Messages" closeAriaLabel="Close messages" />
+      <Box className="px-6 pb-6">
         <Box className="mt-2">
           <span className="text-caption">
             {messagesCount > 0
