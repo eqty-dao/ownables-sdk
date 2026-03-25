@@ -81,7 +81,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         enqueueSnackbar(`${pkg.title} forged`, { variant: "success" });
       }
     } catch (error) {
-      showError("Failed to forge ownable", ownableErrorMessage(error));
+      enqueueSnackbar(`Failed to forge ownable: ${ownableErrorMessage(error)}`, { variant: "error" });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService, progress, chainId, onSelect, showError]);

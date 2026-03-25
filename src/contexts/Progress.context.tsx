@@ -1,9 +1,8 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
-  Box,
   Button,
   Dialog,
-  DialogActions,
+  DialogActions, DialogClose,
   DialogContent,
   DialogTitle,
   List,
@@ -11,8 +10,9 @@ import {
   ListItemIcon,
   ListItemText
 } from '@/components/ui';
-import { CircleCheck as CheckCircleOutlineIcon, AlertCircle as ErrorOutlineIcon, Circle as RadioButtonUncheckedIcon } from "lucide-react";
-import { CircularProgress } from "@/components/ui";
+import { CircleCheck, AlertCircle, Circle, LoaderCircle } from "lucide-react";
+import { cn } from "@/utils/cn"
+import ownableErrorMessage from "@/utils/ownableErrorMessage";
 
 export type ProgressStepStatus = 'pending' | 'active' | 'done' | 'error';
 
@@ -79,12 +79,15 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const open = useCallback((opts: OpenProgressOptions): [ProgressController, LogProgress] => {
     const indexMap: Record<string, number> = Object.fromEntries(opts.steps.map((step, i) => [step.id, i]));
 
-    const onProgress = (stepId: string, state: 'active' | 'done' | 'error') => {
+    const onProgress = (stepId: string, state: 'active' | 'done' | 'error', meta?: any) => {
       const idx = indexMap[stepId];
       if (idx === undefined || !controller) return;
       if (state === 'active') controller.setActive(idx);
       if (state === 'done') controller.setDone(idx);
-      if (state === 'error') controller.setError(idx, 'Step failed');
+      if (state === 'error') {
+        const message = ownableErrorMessage(meta);
+        controller.setError(idx, message);
+      }
     };
 
     setTitle(opts.title);
@@ -98,10 +101,20 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const value = useMemo(() => ({ open, close }), [open, close]);
 
+  const isBusy = useMemo(() => steps.some((s) => s.status === 'active'), [steps]);
+
   return (
     <ProgressContext.Provider value={value}>
       {children}
-      <ProgressModal title={title} steps={steps} open={visible} onClose={close} cancelLabel={cancelLabel} onCancel={onCancel} />
+      <ProgressModal
+        title={title}
+        steps={steps}
+        open={visible}
+        onClose={close}
+        cancelLabel={cancelLabel}
+        onCancel={onCancel}
+        isBusy={isBusy}
+      />
     </ProgressContext.Provider>
   );
 };
@@ -128,25 +141,41 @@ export function withProgress(log?: LogProgress) {
   }
 }
 
-const ProgressModal: React.FC<{ title: string; steps: ProgressStep[]; open: boolean; onClose: () => void; cancelLabel?: string; onCancel?: () => void; }> = ({ title, steps, open, onClose, cancelLabel, onCancel }) => {
+const ProgressModal: React.FC<{
+  title: string;
+  steps: ProgressStep[];
+  open: boolean;
+  onClose: () => void;
+  cancelLabel?: string;
+  onCancel?: () => void;
+  isBusy?: boolean;
+}> = ({ title, steps, open, onClose, cancelLabel, onCancel, isBusy }) => {
   return (
-    <Dialog open={open} onClose={onClose} aria-labelledby="progress-dialog-title" className="w-[min(420px,calc(100vw-32px))]">
-      <DialogTitle id="progress-dialog-title">{title}</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={isBusy ? undefined : onClose}
+      aria-labelledby="progress-dialog-title"
+      className="w-[min(420px,calc(100vw-32px))]"
+    >
+      <div className="flex items-center justify-between">
+        <DialogTitle id="progress-dialog-title">{title}</DialogTitle>
+        { !isBusy && <DialogClose className="mr-6 mt-6" /> }
+      </div>
+
       <DialogContent>
         <List>
           {steps.map((step) => (
             <ListItem key={step.id}>
               <ListItemIcon style={{ minWidth: 36 }}>
-                {step.status === 'active' && <CircularProgress size={20} />}
-                {step.status === 'done' && <CheckCircleOutlineIcon />}
-                {step.status === 'error' && <ErrorOutlineIcon className="text-red-600" />}
-                {(!step.status || step.status === 'pending') && <RadioButtonUncheckedIcon className="text-slate-400" />}
+                {step.status === "active" && <LoaderCircle className="animate-spin inline" />}
+                {step.status === "done" && <CircleCheck className="text-green-600 inline" />}
+                {step.status === "error" && <AlertCircle className="text-red-600 inline" />}
+                {(!step.status || step.status === "pending") && <Circle className="text-slate-400 inline" />}
               </ListItemIcon>
               <ListItemText
-                primary={<span style={{ fontWeight: step.status === 'active' ? 600 : 400 }}>{step.label}</span>}
-                secondary={step.status === 'error' && step.errorMessage ? (
-                  <span className="text-red-600">{step.errorMessage}</span>
-                ) : undefined}
+                className={cn(step.status === "error" && "text-red-600")}
+                primary={<span className={cn(step.status === "active" && "font-bold")}>{step.label}</span>}
+                secondary={step.status === "error" && step.errorMessage}
               />
             </ListItem>
           ))}
@@ -154,7 +183,9 @@ const ProgressModal: React.FC<{ title: string; steps: ProgressStep[]; open: bool
       </DialogContent>
       {(cancelLabel || onCancel) && (
         <DialogActions>
-          <Button onClick={onCancel}>{cancelLabel || 'Cancel'}</Button>
+          <Button onClick={onCancel} disabled={isBusy}>
+            {cancelLabel || "Cancel"}
+          </Button>
         </DialogActions>
       )}
     </Dialog>

@@ -16,7 +16,6 @@ export { Chip } from "./chip";
 export { Alert, type AlertColor } from "./alert";
 export { AlertTitle } from "./alert-title";
 export { Divider } from "./divider";
-export { CircularProgress } from "./circular-progress";
 export { Backdrop } from "./backdrop";
 
 export { FormGroup } from "./form-group";

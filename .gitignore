@@ -15,6 +15,7 @@ ownables/target
 .pnp.js
 /build
 /dist
+.output.txt
 
 # testing
 /coverage
@@ -43,6 +44,7 @@ yarn-error.log*
 *.iml
 .idea
 .claude
+.worktrees
 
 # AI sandbox root
 .bash_profile

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { isE2E } from "@/utils/isE2E";
-import { Box, CircularProgress } from "@/components/ui";
+import { Box } from "@/components/ui";
 import LoginDialog from "@/components/LoginDialog";
 import Loading from "@/components/Loading";
 import { ViewMessagesBar } from "@/components/ViewMessagesBar";
@@ -19,6 +19,7 @@ import { useOwnables } from "@/hooks/useOwnables";
 import { useConsuming } from "@/hooks/useConsuming";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useService } from "@/hooks/useService";
+import { LoaderCircle } from "lucide-react"
 const ISSUE_OWNABLE_ID = "issue";
 
 export default function App() {
@@ -67,7 +68,7 @@ export default function App() {
   if (isConnecting) {
     return (
       <Box className="flex min-h-screen items-center justify-center">
-        <CircularProgress />
+        <LoaderCircle className="animate-spin" />
       </Box>
     );
   }
@@ -154,7 +155,6 @@ export default function App() {
       />
 
       <SnackbarProvider />
-      <Loading show={(!loaded || isPackageManagerLoading) && !showLogin} />
     </>
   );
 }

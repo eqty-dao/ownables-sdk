@@ -3,14 +3,12 @@ import {
   Card,
   CardActions,
   CardContent,
+  CardMedia,
   Box,
+  DialogHeader,
 } from "@/components/ui";
 import WalletConnectControls from './WalletConnectControls';
-
-const cardStyle = {
-  width: 500,
-  maxWidth: "calc(100vw - 64px)",
-};
+import loginBg from '@/assets/login-bg.jpg';
 
 interface LoginDialogProps {
   open: boolean;
@@ -20,10 +18,11 @@ export default function LoginDialog(props: LoginDialogProps) {
   const { open } = props;
 
   return (
-    <Dialog open={open}>
-      <Card style={cardStyle} className="rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+    <Dialog open={open} className="max-w-125 border-none">
+      <Card className="w-full">
+        <CardMedia src={loginBg} className="max-h-60 w-full" style={{ objectFit: 'cover', objectPosition: 'center' }} />
         <CardContent style={{ textAlign: "center" }} className="pb-2 pt-6">
-          <h1 className="text-section-title mb-0 mt-1">Ownable SDK Wallet</h1>
+          <h1 className="text-section-title mb-2 mt-1 text-2xl md:text-3xl">Ownables SDK Wallet</h1>
         </CardContent>
         <CardActions style={{ paddingBottom: 14 }} className="px-6 pb-6">
           <Box className="grow">

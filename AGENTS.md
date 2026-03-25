@@ -33,21 +33,6 @@ Stack: React + TypeScript app (Vite + Tailwind + BaseUI primitives).
 - Error handling: `try/catch` in `src/services/*`; surface errors via Notistack.
 - Keep components small, typed, with co-located styles and tests.
 
-## Test-driven development
-
-When implementing a feature or fixing a bug that affects the UI, write the Gherkin scenario before writing any implementation code.
-
-1. Write a `.feature` file in `/features` describing the expected user interaction and outcome.
-2. Run it with letsrunit to confirm it fails. If it passes, either the feature already exists or the scenario is not testing the right thing.
-3. Implement until the scenario passes.
-4. Do not modify the scenario to fit the implementation. If the test fails, fix the code.
-
-If you cannot write the scenario before implementing, the requirements are not specific enough. Ask for clarification rather than making assumptions in code.
-
-## Unit Testing
-- Jest + React Testing Library. Prefer queries by role/label/text over test IDs.
-- Write tests for logic-heavy hooks/services and critical UI flows.
-
 ## Making Changes
 - Keep changes minimal and focused.
 - Avoid new dependencies; prefer existing stack.

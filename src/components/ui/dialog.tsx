@@ -1,10 +1,8 @@
-import { Dialog as BaseDialog } from "@base-ui/react";
+import { Dialog as BaseDialog, DialogCloseProps } from "@base-ui/react";
 import type { ComponentPropsWithoutRef } from "react";
 import type React from "react";
 import { X } from "lucide-react";
 import { cn } from "@/utils/cn";
-
-export const DialogClose = BaseDialog.Close;
 
 export interface DialogProps extends Omit<ComponentPropsWithoutRef<"div">, "onClose"> {
   open?: boolean;
@@ -15,13 +13,13 @@ export function Dialog({ open, onClose, className, children, ...rest }: DialogPr
   return (
     <BaseDialog.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/30 backdrop-blur-sm transition-opacity duration-200 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
+        <BaseDialog.Backdrop className="fixed inset-0 z-1300 bg-slate-900/30 backdrop-blur-sm transition-opacity duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0" />
         <BaseDialog.Popup
           className={cn(
-            "fixed z-[1400] overflow-auto bg-white shadow-2xl dark:bg-[#1a1a1a]",
+            "fixed z-1400 overflow-auto bg-white shadow-2xl dark:bg-[#1a1a1a]",
             "inset-0 max-h-screen w-full rounded-none border-0",
             "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100vh-32px)] sm:w-[min(640px,calc(100vw-32px))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-slate-200 sm:dark:border-[#2a2a2a]",
-            "transition-[opacity,transform] duration-200 data-[starting-style]:opacity-0 sm:data-[starting-style]:scale-95 data-[ending-style]:opacity-0 sm:data-[ending-style]:scale-95",
+            "transition-[opacity,transform] duration-200 data-starting-style:opacity-0 sm:data-starting-style:scale-95 data-ending-style:opacity-0 sm:data-ending-style:scale-95",
             className
           )}
           {...rest}
@@ -42,12 +40,7 @@ export function DialogHeader({ title, closeAriaLabel = "Close" }: DialogHeaderPr
   return (
     <div className="flex items-center justify-between px-6 pb-2 pt-6">
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
-      <DialogClose
-        aria-label={closeAriaLabel}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
-      >
-        <X className="h-5 w-5" />
-      </DialogClose>
+      <DialogClose aria-label={closeAriaLabel} />
     </div>
   );
 }
@@ -56,6 +49,17 @@ type DialogTitleProps = ComponentPropsWithoutRef<"h2">;
 type DialogContentProps = ComponentPropsWithoutRef<"div">;
 type DialogContentTextProps = ComponentPropsWithoutRef<"p">;
 type DialogActionsProps = ComponentPropsWithoutRef<"div">;
+
+export function DialogClose({ className, ...rest }: Omit<DialogCloseProps, 'children'>) {
+  return (
+    <BaseDialog.Close
+      className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]', className)}
+      {...rest}
+    >
+      <X className="h-5 w-5" />
+    </BaseDialog.Close>
+  );
+}
 
 export function DialogTitle({ children, className, ...rest }: DialogTitleProps) {
   return (
