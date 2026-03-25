@@ -20,10 +20,9 @@ import { useDialogs } from "@/contexts/Dialogs.context";
 import { useService } from "@/hooks/useService";
 import { LoaderCircle } from "lucide-react"
 const ISSUE_OWNABLE_ID = "issue";
-const EMBEDDED = import.meta.env.VITE_EMBEDDED;
+const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDDED?.toLowerCase() ?? '');
 
 export default function App() {
-  const [showLogin, setShowLogin] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showViewMessagesBar, setShowViewMessagesBar] = useState(false);
   const [showCreateOwnable, setShowCreateOwnable] = useState(false);
@@ -52,7 +51,6 @@ export default function App() {
     useConsuming({ ownables, onConsumed: (id) => setOwnables((prev) => prev.map((o) => o.chain.id === id ? { ...o, isConsumed: true } : o)) });
 
   useEffect(() => {
-    setShowLogin(!isConnected && !isE2E);
     setShowSidebar(false);
     setShowViewMessagesBar(false);
     cancelConsuming();
@@ -144,7 +142,7 @@ export default function App() {
             setOwnables={setOwnables}
           />
 
-          <LoginDialog key={address} open={showLogin} />
+          {!isConnected && !isE2E && <LoginDialog open={true} />}
         </>
       )}
 
