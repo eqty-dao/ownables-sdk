@@ -15,7 +15,8 @@ Stack: React + TypeScript app (Vite + Tailwind + BaseUI primitives).
 - `yarn test:e2e` — Cucumber E2E tests
 - `yarn build` — Production build
 - `yarn rustup` — Initialize Rust toolchain (optional, for ownable dev)
-- `yarn ownables:build-all` / `--package=<name>` — Build ownables
+- `yarn ownables:build` — Build all ownables
+- `yarn ownables:build <name>` — Build a single ownable package
 - `yarn ownables:cid --package=<name>` — Compute CID for package zip
 
 ## When to Run Tests/Builds
@@ -57,3 +58,4 @@ If you cannot write the scenario before implementing, the requirements are not s
 - `yarn test:e2e` passes.
 - No unnecessary files added; changes are minimal.
 - Update README if new env vars or commands are introduced.
+

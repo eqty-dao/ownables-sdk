@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, SetStateAction } from "react";
 import {
   Dialog,
   DialogHeader,
@@ -23,10 +23,10 @@ interface CreateOwnableDialogProps {
 }
 
 export default function CreateOwnableDialog({
-  open,
-  onClose,
-  onSuccess,
-}: CreateOwnableDialogProps) {
+                                              open,
+                                              onClose,
+                                              onSuccess,
+                                            }: CreateOwnableDialogProps) {
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -62,10 +62,16 @@ export default function CreateOwnableDialog({
 
     builderService
       .getTemplateCost(DEFAULT_TEMPLATE_ID)
-      .then((cost) => { if (!cancelled) setTemplateCost(cost); })
-      .catch((err) => { if (!cancelled) console.error("Failed to load template cost:", err); });
+      .then((cost) => {
+        if (!cancelled) setTemplateCost(cost);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error("Failed to load template cost:", err);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -92,12 +98,24 @@ export default function CreateOwnableDialog({
       enqueueSnackbar("Builder service not available", { variant: "error" });
       return;
     }
-    if (!name.trim()) { setError("Name is required"); return; }
-    if (!imageFile) { setError("Image is required"); return; }
-    if (!address) { setError("Wallet not connected"); return; }
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+    if (!imageFile) {
+      setError("Image is required");
+      return;
+    }
+    if (!address) {
+      setError("Wallet not connected");
+      return;
+    }
 
     const eth = (window as any).ethereum;
-    if (!eth) { setError("MetaMask not found"); return; }
+    if (!eth) {
+      setError("MetaMask not found");
+      return;
+    }
 
     try {
       setError(null);
@@ -168,7 +186,11 @@ export default function CreateOwnableDialog({
 
       zip.file("ownableData.json", JSON.stringify([ownableData], null, 2));
       zip.file(`image.${imageExtension}`, imageFile);
-      zip.file("chain.json", JSON.stringify({ networkId: networkCode, timestamp: Date.now(), version: "1.0.0" }, null, 2));
+      zip.file("chain.json", JSON.stringify({
+        networkId: networkCode,
+        timestamp: Date.now(),
+        version: "1.0.0"
+      }, null, 2));
 
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const zipArray = new Uint8Array(await zipBlob.arrayBuffer());
@@ -215,7 +237,7 @@ export default function CreateOwnableDialog({
 
   return (
     <Dialog open={open} onClose={handleClose}>
-      <DialogHeader title="Create Ownable" />
+      <DialogHeader title="Create Ownable"/>
       <DialogContent>
         <Box className="flex flex-col gap-4 pt-2">
           {error && (
@@ -227,7 +249,7 @@ export default function CreateOwnableDialog({
           <TextField
             label="Name *"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e: any) => setName(e.target.value)}
             className="w-full"
             required
             disabled={busy}
@@ -236,7 +258,7 @@ export default function CreateOwnableDialog({
           <TextField
             label="Description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e: any) => setDescription(e.target.value)}
             className="w-full"
             multiline
             rows={3}

@@ -10,6 +10,7 @@ import WalletAddress from "./WalletAddress";
 import WalletBalance from "./WalletBalance";
 import ThemePicker from "./ThemePicker";
 import shortId from "@/utils/shortId";
+import { ExternalLink } from "lucide-react"
 
 interface SidebarProps {
   open: boolean;
@@ -79,7 +80,7 @@ export default function Sidebar(props: SidebarProps) {
                   rel="noopener noreferrer"
                   className="font-mono text-xs text-indigo-600 hover:underline dark:text-indigo-400"
                 >
-                  {shortId(anchorAddress, 10)}
+                  {shortId(anchorAddress, 10)} <ExternalLink size={12} className="inline" style={{ verticalAlign: '-1px' }} />
                 </Link>
               ) : (
                 <p className="text-xs text-slate-500 dark:text-slate-400">Enable event anchoring</p>
