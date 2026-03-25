@@ -26,7 +26,6 @@ export default function GetStarted({ onExamples }: GetStartedProps) {
           to learn how to issue an Ownable
           {HAS_EXAMPLES && (
             <>
-              <br />
               or try one of{" "}
               <Link
                 href="#"

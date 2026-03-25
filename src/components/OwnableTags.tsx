@@ -1,5 +1,5 @@
 import { Tag } from "@/components/ui";
-import { ArrowRightLeft, Lock, LockOpen, PackageCheck, Zap } from "lucide-react";
+import { ArrowRightLeft, Lock, LockOpen, Zap } from "lucide-react";
 import type { TagProps } from "@/components/ui/tag";
 import { cn } from "@/utils/cn"
 
@@ -9,25 +9,27 @@ interface OwnableTagsProps {
   isConsumable: boolean;
   isConsumed: boolean;
   isTransferred: boolean;
+  showUnlocked?: boolean;
   display?: TagProps["display"];
   className?: string;
 }
 
-export default function OwnableTags({ isLockable, isLocked, isConsumable, isConsumed, isTransferred, display = "badge", className }: OwnableTagsProps) {
+export default function OwnableTags({ isLockable, isLocked, isConsumable, isConsumed, isTransferred, showUnlocked = true, display = "badge", className }: OwnableTagsProps) {
   if (!isTransferred && !isLockable && !isConsumable) return null;
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
+    <div className={cn('flex flex-wrap items-center gap-2.5', className)}>
+      {isConsumable && (
+        <Tag display={display} variant={isConsumed ? "consumed" : "consumable"} icon={<Zap className="h-3 w-3" />} value={isConsumed ? "Consumed" : "Consumable"} />
+      )}
       {isTransferred && (
         <Tag display={display} variant="transferred" icon={<ArrowRightLeft className="h-3 w-3" />} value="Transferred" />
       )}
-      {isLockable && (isLocked
-        ? <Tag display={display} variant="locked" icon={<Lock className="h-3 w-3" />} value="Locked" />
-        : <Tag display={display} variant="unlocked" icon={<LockOpen className="h-3 w-3" />} value="Unlocked" />
+      {isLockable && isLocked && (
+        <Tag display={display} variant="locked" icon={<Lock className="h-3 w-3" />} value="Locked" />
       )}
-      {isConsumable && (isConsumed
-        ? <Tag display={display} variant="consumed" icon={<Zap className="h-3 w-3" />} value="Consumed" />
-        : <Tag display={display} variant="consumable" icon={<Zap className="h-3 w-3" />} value="Consumable" />
+      {isLockable && !isLocked && showUnlocked && (
+        <Tag display={display} variant="unlocked" icon={<LockOpen className="h-3 w-3" />} value="Unlocked" />
       )}
     </div>
   );

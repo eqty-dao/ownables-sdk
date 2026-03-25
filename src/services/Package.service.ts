@@ -198,7 +198,7 @@ export default class PackageService {
 
   private async storeAssets(cid: string, files: File[]): Promise<void> {
     const storeName = `package:${cid}`;
-    
+
     try {
       if (!(await this.idb.hasStore(storeName))) {
         await this.idb.createStore(storeName);
@@ -214,7 +214,7 @@ export default class PackageService {
     } catch (error) {
       // Check for quota errors
       if (error instanceof Error) {
-        if (error.name === 'QuotaExceededError' || 
+        if (error.name === 'QuotaExceededError' ||
             error.message?.includes('quota') ||
             error.message?.includes('QuotaExceeded')) {
           throw new Error(
@@ -263,7 +263,7 @@ export default class PackageService {
         return; // Success
       } catch (error) {
         console.warn(`Store verification attempt ${attempt}/${maxRetries} failed:`, error);
-        
+
         if (attempt < maxRetries) {
           // Wait before retry (exponential backoff)
           await new Promise((resolve) => setTimeout(resolve, delay * attempt));
@@ -432,7 +432,7 @@ export default class PackageService {
     // Verify store exists after import
     const storeName = `package:${pkg.cid}`;
     const hasStore = await this.idb.hasStore(storeName);
-    
+
     if (!hasStore) {
       // Retry verification in background (non-blocking)
       this.retryStoreVerification(storeName, files.length, 3, 1000)
@@ -440,7 +440,7 @@ export default class PackageService {
           console.error(`Background store verification failed after retries:`, error);
           // Optionally notify user or log to error tracking service
         });
-      
+
       // Still return the package even if verification is pending
       // The background retry will handle it
     } else {

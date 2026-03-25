@@ -50,6 +50,7 @@ export default class OwnableService {
       created: Date;
       keywords: string[];
       uniqueMessageHash?: string;
+      isConsumed?: boolean;
     }>
   > {
     return this.eventChains.loadAll();
@@ -463,6 +464,7 @@ export default class OwnableService {
     // Store both chains; emit anchor progress only once to represent anchoring both
     // Queue anchors for both chains without submitting yet
     await this.store(consumable, consumableStateDump);
+    await this.idb.set(`ownable:${consumable.id}`, "isConsumed", true);
     await this.store(consumer, consumerStateDump);
 
     // Submit a single anchor tx for both

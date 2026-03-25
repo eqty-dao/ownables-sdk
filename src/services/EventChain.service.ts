@@ -13,6 +13,7 @@ interface StoredChainInfo {
   created: Date;
   latestHash: string;
   keywords: string[];
+  isConsumed?: boolean;
 }
 
 export default class EventChainService {
@@ -41,6 +42,7 @@ export default class EventChainService {
       keywords: string[];
       latestHash?: string;
       uniqueMessageHash: string;
+      isConsumed?: boolean;
     }>
   > {
     const ids = (await this.idb.listStores())
@@ -89,6 +91,7 @@ export default class EventChainService {
     keywords: string[];
     uniqueMessageHash: string;
     latestHash?: string;
+    isConsumed?: boolean;
   }> {
     const chainInfo = (await this.idb
       .getMap(`ownable:${id}`)
@@ -101,6 +104,7 @@ export default class EventChainService {
       created,
       keywords,
       uniqueMessageHash,
+      isConsumed,
     } = chainInfo;
 
     return {
@@ -110,6 +114,7 @@ export default class EventChainService {
       created,
       keywords,
       uniqueMessageHash,
+      isConsumed,
     };
   }
 

@@ -1,12 +1,16 @@
-import { Box, Switch, Button, Drawer, DrawerHeader } from "@/components/ui";
+import { Box, Switch, Button, Drawer, DrawerHeader, Link } from "@/components/ui";
 import { useEffect, useState } from "react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useChainId, useDisconnect } from "wagmi";
 import EventChainService from "@/services/EventChain.service";
+import { useAnchorAddress } from "@/hooks/useAnchorAddress";
+import { useExplorerUrl } from "@/hooks/useExplorerUrl";
 import WalletConnectControls from "./WalletConnectControls";
 import NetworkBadge from "./NetworkBadge";
 import WalletAddress from "./WalletAddress";
 import WalletBalance from "./WalletBalance";
 import ThemePicker from "./ThemePicker";
+import shortId from "@/utils/shortId";
+import { ExternalLink } from "lucide-react"
 
 interface SidebarProps {
   open: boolean;
@@ -20,6 +24,9 @@ export default function Sidebar(props: SidebarProps) {
   const [anchoring, setAnchoring] = useState(EventChainService.anchoring);
   const { isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const chainId = useChainId();
+  const anchorAddress = useAnchorAddress();
+  const basescanUrl = useExplorerUrl(chainId, anchorAddress ? `address/${anchorAddress}` : "");
 
   useEffect(() => {
     EventChainService.anchoring = anchoring;
@@ -66,7 +73,18 @@ export default function Sidebar(props: SidebarProps) {
           <Box className="mb-8 flex items-center justify-between rounded-xl border border-black/10 p-4 dark:border-[#333333]">
             <Box>
               <p className="text-base font-medium text-slate-900 dark:text-slate-100">Anchor events</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Enable event anchoring</p>
+              {anchorAddress && basescanUrl ? (
+                <Link
+                  href={basescanUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                  {shortId(anchorAddress, 10)} <ExternalLink size={12} className="inline" style={{ verticalAlign: '-1px' }} />
+                </Link>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">Enable event anchoring</p>
+              )}
             </Box>
             <Switch checked={anchoring} onChange={(e) => setAnchoring(e.target.checked)} aria-label="Anchor events" />
           </Box>

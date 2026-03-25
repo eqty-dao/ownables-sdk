@@ -11,8 +11,9 @@ export const usePackageManager = () => {
   const packageService = useService('packages');
 
   const updatePackages = useCallback(() => {
+    if (!packageService) return;
     try {
-      setPackages(packageService?.list() ?? []);
+      setPackages(packageService.list());
     } catch (err) {
       setError(
         err instanceof Error ? err : new Error("Failed to update packages")
@@ -22,7 +23,8 @@ export const usePackageManager = () => {
 
   useEffect(() => {
     updatePackages();
-  }, [updatePackages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packageService]);
 
   const importPackages = async (files: FileList) => {
     if (!packageService) throw new Error("Package service not ready");

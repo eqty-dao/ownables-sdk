@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "@/hooks/useService";
 import { useOwnableState } from "@/hooks/useOwnableState";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
+import { useDialogs } from "@/contexts/Dialogs.context";
 import OwnableDetail from "./OwnableDetail";
 
 interface OwnableProps {
@@ -37,6 +38,20 @@ export default function Ownable(props: OwnableProps) {
     useOwnableState(chain, pkg, props.onError);
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute);
+  const { showConfirm } = useDialogs();
+
+  const onLock = useCallback(() => {
+    showConfirm({
+      title: "Lock Ownable",
+      message: <span>Are you sure you want to lock this <em>{pkg?.title}</em>?</span>,
+      ok: "Lock",
+      onConfirm: () => execute({ lock: {} }),
+    });
+  }, [pkg, execute, showConfirm]);
+
+  const onUnlock = useCallback(() => {
+    execute({ unlock: {} });
+  }, [execute]);
 
   if (!ownables || !packages || !idb || !eventChains || !relay || !pkg) return <></>;
 
@@ -57,6 +72,8 @@ export default function Ownable(props: OwnableProps) {
       onConsume={() => !!info && props.onConsume(info)}
       onDelete={props.onDelete}
       onTransfer={(address) => transfer(address)}
+      onLock={onLock}
+      onUnlock={onUnlock}
     />
   );
 }

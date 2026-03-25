@@ -6,6 +6,7 @@ import ReactJson from "react-json-view";
 import { CircleX as Cancel, CircleCheck as CheckCircle } from "lucide-react";
 import shortId from "@/utils/shortId";
 import { useChainId } from "wagmi";
+import { useExplorerUrl } from "@/hooks/useExplorerUrl";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
@@ -39,17 +40,7 @@ export default function EventCard(props: EventCardProps) {
   );
   const { event, anchorTx, verified } = props;
   const chainId = useChainId();
-
-  const getExplorerUrl = (txHash: string, chainId: number) => {
-    switch (chainId) {
-      case 84532:
-        return `https://sepolia.basescan.org/tx/${txHash}`;
-      case 8453:
-        return `https://basescan.org/tx/${txHash}`;
-      default:
-        return `https://sepolia.basescan.org/tx/${txHash}`;
-    }
-  };
+  const txUrl = useExplorerUrl(chainId, anchorTx ? `tx/${anchorTx}` : "");
 
   return (
     <Box className="flex flex-col">
@@ -75,7 +66,7 @@ export default function EventCard(props: EventCardProps) {
             {anchorTx ? (
               <>
                 <Link
-                  href={getExplorerUrl(anchorTx, chainId)}
+                  href={txUrl ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="link-primary"

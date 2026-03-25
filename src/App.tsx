@@ -82,7 +82,7 @@ export default function App() {
         isConnected={isConnected}
       />
 
-      {ownables.length === 0 && <GetStarted onExamples={selectIssuePanel} />}
+      {ownables.length === 0 && !showDetail && <GetStarted onExamples={selectIssuePanel} />}
 
       <Box className="mx-auto lg:mt-4 flex max-w-330 gap-4 lg:pb-6 lg:px-4">
         <OwnableList

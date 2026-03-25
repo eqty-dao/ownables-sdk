@@ -1,6 +1,6 @@
 import { RefObject } from "react";
 import { Box, Button, IconButton, Link } from "@/components/ui";
-import { ArrowLeft, ExternalLink as OpenInNew, Info } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, ExternalLink, ExternalLink as OpenInNew, Info, Lock, LockOpen, Zap } from "lucide-react";
 import { EventChain } from "eqty-core";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -8,6 +8,7 @@ import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
 import OwnableTags from "./OwnableTags";
 import OwnableInfo from "./OwnableInfo";
+import { OverlayBanner } from "./OverlayBanner";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
@@ -27,7 +28,13 @@ interface OwnableDetailProps {
   onConsume: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
+  onLock: () => void;
+  onUnlock: () => void;
 }
+
+const unlockButton = cva(
+  "w-full rounded-xl bg-slate-700 px-6 font-semibold text-white transition-colors hover:bg-slate-800 active:bg-slate-900 dark:bg-slate-600 dark:hover:bg-slate-500 py-3 lg:py-4 lg:text-lg flex items-center justify-center gap-2"
+);
 
 const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
 const issuerLink = cva("font-mono link-primary hover:underline");
@@ -52,6 +59,8 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     onConsume,
     onDelete,
     onTransfer,
+    onLock,
+    onUnlock,
   } = props;
   const shortIssuer =
     issuer && issuer.length > 10
@@ -78,19 +87,23 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   className={cn(issuerLink())}
                 >
                   {shortIssuer}
+                  <ExternalLink size={16} className="inline ml-1.5" style={{ verticalAlign: "-2px" }} />
                 </Link>
               </p>
             )}
           </Box>
           <OwnableActions
-            className="-mr-3"
+            className="lg:-mr-3"
             title={pkg.title}
             isConsumable={isConsumable && !isTransferred && !isConsumed}
             isTransferable={pkg.isTransferable && !isTransferred}
+            isLockable={isLockable}
+            isLocked={isLocked}
             onDelete={onDelete}
             chain={chain}
             onConsume={onConsume}
             onTransfer={onTransfer}
+            onLock={onLock}
           />
         </Box>
 
@@ -106,6 +119,9 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             iframeRef={iframeRef}
             onLoad={onLoad}
           />
+          {isConsumed && <OverlayBanner icon={<Zap />} title="Consumed" />}
+          {isTransferred && !isConsumed && <OverlayBanner icon={<ArrowRightLeft />} title="Transferred" />}
+          {isLocked && !isConsumed && !isTransferred && <OverlayBanner icon={<Lock />} title="Locked" />}
         </Box>
 
         {isConsumable && !isTransferred && !isConsumed && (
@@ -116,6 +132,18 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               onClick={onConsume}
             >
               Use Item
+            </Button>
+          </Box>
+        )}
+        {isLocked && !isConsumed && !isTransferred && (
+          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
+            <Button
+              aria-label="Unlock"
+              className={cn(unlockButton())}
+              onClick={onUnlock}
+            >
+              <LockOpen className="h-5 w-5" />
+              Unlock
             </Button>
           </Box>
         )}

@@ -293,6 +293,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GetMetadata {} => query_ownable_metadata(deps),
         QueryMsg::GetWidgetState {} => query_ownable_widget_state(deps),
         QueryMsg::IsLocked {} => query_lock_state(deps),
+        QueryMsg::IsConsumed {} => query_consumed_state(deps),
     }
 }
 
@@ -304,6 +305,12 @@ fn query_ownable_widget_state(deps: Deps) -> StdResult<Binary> {
 fn query_lock_state(deps: Deps) -> StdResult<Binary> {
     let is_locked = LOCKED.load(deps.storage)?;
     to_json_binary(&is_locked)
+}
+
+fn query_consumed_state(deps: Deps) -> StdResult<Binary> {
+    let config = CONFIG.load(deps.storage)?;
+    let is_consumed = config.map_or(false, |c| c.consumed_by.is_some());
+    to_json_binary(&is_consumed)
 }
 
 fn query_ownable_info(deps: Deps) -> StdResult<Binary> {

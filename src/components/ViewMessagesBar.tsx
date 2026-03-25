@@ -39,7 +39,7 @@ const SkeletonMessageItem = () => (
   <ListItem className={cn(messageItem())}>
     <Box className="flex w-full items-center gap-2">
       <Skeleton
-       
+
         width={35}
         height={35}
         style={{ borderRadius: "10%" }}
@@ -51,7 +51,7 @@ const SkeletonMessageItem = () => (
     </Box>
     <Skeleton width="70%" height={14} className="mt-1" />
     <Skeleton
-     
+
       width={80}
       height={28}
       style={{ marginTop: 4, borderRadius: 4 }}
@@ -181,7 +181,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
   }, [open, fetchMessages, fetchImportedHashes]);
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} className="w-[350px]">
+    <Drawer anchor="right" open={open} onClose={onClose} className="w-87.5">
       <DrawerHeader title="Messages" closeAriaLabel="Close messages" />
       <Box className="px-6 pb-6">
         <Box className="mt-2">
@@ -241,7 +241,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                   </span>
                   <Box className="mt-1 flex items-center">
                     <Button
-                     
+
                       size="small"
                       className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
@@ -313,7 +313,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
 
                   <Box className="mt-1 flex items-center">
                     <Button
-                     
+
                       size="small"
                       className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
@@ -332,7 +332,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
         {messages.length > 0 && (
           <Box className="mt-2 flex items-center justify-between">
             <Button
-             
+
               size="small"
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
@@ -343,7 +343,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
               Page {currentPage} of {Math.ceil(totalCount / itemsPerPage)}
             </span>
             <Button
-             
+
               size="small"
               onClick={() =>
                 setCurrentPage((prev) =>
@@ -358,7 +358,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
         )}
         <Box className="mt-1 flex justify-center">
           <Button
-           
+
             size="small"
             onClick={() => {
               setItemsPerPage((prev) => (prev === 50 ? 100 : 50));

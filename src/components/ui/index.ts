@@ -36,3 +36,4 @@ export { Dialog, DialogClose, DialogHeader, DialogTitle, DialogContent, DialogCo
 export { Drawer, DrawerClose, DrawerHeader } from "./drawer";
 export { Tag, type TagProps } from "./tag";
 export { Tile, type TileProps } from "./tile";
+export { FileInput, type FileInputProps } from "./file-input";
