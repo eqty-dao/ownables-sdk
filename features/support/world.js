@@ -1,4 +1,4 @@
 import { setDefaultTimeout } from '@cucumber/cucumber';
-import '@letsrunit/bdd/define';
+import '@letsrunit/cucumber';
 
 setDefaultTimeout(30_000);
