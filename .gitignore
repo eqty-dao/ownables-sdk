@@ -22,6 +22,7 @@ ownables/*/pkg
 /coverage
 .playwright-mcp
 .letsrunit
+features/E2E_TODO.md
 
 # misc
 .DS_Store

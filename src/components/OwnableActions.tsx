@@ -34,7 +34,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
 
   return (
     <>
-      <IconButton className={props.className} onClick={open}>
+      <IconButton aria-label="Ownable actions" className={props.className} onClick={open}>
         <MoreVert />
       </IconButton>
       <Menu
