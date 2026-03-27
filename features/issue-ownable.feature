@@ -5,4 +5,4 @@ Feature: Issue ownable
     When I click button "Issue an Ownable" within navigation "Ownable list"
     And I click button "Antenna"
     Then the page contains button "Use Item"
-    And the page not contains button "Connect to wallet"
+    And the page does not contain button "Connect to wallet"

@@ -6,5 +6,5 @@ Feature: Consume ownable
     And I click button "Use Item"
     And I click button "Robot" within navigation "Ownable list"
     Then the page contains text "Consumed"
-    And The page does not contain button "Use Item"
-    And the page not contains button "Connect to wallet"
+    And the page does not contain button "Use Item"
+    And the page does not contain button "Connect to wallet"

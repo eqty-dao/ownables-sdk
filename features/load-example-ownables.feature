@@ -4,4 +4,4 @@ Feature: Load example ownables
     Given I'm on the homepage
     When I click text "the examples"
     Then the page contains button "Use Item"
-    And the page not contains button "Connect to wallet"
+    And the page does not contain button "Connect to wallet"

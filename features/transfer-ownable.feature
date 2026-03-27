@@ -8,4 +8,4 @@ Feature: Transfer ownable
     And I set field "Recipient address" to "0x0000000000000000000000000000000000000002"
     And I click button "Ok"
     Then the page contains text "Transferred"
-    And the page not contains button "Connect to wallet"
+    And the page does not contain button "Connect to wallet"

@@ -46,13 +46,30 @@
       "react-dom": "$react-dom"
     }
   },
+  "resolutions": {
+    "@letsrunit/ai": "portal:/home/arnold/Projects/letsrunit/packages/ai",
+    "@letsrunit/bdd": "portal:/home/arnold/Projects/letsrunit/packages/bdd",
+    "@letsrunit/cli": "portal:/home/arnold/Projects/letsrunit/packages/cli",
+    "@letsrunit/controller": "portal:/home/arnold/Projects/letsrunit/packages/controller",
+    "@letsrunit/cucumber": "portal:/home/arnold/Projects/letsrunit/packages/cucumber",
+    "@letsrunit/executor": "portal:/home/arnold/Projects/letsrunit/packages/executor",
+    "@letsrunit/gherker": "portal:/home/arnold/Projects/letsrunit/packages/gherker",
+    "@letsrunit/gherkin": "portal:/home/arnold/Projects/letsrunit/packages/gherkin",
+    "@letsrunit/journal": "portal:/home/arnold/Projects/letsrunit/packages/journal",
+    "@letsrunit/mailbox": "portal:/home/arnold/Projects/letsrunit/packages/mailbox",
+    "@letsrunit/mcp-server": "portal:/home/arnold/Projects/letsrunit/packages/mcp-server",
+    "@letsrunit/playwright": "portal:/home/arnold/Projects/letsrunit/packages/playwright",
+    "@letsrunit/store": "portal:/home/arnold/Projects/letsrunit/packages/store",
+    "@letsrunit/utils": "portal:/home/arnold/Projects/letsrunit/packages/utils",
+    "letsrunit": "portal:/home/arnold/Projects/letsrunit/packages/letsrunit"
+  },
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
     "check:styles": "node bin/check-styles.mjs",
     "preview": "vite preview",
-    "test:e2e": "cucumber-js",
+    "test:e2e": "NODE_OPTIONS='--preserve-symlinks --import tsx' cucumber-js",
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
     "ownables:build": "bin/ownables-build.sh",
     "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/Cargo.lock",
@@ -87,9 +104,9 @@
     "@babel/core": "^7.29.0",
     "@babel/preset-typescript": "^7.28.5",
     "@cucumber/cucumber": "^12.7.0",
-    "@letsrunit/bdd": "^0.8.0",
-    "@letsrunit/cli": "^0.8.0",
-    "@letsrunit/cucumber": "^0.8.0",
+    "@letsrunit/bdd": "portal:/home/arnold/Projects/letsrunit/packages/bdd",
+    "@letsrunit/cli": "portal:/home/arnold/Projects/letsrunit/packages/cli",
+    "@letsrunit/cucumber": "portal:/home/arnold/Projects/letsrunit/packages/cucumber",
     "@tailwindcss/postcss": "^4.2.1",
     "@vitejs/plugin-react": "^6.0.1",
     "ajv": "^8.18.0",
@@ -97,6 +114,7 @@
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
+    "tsx": "^4.21.0",
     "vite": "^8.0.0"
   }
 }
