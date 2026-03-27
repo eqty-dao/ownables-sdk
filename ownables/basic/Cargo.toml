@@ -1,5 +1,5 @@
 [package]
-name = "ownable"
+name = "ownable-basic"
 description = "My First Ownable"
 version = "0.1.0"
 authors = ["EQTY <info@eqty.me>"]
@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 wasm-opt = false
 
 [features]
-backtraces = ["cosmwasm-std/backtraces"]
+backtraces = []
 library = []
 
 [package.metadata.scripts]

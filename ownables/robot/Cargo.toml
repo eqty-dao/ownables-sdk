@@ -1,6 +1,6 @@
 [package]
 name = "ownable-robot"
-version = "0.1.1"
+version = "0.2.0"
 description = "An adorable robot companion"
 license = "MIT"
 authors = ["bekauz <bekauz@protonmail.com>", "Arnold Daniels <arnold@jasny.net>"]
@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 wasm-opt = false
 
 [features]
-backtraces = ["cosmwasm-std/backtraces"]
+backtraces = []
 library = []
 
 [package.metadata.scripts]

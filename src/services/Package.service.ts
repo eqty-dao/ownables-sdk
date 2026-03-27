@@ -119,6 +119,7 @@ export default class PackageService {
   private storePackageInfo(
     title: string,
     name: string,
+    version: string | undefined,
     description: string | undefined,
     cid: string,
     keywords: string[],
@@ -142,6 +143,7 @@ export default class PackageService {
       pkg = {
         title,
         name,
+        version,
         description,
         cid,
         keywords,
@@ -154,6 +156,7 @@ export default class PackageService {
     } else {
       // Update package and add new version info if it's an update
       Object.assign(pkg, {
+        version,
         description,
         keywords,
         uniqueMessageHash,
@@ -389,6 +392,7 @@ export default class PackageService {
       .replace(/[-_]+/, " ")
       .replace(/\b\w/, (c: string) => c.toUpperCase());
     const description = packageJson.description;
+    const version = packageJson.version;
     const keywords: string[] = packageJson.keywords || [];
     const capabilities = await this.getCapabilities(files);
 
@@ -399,6 +403,7 @@ export default class PackageService {
     const pkg = this.storePackageInfo(
       title,
       name,
+      version,
       description,
       cid,
       keywords,

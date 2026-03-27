@@ -4,13 +4,14 @@ use cosmwasm_std::{to_json_binary, Binary, Attribute, Event};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use ownable_std::{ExternalEventMsg, InfoResponse, Metadata, OwnableInfo};
+use ownable_std::{package_title_from_name, ExternalEventMsg, InfoResponse, Metadata, OwnableInfo};
 use crate::error::ContractError;
 
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ownable-speakers";
+const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 pub fn instantiate(
     deps: DepsMut,
@@ -25,12 +26,13 @@ pub fn instantiate(
         ownable_type: Some("speakers".to_string()),
     };
 
+    let package_title = package_title_from_name(env!("CARGO_PKG_NAME"));
     let metadata = Metadata {
         image: None,
         image_data: None,
         external_url: None,
-        description: Some("Consumable add-on for Robot".to_string()),
-        name: Some("Speakers".to_string()),
+        description: Some(format!("{package_title} ownable")),
+        name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
         youtube_url: None,
@@ -156,7 +158,7 @@ fn try_register_lock(
 pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
     // only ownable owner can lock it
     let ownership = OWNABLE_INFO.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
+    if info.sender != ownership.owner {
         return Err(ContractError::Unauthorized {
             val: "Unauthorized".into(),
         });
@@ -214,7 +216,7 @@ pub fn try_consume(
     }
     let ownership = OWNABLE_INFO.load(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
+    if info.sender != ownership.owner {
         return Err(ContractError::Unauthorized {
             val: "Unauthorized consumption attempt".into(),
         });

@@ -50,10 +50,11 @@
     "test:e2e": "cucumber-js",
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
     "ownables:build": "bin/ownables-build.sh",
-    "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/*/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/*/Cargo.lock",
+    "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/Cargo.lock",
     "ownables:deploy": "cp ./ownables/*.zip ./public/ownables/",
     "ownables:cid": "node bin/package-cid.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ownables:copy": "bin/ownables-copy.sh"
   },
   "repository": {
     "type": "git",

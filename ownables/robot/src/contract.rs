@@ -4,12 +4,13 @@ use cosmwasm_std::{to_json_binary, Binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use ownable_std::{ExternalEventMsg, InfoResponse, Metadata, OwnableInfo, rgb_hex};
+use ownable_std::{package_title_from_name, ExternalEventMsg, InfoResponse, Metadata, OwnableInfo, rgb_hex};
 use crate::error::ContractError;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ownable-robot";
+const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 pub fn instantiate(
     deps: DepsMut,
@@ -33,12 +34,13 @@ pub fn instantiate(
         has_armor: false
     };
 
+    let package_title = package_title_from_name(env!("CARGO_PKG_NAME"));
     let meta = Metadata {
         image: None,
         image_data: None,
         external_url: None,
-        description: Some("An adorable robot companion! He's great at just hanging out and keeping you company. Add-ons are available as Consumables.".to_string()),
-        name: Some("Robot".to_string()),
+        description: Some(format!("{package_title} ownable")),
+        name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
         youtube_url: None,
@@ -234,7 +236,7 @@ fn try_register_lock(
 pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
     // only ownable owner can lock it
     let ownership = OWNABLE_INFO.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
+    if info.sender != ownership.owner {
         return Err(ContractError::Unauthorized {
             val: "Unauthorized".into(),
         });

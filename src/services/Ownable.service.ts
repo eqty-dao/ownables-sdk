@@ -81,7 +81,10 @@ export default class OwnableService {
   async initWorker(id: string, cid: string): Promise<void> {
     if (this._rpc.has(id)) return;
 
-    const js = workerJsSource + ownableJsSource;
+    const packageOwnableJs = (await this.packages
+      .getAsset(cid, "ownable.js", (fr, file) => fr.readAsText(file))
+      .catch(() => null)) as string | null;
+    const js = workerJsSource + (packageOwnableJs || ownableJsSource);
     const wasm = (await this.packages.getAsset(
       cid,
       "ownable_bg.wasm",

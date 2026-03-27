@@ -153,7 +153,10 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                 No packages available yet.
               </div>
             ) : (
-              filteredPackages.map((pkg) => (
+              filteredPackages.map((pkg) => {
+                const version = "stub" in pkg ? undefined : pkg.version;
+
+                return (
                 <Button
                   key={pkg.title}
                   type="button"
@@ -169,9 +172,16 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                   </div>
                   {/* Text block */}
                   <div className="min-w-0 flex-1 lg:mt-2 lg:flex-none">
-                    <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
-                      {pkg.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
+                        {pkg.title}
+                      </p>
+                      {version && (
+                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+                          v{version}
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">
                       {pkg.description}
                     </p>
@@ -179,7 +189,8 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                   {/* Chevron — mobile only */}
                   <ChevronRight size={20} className="shrink-0 text-slate-300 dark:text-slate-600 lg:hidden" />
                 </Button>
-              ))
+                );
+              })
             )}
           </div>
         </Box>
