@@ -98,6 +98,7 @@ export function useOwnableState(
         setStateDump(sd);
       } catch (e) {
         console.error("Error applying chain:", e);
+        setError(ownableErrorMessage(e as Error));
         onError("Failed to apply chain", ownableErrorMessage(e as Error));
       } finally {
         busyRef.current = false;

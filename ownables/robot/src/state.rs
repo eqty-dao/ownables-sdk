@@ -20,4 +20,4 @@ pub const METADATA: Item<Metadata> = Item::new("metadata");
 pub const NFT_ITEM: Item<NFT> = Item::new("nft");
 pub const LOCKED: Item<bool> = Item::new("is_locked");
 pub const PACKAGE_CID: Item<String> = Item::new("package_cid");
-pub const NETWORK_ID: Item<u8> = Item::new("network_id");
+pub const NETWORK_ID: Item<u32> = Item::new("network_id");

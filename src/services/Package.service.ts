@@ -120,6 +120,8 @@ export default class PackageService {
     title: string,
     name: string,
     version: string | undefined,
+    ownablesAbi: string | undefined,
+    wireFormat: string | undefined,
     description: string | undefined,
     cid: string,
     keywords: string[],
@@ -144,6 +146,8 @@ export default class PackageService {
         title,
         name,
         version,
+        ownablesAbi,
+        wireFormat,
         description,
         cid,
         keywords,
@@ -157,6 +161,8 @@ export default class PackageService {
       // Update package and add new version info if it's an update
       Object.assign(pkg, {
         version,
+        ownablesAbi,
+        wireFormat,
         description,
         keywords,
         uniqueMessageHash,
@@ -347,6 +353,26 @@ export default class PackageService {
     };
   }
 
+  private validatePackageFormat(packageJson: TypedDict, files: File[]): void {
+    const hasWasm = files.some((file) => file.name === "ownable_bg.wasm");
+    if (!hasWasm) return;
+
+    const ownablesAbi = packageJson.ownablesAbi;
+    const wireFormat = packageJson.wireFormat;
+
+    if (ownablesAbi !== "1") {
+      throw new Error(
+        `Invalid package: expected package.json ownablesAbi to be "1", got "${String(ownablesAbi)}"`
+      );
+    }
+
+    if (wireFormat !== "cbor") {
+      throw new Error(
+        `Invalid package: expected package.json wireFormat to be "cbor", got "${String(wireFormat)}"`
+      );
+    }
+  }
+
   async processPackage(
     message: any,
     uniqueMessageHash?: string,
@@ -391,9 +417,14 @@ export default class PackageService {
       .replace(/^ownable-|-ownable$/, "")
       .replace(/[-_]+/, " ")
       .replace(/\b\w/, (c: string) => c.toUpperCase());
+    const ownablesAbi = packageJson.ownablesAbi;
+    const wireFormat = packageJson.wireFormat;
     const description = packageJson.description;
     const version = packageJson.version;
     const keywords: string[] = packageJson.keywords || [];
+
+    this.validatePackageFormat(packageJson, files);
+
     const capabilities = await this.getCapabilities(files);
 
     //Store assets
@@ -404,6 +435,8 @@ export default class PackageService {
       title,
       name,
       version,
+      ownablesAbi,
+      wireFormat,
       description,
       cid,
       keywords,
@@ -594,6 +627,7 @@ export default class PackageService {
         (mediaFile: File) => {
           if (!mediaFile) {
             reject(`Asset "${name}" is not in package ${cid}`);
+            return;
           }
 
           fileReader.onload = (event) => {

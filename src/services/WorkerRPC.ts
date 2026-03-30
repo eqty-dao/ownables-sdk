@@ -1,4 +1,5 @@
 import TypedDict from "@/interfaces/TypedDict";
+import { decode, encode } from "cbor-x";
 import { StateDump } from "./Ownable.service";
 
 interface MessageInfo {
@@ -17,12 +18,18 @@ interface CosmWasmEvent {
   attributes: TypedDict<string>;
 }
 
-/**
- * Manages a dedicated Web Worker per ownable that runs the WASM contract.
- * Replaces the outer iframe + simple-iframe-rpc layer from the previous architecture.
- * The worker is initialized once at app load (initWorker) and reused for both
- * canConsume eligibility checks and full display operations.
- */
+interface HostAbiEnvelope {
+  success: boolean;
+  payload?: Uint8Array;
+  error_code?: string;
+  error_message?: string;
+}
+
+interface WorkerPayload {
+  result: string;
+  mem?: { state_dump: StateDump };
+}
+
 export default class WorkerRPC {
   private worker!: Worker;
   private readonly ownableId: string;
@@ -33,26 +40,108 @@ export default class WorkerRPC {
     this.ownableId = id;
   }
 
-  /**
-   * Creates the Worker from a JS blob (worker.js + ownable.js combined),
-   * sends the WASM buffer, and waits for the "WASM instantiated" confirmation.
-   */
+  private wrapWorkerError(context: string, err: unknown): Error {
+    if (err instanceof Error) return err;
+
+    if (typeof ErrorEvent !== "undefined" && err instanceof ErrorEvent) {
+      const parts = [
+        context,
+        err.message || "worker script error",
+        err.filename ? `at ${err.filename}:${err.lineno}:${err.colno}` : "",
+      ].filter(Boolean);
+      const wrapped = new Error(parts.join(" "));
+      (wrapped as any).cause = err;
+      return wrapped;
+    }
+
+    if (typeof MessageEvent !== "undefined" && err instanceof MessageEvent) {
+      const wrapped = new Error(`${context}: worker message deserialization error`);
+      (wrapped as any).cause = err;
+      return wrapped;
+    }
+
+    if (err instanceof Event) {
+      const eventLike = err as any;
+      const details = [
+        eventLike?.message,
+        eventLike?.filename
+          ? `at ${eventLike.filename}:${eventLike.lineno ?? "?"}:${eventLike.colno ?? "?"}`
+          : "",
+      ]
+        .filter((v) => typeof v === "string" && v.trim() !== "")
+        .join(" ");
+      const wrapped = new Error(
+        `${context}: worker emitted ${err.type} event${details ? ` (${details})` : ""}`
+      );
+      (wrapped as any).cause = err;
+      return wrapped;
+    }
+
+    const wrapped = new Error(`${context}: ${String(err)}`);
+    (wrapped as any).cause = err;
+    return wrapped;
+  }
+
   async initialize(js: string, wasm: Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
       const blob = new Blob([js], { type: "application/javascript" });
       const blobURL = URL.createObjectURL(blob);
       this.worker = new Worker(blobURL, { type: "module" });
+      let settled = false;
 
-      this.worker.onmessage = (event) => resolve(event.data);
-      this.worker.onerror = (err) => reject(err);
-      this.worker.onmessageerror = (err) => reject(err);
+      const onMessage = (event: MessageEvent<{ success?: boolean; err?: string }>) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (event.data?.err) {
+          const raw = event.data.err;
+          if (raw.includes("__wbindgen_placeholder__")) {
+            reject(
+              new Error(
+                "Ownable package is incompatible with this runtime (wasm-bindgen imports detected). Rebuild and re-import the package with Host ABI v1."
+              )
+            );
+            return;
+          }
+          reject(new Error(`Ownable worker init failed: ${raw}`));
+          return;
+        }
+        if (event.data?.success) {
+          resolve();
+          return;
+        }
+        reject(new Error("Ownable worker init failed: invalid init response"));
+      };
 
-      const buffer = wasm.buffer;
-      this.worker.postMessage(buffer, [buffer]);
+      const onError = (event: Event) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(this.wrapWorkerError("Ownable worker init failed", event));
+      };
+
+      const onMessageError = (event: MessageEvent) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(this.wrapWorkerError("Ownable worker init failed", event));
+      };
+
+      const cleanup = () => {
+        URL.revokeObjectURL(blobURL);
+        this.worker.removeEventListener("message", onMessage);
+        this.worker.removeEventListener("error", onError);
+        this.worker.removeEventListener("messageerror", onMessageError);
+      };
+
+      this.worker.addEventListener("message", onMessage);
+      this.worker.addEventListener("error", onError);
+      this.worker.addEventListener("messageerror", onMessageError);
+
+      this.worker.postMessage({ type: "init", wasm });
     });
   }
 
-  /** Register the widget iframe window so refresh() can push state to it. */
   setWidgetWindow(win: Window | null): void {
     this.widgetWindow = win;
   }
@@ -67,52 +156,89 @@ export default class WorkerRPC {
     return Object.fromEntries(attributes.map((a) => [a.key, a.value]));
   }
 
-  /**
-   * Send a message to the worker and await its response.
-   * Calls are serialized through a queue so only one message is in-flight
-   * at a time — the {once:true} listener pattern requires strict sequencing.
-   */
-  private workerCall<T extends Response | string>(
+  private decodeEnvelope(output: ArrayBuffer | Uint8Array): WorkerPayload {
+    const envelope = decode(
+      output instanceof Uint8Array ? output : new Uint8Array(output)
+    ) as HostAbiEnvelope;
+
+    if (!envelope.success) {
+      throw new Error(
+        `Ownable ABI call failed: ${envelope.error_code || "UNKNOWN"} ${envelope.error_message || ""}`.trim()
+      );
+    }
+
+    const payload = envelope.payload ?? new Uint8Array();
+    return decode(payload) as WorkerPayload;
+  }
+
+  private workerCall(
     type: string,
-    msg: TypedDict,
-    info: TypedDict,
+    request: TypedDict,
     state?: StateDump
-  ): Promise<{ response: T; state: StateDump }> {
+  ): Promise<{ response: string; state: StateDump }> {
     const call = () =>
-      new Promise<{ response: T; state: StateDump }>((resolve, reject) => {
+      new Promise<{ response: string; state: StateDump }>((resolve, reject) => {
         if (!this.worker) {
           reject(`Unable to ${type}: not initialized`);
           return;
         }
+        let settled = false;
 
-        this.worker.addEventListener(
-          "message",
-          (event: MessageEvent<Map<string, any> | { err: any }>) => {
-            if ("err" in event.data) {
-              reject(
-                new Error(`Ownable ${type} failed`, { cause: event.data.err })
-              );
-              return;
-            }
+        const onMessage = (
+          event: MessageEvent<{ output?: ArrayBuffer | Uint8Array; err?: string }>
+        ) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          if (event.data?.err) {
+            reject(new Error(`Ownable ${type} failed: ${event.data.err}`));
+            return;
+          }
 
-            const result = event.data.get("result");
-            const response = JSON.parse(result) as T;
-            const nextState: StateDump = event.data.has("mem")
-              ? JSON.parse(event.data.get("mem")).state_dump
-              : state;
+          if (!event.data?.output) {
+            reject(new Error(`Ownable ${type} failed: empty worker output`));
+            return;
+          }
 
-            resolve({ response, state: nextState });
-          },
-          { once: true }
-        );
+          try {
+            const decoded = this.decodeEnvelope(event.data.output);
+            const nextState = decoded.mem?.state_dump ?? state;
+            resolve({ response: decoded.result, state: nextState || [] });
+          } catch (error) {
+            reject(error instanceof Error ? error : new Error(String(error)));
+          }
+        };
 
-        this.worker.postMessage({
-          type,
-          ownable_id: this.ownableId,
-          msg,
-          info,
-          mem: { state_dump: state },
-        });
+        const onError = (event: Event) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(
+            this.wrapWorkerError(`Ownable ${type} failed`, event)
+          );
+        };
+
+        const onMessageError = (event: MessageEvent) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(
+            this.wrapWorkerError(`Ownable ${type} failed`, event)
+          );
+        };
+
+        const cleanup = () => {
+          this.worker.removeEventListener("message", onMessage);
+          this.worker.removeEventListener("error", onError);
+          this.worker.removeEventListener("messageerror", onMessageError);
+        };
+
+        this.worker.addEventListener("message", onMessage);
+        this.worker.addEventListener("error", onError);
+        this.worker.addEventListener("messageerror", onMessageError);
+
+        const input = encode(request);
+        this.worker.postMessage({ type, input });
       });
 
     const next = this._queue.then(call, call);
@@ -124,13 +250,10 @@ export default class WorkerRPC {
     msg: TypedDict,
     info: MessageInfo
   ): Promise<{ attributes: TypedDict<string>; state: StateDump }> {
-    const { response, state } = await this.workerCall<Response>(
-      "instantiate",
-      msg,
-      info as unknown as TypedDict
-    );
+    const { response, state } = await this.workerCall("instantiate", { msg, info });
+    const parsed = JSON.parse(response) as Response;
     return {
-      attributes: this.attributesToDict((response as Response).attributes),
+      attributes: this.attributesToDict(parsed.attributes),
       state,
     };
   }
@@ -145,13 +268,12 @@ export default class WorkerRPC {
     data: string;
     state: StateDump;
   }> {
-    const { response, state: newState } = await this.workerCall<Response>(
+    const { response, state: newState } = await this.workerCall(
       "execute",
-      msg,
-      info as unknown as TypedDict,
+      { msg, info, mem: { state_dump: state } },
       state
     );
-    return this.toExecuteResult(response as Response, newState);
+    return this.toExecuteResult(JSON.parse(response) as Response, newState);
   }
 
   async externalEvent(
@@ -164,13 +286,17 @@ export default class WorkerRPC {
     data: string;
     state: StateDump;
   }> {
-    const { response, state: newState } = await this.workerCall<Response>(
+    const { response, state: newState } = await this.workerCall(
       "external_event",
-      msg,
-      { info },
+      {
+        msg: msg.msg,
+        info,
+        ownable_id: this.ownableId,
+        mem: { state_dump: state },
+      },
       state
     );
-    return this.toExecuteResult(response as Response, newState);
+    return this.toExecuteResult(JSON.parse(response) as Response, newState);
   }
 
   private toExecuteResult(
@@ -194,8 +320,7 @@ export default class WorkerRPC {
   }
 
   async queryRaw(msg: TypedDict, state: StateDump): Promise<string> {
-    return (await this.workerCall<string>("query", msg, {}, state))
-      .response as string;
+    return (await this.workerCall("query", { msg, mem: { state_dump: state } }, state)).response;
   }
 
   async query(msg: TypedDict, state: StateDump): Promise<any> {

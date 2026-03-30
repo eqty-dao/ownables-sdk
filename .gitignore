@@ -6,12 +6,12 @@ ownables/*/target
 ownables/*/schema
 Cargo.lock
 ownables/*.zip
-ownables/car
 ownables/storiedApes
 ownables/my-first
 ownables/*/assets/instantiate_msg.json
 ownablesOrig
 ownables/target
+ownables/*/pkg
 /.pnp
 .pnp.js
 /build

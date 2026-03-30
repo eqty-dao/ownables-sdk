@@ -1,49 +1,97 @@
-// This file is appended to bindgen.js from the ownable package. It allows the ownable iframe to message the worker.
+let wasm;
+let exportsRef;
+let memory;
 
-addEventListener('message', (e) => {
-  const _init = (typeof __wbg_init !== 'undefined') ? __wbg_init : init;
+function toU8Array(value) {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+  throw new Error("invalid wasm payload: expected ArrayBuffer or TypedArray");
+}
 
-  if (wasm === undefined) {
-    _init(e.data).then(
-      () => {
-        let responseMsg = {
-          success: true,
-          msg: "WASM instantiated successfully",
-        }
-        self.postMessage(responseMsg);
-      }
-    );
+function unpackPtrLen(packed) {
+  const value = typeof packed === "bigint" ? packed : BigInt(packed);
+  const ptr = Number(value & 0xffffffffn);
+  const len = Number((value >> 32n) & 0xffffffffn);
+  return { ptr, len };
+}
 
-    return;
+function invoke(type, inputBytes) {
+  if (!exportsRef || !memory) {
+    throw new Error("WASM not initialized");
   }
 
-  switch (e.data.type) {
-    case "instantiate":
-      e.data.msg.nft = (!e.data.msg.nft) ? undefined : e.data.msg.nft;
-      e.data.msg.ownable_type = (!e.data.msg.ownable_type) ? undefined : e.data.msg.ownable_type;
-      e.data.msg.network_id = 0;
-      instantiate_contract(e.data.msg, e.data.info)
-        .then(resp => self.postMessage(resp))
-        .catch(err => self.postMessage({err}));
-      break;
-    case "execute":
-      execute_contract(e.data.msg, e.data.info, e.data.mem)
-        .then(resp => self.postMessage(resp))
-        .catch(err => self.postMessage({err}));
-      break;
-    case "external_event":
-      const messageInfo = e.data.info;
-      register_external_event(e.data.msg.msg, messageInfo.info, e.data.ownable_id, e.data.mem)
-        .then(resp => self.postMessage(resp))
-        .catch(err => self.postMessage({err}));
-      break;
-    case "query":
-      query_contract_state(e.data.msg, e.data.mem)
-        .then(resp => self.postMessage(resp))
-        .catch(err => self.postMessage({err}));
-      break;
-    default:
-      self.postMessage({err: `unknown message type ${e.data.type}`});
-      break;
+  const len = inputBytes.length >>> 0;
+  const inPtr = exportsRef.ownable_alloc(len);
+
+  if (len > 0) {
+    new Uint8Array(memory.buffer, inPtr, len).set(inputBytes);
+  }
+
+  let packed;
+  try {
+    switch (type) {
+      case "instantiate":
+        packed = exportsRef.ownable_instantiate(inPtr, len);
+        break;
+      case "execute":
+        packed = exportsRef.ownable_execute(inPtr, len);
+        break;
+      case "query":
+        packed = exportsRef.ownable_query(inPtr, len);
+        break;
+      case "external_event":
+        packed = exportsRef.ownable_external_event(inPtr, len);
+        break;
+      default:
+        throw new Error(`unknown message type ${type}`);
+    }
+  } finally {
+    exportsRef.ownable_free(inPtr, len);
+  }
+
+  const { ptr: outPtr, len: outLen } = unpackPtrLen(packed);
+  const output = outLen > 0
+    ? new Uint8Array(new Uint8Array(memory.buffer, outPtr, outLen))
+    : new Uint8Array();
+
+  if (outLen > 0) {
+    exportsRef.ownable_free(outPtr, outLen);
+  }
+
+  return output;
+}
+
+addEventListener("message", async (e) => {
+  try {
+    const { type: messageType } = e.data || {};
+
+    if (messageType === "init") {
+      const wasmBytes = toU8Array(e.data.wasm);
+      const { instance } = await WebAssembly.instantiate(wasmBytes, {});
+      wasm = instance;
+      exportsRef = wasm.exports;
+      memory = exportsRef.memory;
+      self.postMessage({ success: true, msg: "WASM instantiated successfully" });
+      return;
+    }
+
+    if (!wasm) {
+      throw new Error("WASM not initialized");
+    }
+
+    const { type, input } = e.data;
+    const inBytes = new Uint8Array(input || new ArrayBuffer(0));
+    const output = invoke(type, inBytes);
+    self.postMessage({ output }, [output.buffer]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    self.postMessage({ err: message });
   }
 });
