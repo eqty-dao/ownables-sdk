@@ -26,7 +26,7 @@ interface HostAbiEnvelope {
 }
 
 interface WorkerPayload {
-  result: string;
+  result: Uint8Array;
   mem?: { state_dump: StateDump };
 }
 
@@ -175,9 +175,9 @@ export default class WorkerRPC {
     type: string,
     request: TypedDict,
     state?: StateDump
-  ): Promise<{ response: string; state: StateDump }> {
+  ): Promise<{ response: Uint8Array; state: StateDump }> {
     const call = () =>
-      new Promise<{ response: string; state: StateDump }>((resolve, reject) => {
+      new Promise<{ response: Uint8Array; state: StateDump }>((resolve, reject) => {
         if (!this.worker) {
           reject(`Unable to ${type}: not initialized`);
           return;
@@ -203,7 +203,7 @@ export default class WorkerRPC {
           try {
             const decoded = this.decodeEnvelope(event.data.output);
             const nextState = decoded.mem?.state_dump ?? state;
-            resolve({ response: decoded.result, state: nextState || [] });
+            resolve({ response: decoded.result as Uint8Array, state: nextState || [] });
           } catch (error) {
             reject(error instanceof Error ? error : new Error(String(error)));
           }
@@ -251,7 +251,7 @@ export default class WorkerRPC {
     info: MessageInfo
   ): Promise<{ attributes: TypedDict<string>; state: StateDump }> {
     const { response, state } = await this.workerCall("instantiate", { msg, info });
-    const parsed = JSON.parse(response) as Response;
+    const parsed = decode(response) as Response;
     return {
       attributes: this.attributesToDict(parsed.attributes),
       state,
@@ -273,7 +273,7 @@ export default class WorkerRPC {
       { msg, info, mem: { state_dump: state } },
       state
     );
-    return this.toExecuteResult(JSON.parse(response) as Response, newState);
+    return this.toExecuteResult(decode(response) as Response, newState);
   }
 
   async externalEvent(
@@ -296,7 +296,7 @@ export default class WorkerRPC {
       },
       state
     );
-    return this.toExecuteResult(JSON.parse(response) as Response, newState);
+    return this.toExecuteResult(decode(response) as Response, newState);
   }
 
   private toExecuteResult(
@@ -319,23 +319,14 @@ export default class WorkerRPC {
     };
   }
 
-  async queryRaw(msg: TypedDict, state: StateDump): Promise<string> {
+  async queryRaw(msg: TypedDict, state: StateDump): Promise<Uint8Array> {
     return (await this.workerCall("query", { msg, mem: { state_dump: state } }, state)).response;
   }
 
   async query(msg: TypedDict, state: StateDump): Promise<any> {
-    const resultB64 = await this.queryRaw(msg, state);
-    try {
-      const bytes = Uint8Array.from(atob(resultB64), (c) => c.charCodeAt(0));
-      return JSON.parse(new TextDecoder().decode(bytes));
-    } catch (error) {
-      console.error("Failed to decode base64 result:", error);
-      throw new Error(
-        `Invalid base64 data: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
-    }
+    // Query result bytes are the raw JSON bytes from cosmwasm Binary (to_json_binary).
+    const bytes = await this.queryRaw(msg, state);
+    return JSON.parse(new TextDecoder().decode(bytes));
   }
 
   async refresh(state: StateDump): Promise<void> {

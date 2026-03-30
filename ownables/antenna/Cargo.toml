@@ -32,7 +32,6 @@ cw2 = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-serde_json = { workspace = true }
 ciborium = { workspace = true }
 ownable-std = { workspace = true }
 ownable-std-macros = { workspace = true }

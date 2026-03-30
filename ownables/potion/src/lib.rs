@@ -1,8 +1,7 @@
 use cosmwasm_std::MessageInfo;
-use ownable_std::abi::{cbor_from_slice, cbor_to_vec, HostAbiError};
+use ownable_std::abi::{cbor_from_slice, cbor_to_vec, AbiResponse, AbiResultPayload, HostAbiError};
 use ownable_std::{create_env, ownable_host_abi_v1, ExternalEventMsg, IdbStateDump, load_owned_deps};
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
@@ -38,13 +37,6 @@ struct AbiExternalEventRequest {
     mem: IdbStateDump,
 }
 
-#[derive(Serialize, Deserialize)]
-struct AbiResultPayload {
-    result: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mem: Option<IdbStateDump>,
-}
-
 fn instantiate_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
     let request: AbiInstantiateRequest = cbor_from_slice(input)?;
     let mut deps = load_owned_deps(None);
@@ -53,7 +45,7 @@ fn instantiate_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
         .map_err(HostAbiError::from_display)?;
 
     let payload = AbiResultPayload {
-        result: to_string(&response).map_err(HostAbiError::from_display)?,
+        result: cbor_to_vec(&AbiResponse::from(response))?,
         mem: Some(IdbStateDump::from(deps.storage)),
     };
 
@@ -68,7 +60,7 @@ fn execute_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
         .map_err(HostAbiError::from_display)?;
 
     let payload = AbiResultPayload {
-        result: to_string(&response).map_err(HostAbiError::from_display)?,
+        result: cbor_to_vec(&AbiResponse::from(response))?,
         mem: Some(IdbStateDump::from(deps.storage)),
     };
 
@@ -83,7 +75,7 @@ fn query_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
         .map_err(HostAbiError::from_display)?;
 
     let payload = AbiResultPayload {
-        result: to_string(&response).map_err(HostAbiError::from_display)?,
+        result: response.to_vec(),
         mem: None,
     };
 
@@ -103,7 +95,7 @@ fn external_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
     .map_err(HostAbiError::from_display)?;
 
     let payload = AbiResultPayload {
-        result: to_string(&response).map_err(HostAbiError::from_display)?,
+        result: cbor_to_vec(&AbiResponse::from(response))?,
         mem: Some(IdbStateDump::from(deps.storage)),
     };
 
