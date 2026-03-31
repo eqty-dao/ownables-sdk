@@ -171,7 +171,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                     <ChevronRight size={20} className="text-slate-300 dark:text-slate-600" />
                   </div>
                   {/* Text block */}
-                  <div className="min-w-0 flex-1 lg:mt-2 lg:flex-none">
+                  <div className="min-w-0 w-full flex-1 lg:mt-2 lg:flex-none">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
                         {pkg.title}

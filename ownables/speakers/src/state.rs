@@ -11,7 +11,7 @@ pub struct Config {
     pub color: String,
 }
 
-pub const CONFIG: Item<Option<Config>> = Item::new("config");
+pub const CONFIG: Item<Config> = Item::new("config");
 pub const OWNABLE_INFO: Item<OwnableInfo> = Item::new("ownable_info");
 pub const METADATA: Item<Metadata> = Item::new("metadata");
 pub const NFT_ITEM: Item<NFT> = Item::new("nft");

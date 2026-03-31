@@ -6,7 +6,7 @@ use ownable_std::{Metadata, NFT, OwnableInfo};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {}
 
-pub const CONFIG: Item<Option<Config>> = Item::new("config");
+pub const CONFIG: Item<Config> = Item::new("config");
 pub const OWNABLE_INFO: Item<OwnableInfo> = Item::new("ownable_info");
 pub const METADATA: Item<Metadata> = Item::new("metadata");
 pub const NFT_ITEM: Item<NFT> = Item::new("nft");

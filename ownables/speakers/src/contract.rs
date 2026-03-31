@@ -44,7 +44,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -221,10 +221,7 @@ pub fn try_consume(
             val: "Unauthorized consumption attempt".into(),
         });
     }
-    let mut config = match config {
-        None => return Err(ContractError::CustomError { val: "No config found".to_string() }),
-        Some(c) => c,
-    };
+    let mut config = config;
 
     if let Some(_) = config.consumed_by {
         return Err(ContractError::CustomError {
@@ -232,7 +229,7 @@ pub fn try_consume(
         });
     }
     config.consumed_by = Some(ownership.clone().owner);
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
 
     let mut event = Event::new("consume".to_string());
     event = event.add_attributes(vec![
@@ -311,7 +308,7 @@ fn query_lock_state(deps: Deps) -> StdResult<Binary> {
 
 fn query_consumed_state(deps: Deps) -> StdResult<Binary> {
     let config = CONFIG.load(deps.storage)?;
-    let is_consumed = config.map_or(false, |c| c.consumed_by.is_some());
+    let is_consumed = config.consumed_by.is_some();
     to_json_binary(&is_consumed)
 }
 

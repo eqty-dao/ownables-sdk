@@ -45,7 +45,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -224,26 +224,22 @@ pub fn try_drink(
         });
     }
 
-    match config {
-        None => Err(ContractError::CustomError { val: "No config found".to_string() }),
-        Some(mut c) => {
-            if c.current_amount < consumption_amount {
-                return Err(ContractError::CustomError {
-                    val: "Attempt to drink more than is available".into(),
-                });
-            }
-            c.current_amount -= consumption_amount;
-            CONFIG.save(deps.storage, &Some(c.clone()))?;
-
-            Ok(Response::new()
-                .add_attribute("method", "try_drink")
-                .add_attribute(
-                    "new_amount",
-                    c.current_amount.to_string()
-                )
-            )
-        }
+    let mut c = config;
+    if c.current_amount < consumption_amount {
+        return Err(ContractError::CustomError {
+            val: "Attempt to drink more than is available".into(),
+        });
     }
+    c.current_amount -= consumption_amount;
+    CONFIG.save(deps.storage, &c.clone())?;
+
+    Ok(Response::new()
+        .add_attribute("method", "try_drink")
+        .add_attribute(
+            "new_amount",
+            c.current_amount.to_string()
+        )
+    )
 }
 
 pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {

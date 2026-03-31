@@ -4,7 +4,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
-use crate::state::{NFT_ITEM, CONFIG, METADATA, PACKAGE_CID, OWNABLE_INFO, NETWORK_ID};
+use crate::state::{Config, NFT_ITEM, CONFIG, METADATA, PACKAGE_CID, OWNABLE_INFO, NETWORK_ID};
 use ownable_std::{package_title_from_name, ExternalEventMsg, InfoResponse, Metadata, OwnableInfo};
 
 // version info for migration info
@@ -39,7 +39,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &None)?;
+    CONFIG.save(deps.storage, &Config {})?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }

@@ -47,7 +47,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -149,26 +149,24 @@ fn try_register_consume(
         return Err(ContractError::InvalidExternalEventArgs {})
     }
 
-    let config_option = CONFIG.load(deps.storage)?;
-    if let Some(mut config) = config_option {
-        match consumable_type.as_str() {
-            "antenna" => {
-                config.has_antenna = true;
-            },
-            "armor" => {
-                config.has_armor = true;
-            },
-            "paint" => {
-                config.color = color;
-            },
-            "speakers" => {
-                config.has_speaker = true;
-            },
-            _ => {},
-        }
-        config.consumed_ownable_ids.push(Addr::unchecked(ownable_id));
-        CONFIG.save(deps.storage, &Some(config))?;
+    let mut config = CONFIG.load(deps.storage)?;
+    match consumable_type.as_str() {
+        "antenna" => {
+            config.has_antenna = true;
+        },
+        "armor" => {
+            config.has_armor = true;
+        },
+        "paint" => {
+            config.color = color;
+        },
+        "speakers" => {
+            config.has_speaker = true;
+        },
+        _ => {},
     }
+    config.consumed_ownable_ids.push(Addr::unchecked(ownable_id));
+    CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new()
         .add_attribute("method", "try_register_consume")
