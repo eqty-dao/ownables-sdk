@@ -4,7 +4,7 @@ use cosmwasm_std::{to_json_binary, Binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use ownable_std::{package_title_from_name, ExternalEventMsg, get_random_color, InfoResponse, Metadata, OwnableInfo};
+use ownable_std::{package_title_from_name, ExternalEventMsg, get_random_color, InfoResponse, Metadata, OwnableInfo, ensure_owner};
 use crate::error::ContractError;
 
 // version info for migration info
@@ -37,7 +37,7 @@ pub fn instantiate(
         image: None,
         image_data: None,
         external_url: None,
-        description: Some(format!("{package_title} ownable")),
+        description: Some(env!("CARGO_PKG_DESCRIPTION").to_string()),
         name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
@@ -159,11 +159,9 @@ fn try_register_lock(
 pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
     // only ownable owner can lock it
     let ownership = OWNABLE_INFO.load(deps.storage)?;
-    if info.sender != ownership.owner {
-        return Err(ContractError::Unauthorized {
-            val: "Unauthorized".into(),
-        });
-    }
+    ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
+        val: "Unauthorized".into(),
+    })?;
 
     let is_locked = LOCKED.update(
         deps.storage,
@@ -218,11 +216,9 @@ pub fn try_drink(
     }
     let ownership = OWNABLE_INFO.load(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
-    if info.sender != ownership.owner {
-        return Err(ContractError::Unauthorized {
-            val: "Unable to drink potion".into(),
-        });
-    }
+    ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
+        val: "Unable to drink potion".into(),
+    })?;
 
     let mut c = config;
     if c.current_amount < consumption_amount {

@@ -1,6 +1,6 @@
 [package]
 name = "ownable-antenna"
-version = "0.2.0"
+version = "0.2.1"
 description = "Add-on for Robot"
 license = "MIT"
 authors = ["bekauz <bekauz@protonmail.com>"]

@@ -31,7 +31,7 @@ pub fn instantiate(
         image: None,
         image_data: None,
         external_url: None,
-        description: Some(format!("{package_title} ownable")),
+        description: Some(env!("CARGO_PKG_DESCRIPTION").to_string()),
         name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
