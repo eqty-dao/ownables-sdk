@@ -3,6 +3,7 @@ import { Box, Button, IconButton, Skeleton } from "@/components/ui";
 import { ArrowLeft, ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
+import { PACKAGE_EXAMPLES } from "@/config/examples";
 import { enqueueSnackbar } from "notistack";
 import selectFile from "@/utils/selectFile";
 import { cva } from "class-variance-authority";
@@ -43,7 +44,20 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   const builderService = useService("builder");
   const hasBuilder = !!builderService;
 
-  const filteredPackages = packages.filter((pkg) => !pkg.isNotLocal);
+  const filteredPackages = (() => {
+    const issuablePackages = packages.filter((pkg) => !pkg.isNotLocal);
+    const byName = new Map(issuablePackages.map((pkg) => [pkg.name, pkg]));
+
+    for (const example of PACKAGE_EXAMPLES) {
+      if (!byName.has(example.name)) {
+        byName.set(example.name, example);
+      }
+    }
+
+    return Array.from(byName.values()).sort((a, b) =>
+      a.title.localeCompare(b.title)
+    );
+  })();
 
   const importAll = async () => {
     const files = await selectFile({ accept: ".zip", multiple: true });
