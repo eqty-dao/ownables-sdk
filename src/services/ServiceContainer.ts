@@ -1,15 +1,21 @@
-import IDBService from "./IDB.service";
 import { isE2E } from "@/utils/isE2E";
-import EventChainService from "./EventChain.service";
-import OwnableService from "./Ownable.service";
-import PackageService from "./Package.service";
-import LocalStorageService from "./LocalStorage.service";
-import { PollingService } from "./Polling.service";
-import { RelayService } from "./Relay.service";
-import EQTYService from "./EQTY.service";
-import BuilderService from "./Builder.service";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
+import { EQTYService } from "@ownables/adapter-viem";
+import {
+  IDBService,
+  LocalStorageService,
+  PackageService,
+  RelayService,
+} from "@ownables/platform-browser/dist/platform-browser/src/index.js";
+import {
+  EventChainService,
+  OwnableService,
+  PollingService,
+} from "@ownables/core";
+import { BuilderService } from "@ownables/builder-client";
+import workerJsSource from "@/assets/worker.js?raw";
+import { PACKAGE_EXAMPLES, PACKAGE_EXAMPLE_URL } from "@/config/examples";
 
 export interface ServiceMap {
   relay: RelayService;
@@ -37,7 +43,6 @@ export default class ServiceContainer {
     public readonly walletClient?: WalletClient,
     public readonly publicClient?: PublicClient
   ) {
-
     this.register(
       "eqty",
       async (c) => {
@@ -66,19 +71,32 @@ export default class ServiceContainer {
       async (c) => new LocalStorageService(`${c.chainId}:${c.address}`)
     );
 
-    this.register("relay", async (c) => new RelayService(await c.get("eqty")));
+    this.register(
+      "relay",
+      async (c) =>
+        new RelayService(await c.get("eqty"), {
+          relayUrl: import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL,
+        })
+    );
 
     this.register(
       "eventChains",
       async (c) =>
-        new EventChainService(await c.get("idb"), await c.get("eqty"))
+        new EventChainService(
+          await c.get("idb"),
+          await c.get("eqty"),
+          new LocalStorageService()
+        )
     );
 
     this.register("packages", async (c) => {
       // Packages are stored globally and not per account
       const idb = await IDBService.main();
       const storage = new LocalStorageService();
-      return new PackageService(idb, await c.get("relay"), storage);
+      return new PackageService(idb, await c.get("relay"), storage, {
+        exampleUrl: PACKAGE_EXAMPLE_URL,
+        examples: PACKAGE_EXAMPLES,
+      });
     });
 
     this.register(
@@ -88,7 +106,10 @@ export default class ServiceContainer {
           await c.get("idb"),
           await c.get("eventChains"),
           await c.get("eqty"),
-          await c.get("packages")
+          await c.get("packages"),
+          {
+            getWorkerSource: () => workerJsSource,
+          }
         )
     );
 
@@ -98,7 +119,17 @@ export default class ServiceContainer {
         new PollingService(await c.get("relay"), await c.get("localStorage"))
     );
 
-    this.register("builder", async (c) => new BuilderService(c.chainId!));
+    this.register(
+      "builder",
+      async (c) =>
+        new BuilderService(c.chainId!, {
+          url: import.meta.env.VITE_BUILDER ?? "",
+          apiKey: import.meta.env.VITE_BUILDER_API_KEY,
+          serverWalletsEndpoint:
+            import.meta.env.VITE_BUILDER_SERVER_WALLETS_ENDPOINT,
+          uploadNetworkQueryKey: import.meta.env.VITE_BUILDER_NETWORK_PARAM,
+        })
+    );
   }
 
   get key() {

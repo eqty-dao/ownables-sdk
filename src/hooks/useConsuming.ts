@@ -69,7 +69,7 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
     if (ownableService.anchoring) steps.push({ id: "anchor", label: "Anchor both events" });
     const [ctrl, onProgress] = progress.open({ title: "Consuming Ownable", steps });
     ownableService
-      .consume(consumer, consumable, onProgress)
+      .consume(consumer, consumable, onProgress as any)
       .then(() => {
         setConsuming(null);
         overlay.hide();

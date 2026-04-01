@@ -1,5 +1,5 @@
 import { Link } from "@/components/ui";
-import { HAS_EXAMPLES } from "@/services/Package.service";
+import { HAS_EXAMPLES } from "@/config/examples";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 

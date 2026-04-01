@@ -1,7 +1,7 @@
 import { Box, Switch, Button, Drawer, DrawerHeader, Link } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { useAccount, useChainId, useDisconnect } from "wagmi";
-import EventChainService from "@/services/EventChain.service";
+import { useService } from "@/hooks/useService";
 import { useAnchorAddress } from "@/hooks/useAnchorAddress";
 import { useExplorerUrl } from "@/hooks/useExplorerUrl";
 import WalletConnectControls from "./WalletConnectControls";
@@ -21,7 +21,8 @@ interface SidebarProps {
 
 export default function Sidebar(props: SidebarProps) {
   const { open, onClose, onReset, onFactoryReset } = props;
-  const [anchoring, setAnchoring] = useState(EventChainService.anchoring);
+  const eventChains = useService("eventChains");
+  const [anchoring, setAnchoring] = useState(false);
   const { isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
@@ -29,8 +30,14 @@ export default function Sidebar(props: SidebarProps) {
   const basescanUrl = useExplorerUrl(chainId, anchorAddress ? `address/${anchorAddress}` : "");
 
   useEffect(() => {
-    EventChainService.anchoring = anchoring;
-  }, [anchoring]);
+    if (eventChains) {
+      setAnchoring(eventChains.anchoring);
+    }
+  }, [eventChains]);
+
+  useEffect(() => {
+    eventChains?.setAnchoring(anchoring);
+  }, [anchoring, eventChains]);
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} className="flex w-[384px] flex-col overflow-hidden">

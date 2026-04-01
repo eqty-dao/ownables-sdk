@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import ServiceContainer from "@/services/ServiceContainer";
-import { RelayService } from "@/services/Relay.service";
+import { RelayService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 import {
   useAccount,
   useChainId,

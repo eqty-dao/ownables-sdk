@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import { StateDump } from "@/services/Ownable.service";
+import type { StateDump } from "@ownables/core";
 import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import TypedDict from "@/interfaces/TypedDict";
@@ -112,8 +112,8 @@ export function useOwnableState(
     async (msg: TypedDict, onProgress?: LogProgress, submitAnchors = true): Promise<void> => {
       if (!ownables) return;
       try {
-        const sd = await ownables.execute(chain, msg, stateDump, onProgress);
-        if (submitAnchors) await ownables.submitAnchors(onProgress);
+        const sd = await ownables.execute(chain, msg, stateDump, onProgress as any);
+        if (submitAnchors) await ownables.submitAnchors(onProgress as any);
 
         await refresh(sd);
         setApplied(chain.latestHash);
