@@ -1,7 +1,7 @@
 import allInline from 'all-inline';
 import React, { RefObject, useLayoutEffect, useRef } from 'react';
 import { useService } from '@/hooks/useService';
-import PackageService from '@/services/Package.service';
+import type { PackageService } from '@ownables/platform-browser';
 
 async function generateWidgetHTML(
   packageService: PackageService,
@@ -20,7 +20,7 @@ async function generateWidgetHTML(
     }
   );
 
-  return doc.documentElement.outerHTML;
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 }
 
 export interface OwnableFrameProps {
