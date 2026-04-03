@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
-
-type ThemeMode = "light" | "dark" | "system";
+import { getStoredThemeMode, setThemeMode, type ThemeMode } from "@/utils/themeMode";
 
 const modeButton = cva(
   "w-full rounded-xl border-2 p-3 text-sm font-medium transition-colors",
@@ -18,46 +17,25 @@ const modeButton = cva(
   }
 );
 
-function resolveSystemDark(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-function applyThemeMode(mode: ThemeMode) {
-  const root = document.documentElement;
-  const useDark = mode === "dark" || (mode === "system" && resolveSystemDark());
-  root.classList.toggle("dark", useDark);
-  root.dataset.themeMode = mode;
-}
-
 export default function ThemePicker() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    const stored = localStorage.getItem("theme-mode");
-    return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
-  });
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getStoredThemeMode());
 
   useEffect(() => {
-    applyThemeMode(themeMode);
-    localStorage.setItem("theme-mode", themeMode);
-
-    if (themeMode !== "system") return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = () => applyThemeMode("system");
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
+    setThemeMode(themeMode);
   }, [themeMode]);
 
   return (
     <div className="grid grid-cols-3 gap-2">
       {([
         { mode: "light", icon: <Sun className="h-6 w-6" />, label: "Light" },
-        { mode: "dark",  icon: <Moon className="h-6 w-6" />, label: "Dark" },
+        { mode: "dark", icon: <Moon className="h-6 w-6" />, label: "Dark" },
         { mode: "system", icon: <Monitor className="h-6 w-6" />, label: "System" },
       ] as const).map(({ mode, icon, label }) => (
         <button
           key={mode}
           type="button"
           className={cn(modeButton({ active: themeMode === mode }))}
-          onClick={() => setThemeMode(mode)}
+          onClick={() => setThemeModeState(mode)}
         >
           <span className="flex flex-col items-center gap-1">
             {icon}
