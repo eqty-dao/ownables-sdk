@@ -1922,39 +1922,42 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@portal:/home/arnold/Projects/eqty/ownables-js/packages/adapter-viem::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@ownables/adapter-viem@portal:/home/arnold/Projects/eqty/ownables-js/packages/adapter-viem::locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/adapter-viem@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@ownables/adapter-viem@npm:0.5.1"
   dependencies:
-    "@ownables/core": "workspace:*"
+    "@ownables/core": "npm:0.5.1"
     eqty-core: "npm:^1.0.2"
     viem: "npm:^2.47.4"
+  checksum: 10c0/7f779084e7d4187be3cfc427d1134a2f27f975960bfcc66c89c646cbe3a55c9dafbf4dd138559ace0a20a91456ad6360623ecfd6b22004588f00f43b2fa29ac0
   languageName: node
-  linkType: soft
+  linkType: hard
 
-"@ownables/builder-client@portal:/home/arnold/Projects/eqty/ownables-js/packages/builder-client::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@ownables/builder-client@portal:/home/arnold/Projects/eqty/ownables-js/packages/builder-client::locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/builder-client@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@ownables/builder-client@npm:0.5.1"
   dependencies:
     axios: "npm:^1.13.6"
+  checksum: 10c0/c0fce5af94276987813c686d10d6f2d93e4f5f146fd6d0319fab5109afd8d8e2c488c052a9b75bb2a368917168aeb3e5b2bc73c3f924397a4c67523b854704d6
   languageName: node
-  linkType: soft
+  linkType: hard
 
-"@ownables/core@portal:/home/arnold/Projects/eqty/ownables-js/packages/core::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@ownables/core@portal:/home/arnold/Projects/eqty/ownables-js/packages/core::locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/core@npm:0.5.1, @ownables/core@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@ownables/core@npm:0.5.1"
   dependencies:
     cbor-x: "npm:^1.6.0"
     eqty-core: "npm:^1.0.2"
     jszip: "npm:^3.10.1"
+  checksum: 10c0/5db0e21598e9ec24b1d50ce7cc6fbff496c46a3eefa383b77cb10b246c9b4df7840c57bf0a222e64e8159d1aec83ae09d566f29062f4a56c489511f664e0e04d
   languageName: node
-  linkType: soft
+  linkType: hard
 
-"@ownables/platform-browser@portal:/home/arnold/Projects/eqty/ownables-js/packages/platform-browser::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@ownables/platform-browser@portal:/home/arnold/Projects/eqty/ownables-js/packages/platform-browser::locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/platform-browser@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@ownables/platform-browser@npm:0.5.1"
   dependencies:
-    "@ownables/core": "workspace:*"
+    "@ownables/core": "npm:0.5.1"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
@@ -1962,8 +1965,9 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
+  checksum: 10c0/39f43359a1909cdd01a278e1ff66b0334551f4b4fd59c3932b76de9513f5312e97b4661075ec100430095fd31d483d20ad9ea3d2ca726820906e64bf2fa5ec58
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "@ownables/sdk@workspace:.":
   version: 0.0.0-use.local
@@ -1977,10 +1981,10 @@ __metadata:
     "@letsrunit/bdd": "npm:^0.8.0"
     "@letsrunit/cli": "npm:^0.8.0"
     "@letsrunit/cucumber": "npm:^0.8.0"
-    "@ownables/adapter-viem": "portal:/home/arnold/Projects/eqty/ownables-js/packages/adapter-viem"
-    "@ownables/builder-client": "portal:/home/arnold/Projects/eqty/ownables-js/packages/builder-client"
-    "@ownables/core": "portal:/home/arnold/Projects/eqty/ownables-js/packages/core"
-    "@ownables/platform-browser": "portal:/home/arnold/Projects/eqty/ownables-js/packages/platform-browser"
+    "@ownables/adapter-viem": "npm:^0.5.1"
+    "@ownables/builder-client": "npm:^0.5.1"
+    "@ownables/core": "npm:^0.5.1"
+    "@ownables/platform-browser": "npm:^0.5.1"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
     "@tanstack/react-query": "npm:^5.90.5"
