@@ -23,6 +23,14 @@ import { getE2EAccount } from "@/services/E2EWallet";
 import { isE2E } from "@/utils/isE2E";
 import { initializeThemeMode, setupSystemThemeListener } from "@/utils/themeMode";
 
+const isE2EEnvEnabled = ["1", "true"].includes(
+  (import.meta.env.VITE_E2E || "").toLowerCase().trim()
+);
+
+if (isE2EEnvEnabled) {
+  document.documentElement.setAttribute("data-e2e", "1");
+}
+
 const chains = [baseSepolia, base] as const;
 const queryClient = new QueryClient();
 
