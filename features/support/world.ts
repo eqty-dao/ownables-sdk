@@ -1,5 +1,6 @@
 import { Before, setDefaultTimeout } from '@cucumber/cucumber';
 import '@letsrunit/cucumber';
+import { cleanWalletState } from './utils/clean-wallet-state';
 
 setDefaultTimeout(30_000);
 
@@ -24,22 +25,5 @@ Before({ name: 'Verify E2E mode' }, async function () {
 });
 
 Before({ name: 'Reset browser state' }, async function () {
-  await this.page.evaluate(async () => {
-    localStorage.clear();
-    sessionStorage.clear();
-
-    const dbs = await indexedDB.databases();
-    const names = dbs
-      .map((db) => db?.name)
-      .filter((name) => !!name && (name === 'ownables' || name.startsWith('ownables:')));
-
-    await Promise.all(names.map((name) =>
-      new Promise((resolve) => {
-        const req = indexedDB.deleteDatabase(name);
-        req.onsuccess = () => resolve();
-        req.onerror = () => resolve();
-        req.onblocked = () => resolve();
-      })
-    ));
-  });
+  await cleanWalletState(this.page);
 });
