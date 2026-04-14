@@ -1,6 +1,6 @@
 # Ownables SDK
 
-![ownables](https://user-images.githubusercontent.com/100821/177121121-a1c3dc8c-8108-4c07-9e15-b83ebfdf8f98.png)
+![ownables](https://github.com/user-attachments/assets/1f0a642a-aaa4-4fdd-8902-7d876e418b3d)
 
 Ownables are CosmWasm smart contracts that define ownership. In addition to running on a Cosmos blockchain, Ownables
 can run directly in a wallet and integrate with Base.
