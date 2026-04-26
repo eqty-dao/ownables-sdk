@@ -32,5 +32,6 @@ schemars = "0.8.8"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = "1.0.31"
 ciborium = "0.2"
-ownable-std = { path = "../../ownable-std" }
-ownable-std-macros = { path = "../../ownable-std/macros/ownable-std-macros" }
+ownable-std = "0.6.1"
+ownable-std-macros = "0.6.1"
+
