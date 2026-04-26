@@ -11,9 +11,16 @@
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "preserveSymlinks": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@ownables/platform-browser": [
+        "node_modules/@ownables/platform-browser/dist/platform-browser/src/index.d.ts"
+      ],
+      "@ownables/platform-browser/*": [
+        "node_modules/@ownables/platform-browser/dist/platform-browser/src/*"
+      ]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

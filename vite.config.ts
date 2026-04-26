@@ -14,5 +14,8 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    fs: {
+      deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.letsrunit/**']
+    }
   },
 });

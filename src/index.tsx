@@ -21,6 +21,7 @@ import { DialogsProvider } from "@/contexts/Dialogs.context";
 import { OverlayProvider } from "@/contexts/Overlay.context";
 import { getE2EAccount } from "@/services/E2EWallet";
 import { isE2E } from "@/utils/isE2E";
+import { initializeThemeMode, setupSystemThemeListener } from "@/utils/themeMode";
 
 const chains = [baseSepolia, base] as const;
 const queryClient = new QueryClient();
@@ -71,6 +72,9 @@ function E2EAutoConnect() {
 
   return null;
 }
+
+initializeThemeMode();
+setupSystemThemeListener();
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement

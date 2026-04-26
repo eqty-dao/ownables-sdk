@@ -3,6 +3,7 @@ import { Box, Button, IconButton, Skeleton } from "@/components/ui";
 import { ArrowLeft, ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
+import { PACKAGE_EXAMPLES } from "@/config/examples";
 import { enqueueSnackbar } from "notistack";
 import selectFile from "@/utils/selectFile";
 import { cva } from "class-variance-authority";
@@ -43,7 +44,20 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   const builderService = useService("builder");
   const hasBuilder = !!builderService;
 
-  const filteredPackages = packages.filter((pkg) => !pkg.isNotLocal);
+  const filteredPackages = (() => {
+    const issuablePackages = packages.filter((pkg) => !pkg.isNotLocal);
+    const byName = new Map(issuablePackages.map((pkg) => [pkg.name, pkg]));
+
+    for (const example of PACKAGE_EXAMPLES) {
+      if (!byName.has(example.name)) {
+        byName.set(example.name, example);
+      }
+    }
+
+    return Array.from(byName.values()).sort((a, b) =>
+      a.title.localeCompare(b.title)
+    );
+  })();
 
   const importAll = async () => {
     const files = await selectFile({ accept: ".zip", multiple: true });
@@ -153,7 +167,10 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                 No packages available yet.
               </div>
             ) : (
-              filteredPackages.map((pkg) => (
+              filteredPackages.map((pkg) => {
+                const version = "stub" in pkg ? undefined : pkg.version;
+
+                return (
                 <Button
                   key={pkg.title}
                   type="button"
@@ -168,10 +185,17 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                     <ChevronRight size={20} className="text-slate-300 dark:text-slate-600" />
                   </div>
                   {/* Text block */}
-                  <div className="min-w-0 flex-1 lg:mt-2 lg:flex-none">
-                    <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
-                      {pkg.title}
-                    </p>
+                  <div className="min-w-0 w-full flex-1 lg:mt-2 lg:flex-none">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-semibold leading-5 text-slate-900 dark:text-slate-100">
+                        {pkg.title}
+                      </p>
+                      {version && (
+                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+                          v{version}
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-xs font-medium leading-4 text-slate-500 dark:text-slate-400">
                       {pkg.description}
                     </p>
@@ -179,7 +203,8 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                   {/* Chevron — mobile only */}
                   <ChevronRight size={20} className="shrink-0 text-slate-300 dark:text-slate-600 lg:hidden" />
                 </Button>
-              ))
+                );
+              })
             )}
           </div>
         </Box>

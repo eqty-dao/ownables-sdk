@@ -7,7 +7,7 @@ import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
-import LocalStorageService from "@/services/LocalStorage.service";
+import { LocalStorageService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 import { Button } from "@/components/ui";
 
 export interface OwnableEntry {
@@ -62,7 +62,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       const steps = [{ id: "signEvent", label: "Sign the event" }];
       if (ownableService.anchoring) steps.push({ id: "anchorEvent", label: "Anchor the event" });
       const [ctrl, onProgress] = progress.open({ title: `Forging ${pkg.title}`, steps });
-      const result = await ownableService.create(pkg, onProgress);
+      const result = await ownableService.create(pkg, onProgress as any);
       setOwnables((prev) => [...prev, { chain: result.chain, package: pkg.cid }]);
       onSelect(result.chain.id);
       ctrl.close();

@@ -52,9 +52,9 @@ export default function OwnableListItem(props: OwnableListItemProps) {
 
   const loadThumbnail = useCallback(async () => {
     try {
-      const globalIdb = await import("@/services/IDB.service").then((m) =>
-        m.default.main()
-      );
+      const globalIdb = await import(
+        "@ownables/platform-browser/dist/platform-browser/src/index.js"
+      ).then((m) => m.IDBService.main());
       const thumbnailFile = await globalIdb.get(
         `package:${packageCid}`,
         "thumbnail.webp"

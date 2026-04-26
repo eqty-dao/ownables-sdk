@@ -4,12 +4,13 @@ use cosmwasm_std::{to_json_binary, Binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use ownable_std::{ExternalEventMsg, get_random_color, InfoResponse, Metadata, OwnableInfo};
+use ownable_std::{package_title_from_name, ExternalEventMsg, get_random_color, InfoResponse, Metadata, OwnableInfo, ensure_owner};
 use crate::error::ContractError;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ownable-demo";
+const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 pub fn instantiate(
     deps: DepsMut,
@@ -31,19 +32,20 @@ pub fn instantiate(
         color: get_random_color(msg.clone().ownable_id),
     };
 
+    let package_title = package_title_from_name(env!("CARGO_PKG_NAME"));
     let meta = Metadata {
         image: None,
         image_data: None,
         external_url: None,
-        description: Some("Drink a colorful potion".to_string()),
-        name: Some("Potion".to_string()),
+        description: Some(env!("CARGO_PKG_DESCRIPTION").to_string()),
+        name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
         youtube_url: None,
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -157,11 +159,9 @@ fn try_register_lock(
 pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
     // only ownable owner can lock it
     let ownership = OWNABLE_INFO.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
-        return Err(ContractError::Unauthorized {
-            val: "Unauthorized".into(),
-        });
-    }
+    ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
+        val: "Unauthorized".into(),
+    })?;
 
     let is_locked = LOCKED.update(
         deps.storage,
@@ -216,32 +216,26 @@ pub fn try_drink(
     }
     let ownership = OWNABLE_INFO.load(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
-        return Err(ContractError::Unauthorized {
-            val: "Unable to drink potion".into(),
+    ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
+        val: "Unable to drink potion".into(),
+    })?;
+
+    let mut c = config;
+    if c.current_amount < consumption_amount {
+        return Err(ContractError::CustomError {
+            val: "Attempt to drink more than is available".into(),
         });
     }
+    c.current_amount -= consumption_amount;
+    CONFIG.save(deps.storage, &c.clone())?;
 
-    match config {
-        None => Err(ContractError::CustomError { val: "No config found".to_string() }),
-        Some(mut c) => {
-            if c.current_amount < consumption_amount {
-                return Err(ContractError::CustomError {
-                    val: "Attempt to drink more than is available".into(),
-                });
-            }
-            c.current_amount -= consumption_amount;
-            CONFIG.save(deps.storage, &Some(c.clone()))?;
-
-            Ok(Response::new()
-                .add_attribute("method", "try_drink")
-                .add_attribute(
-                    "new_amount",
-                    c.current_amount.to_string()
-                )
-            )
-        }
-    }
+    Ok(Response::new()
+        .add_attribute("method", "try_drink")
+        .add_attribute(
+            "new_amount",
+            c.current_amount.to_string()
+        )
+    )
 }
 
 pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {

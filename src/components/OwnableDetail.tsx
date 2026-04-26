@@ -11,6 +11,7 @@ import OwnableInfo from "./OwnableInfo";
 import { OverlayBanner } from "./OverlayBanner";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
+import { normalizeMetadataBackgroundColor } from "@/utils/metadataBackgroundColor";
 
 interface OwnableDetailProps {
   chain: EventChain;
@@ -66,6 +67,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     issuer && issuer.length > 10
       ? `${issuer.slice(0, 6)}...${issuer.slice(-4)}`
       : issuer;
+  const ownableBackgroundColor = normalizeMetadataBackgroundColor(metadata.background_color);
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-5">
@@ -110,7 +112,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         {/* Widget — single iframe, responsive sizing */}
         <Box
           className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125"
-          style={{ aspectRatio: "3 / 4" }}
+          style={{
+            aspectRatio: "3 / 4",
+            ...(ownableBackgroundColor ? { backgroundColor: ownableBackgroundColor } : {}),
+          }}
         >
           <OwnableFrame
             id={chain.id}

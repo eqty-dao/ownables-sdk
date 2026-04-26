@@ -4,13 +4,14 @@ use cosmwasm_std::{to_json_binary, Binary, Attribute, Event};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
-use ownable_std::{ExternalEventMsg, InfoResponse, Metadata, OwnableInfo};
+use ownable_std::{package_title_from_name, ExternalEventMsg, InfoResponse, Metadata, OwnableInfo, ensure_owner};
 use crate::error::ContractError;
 
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:ownable-speakers";
+const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 
 pub fn instantiate(
     deps: DepsMut,
@@ -25,12 +26,13 @@ pub fn instantiate(
         ownable_type: Some("speakers".to_string()),
     };
 
+    let package_title = package_title_from_name(env!("CARGO_PKG_NAME"));
     let metadata = Metadata {
         image: None,
         image_data: None,
         external_url: None,
-        description: Some("Consumable add-on for Robot".to_string()),
-        name: Some("Speakers".to_string()),
+        description: Some(env!("CARGO_PKG_DESCRIPTION").to_string()),
+        name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
         youtube_url: None,
@@ -42,7 +44,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -156,11 +158,9 @@ fn try_register_lock(
 pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
     // only ownable owner can lock it
     let ownership = OWNABLE_INFO.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
-        return Err(ContractError::Unauthorized {
-            val: "Unauthorized".into(),
-        });
-    }
+    ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
+        val: "Unauthorized".into(),
+    })?;
 
     let is_locked = LOCKED.update(
         deps.storage,
@@ -214,15 +214,10 @@ pub fn try_consume(
     }
     let ownership = OWNABLE_INFO.load(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
-    if info.sender.to_string() != ownership.owner {
-        return Err(ContractError::Unauthorized {
-            val: "Unauthorized consumption attempt".into(),
-        });
-    }
-    let mut config = match config {
-        None => return Err(ContractError::CustomError { val: "No config found".to_string() }),
-        Some(c) => c,
-    };
+    ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
+        val: "Unauthorized consumption attempt".into(),
+    })?;
+    let mut config = config;
 
     if let Some(_) = config.consumed_by {
         return Err(ContractError::CustomError {
@@ -230,7 +225,7 @@ pub fn try_consume(
         });
     }
     config.consumed_by = Some(ownership.clone().owner);
-    CONFIG.save(deps.storage, &Some(config.clone()))?;
+    CONFIG.save(deps.storage, &config.clone())?;
 
     let mut event = Event::new("consume".to_string());
     event = event.add_attributes(vec![
@@ -309,7 +304,7 @@ fn query_lock_state(deps: Deps) -> StdResult<Binary> {
 
 fn query_consumed_state(deps: Deps) -> StdResult<Binary> {
     let config = CONFIG.load(deps.storage)?;
-    let is_consumed = config.map_or(false, |c| c.consumed_by.is_some());
+    let is_consumed = config.consumed_by.is_some();
     to_json_binary(&is_consumed)
 }
 

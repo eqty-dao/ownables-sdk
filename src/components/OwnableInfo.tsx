@@ -7,7 +7,7 @@ import {
 } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 import type React from "react";
-import { Fingerprint, Info as InfoOutlined, X } from "lucide-react";
+import { Fingerprint, Info as InfoOutlined } from "lucide-react";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { Dialog } from "@/components/ui";
 import { EventChain } from "eqty-core";
@@ -86,9 +86,7 @@ export default function OwnableInfo(props: OwnableInfoProps) {
           <DialogClose
             aria-label="Close"
             className="ml-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
-          >
-            <X className="h-5 w-5" />
-          </DialogClose>
+          />
         </div>
 
         {/* Events */}

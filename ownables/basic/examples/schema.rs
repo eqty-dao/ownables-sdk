@@ -3,8 +3,8 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use ownable::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use ownable::state::{Config};
+use ownable_basic::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use ownable_basic::state::{Config};
 use ownable_std::{ExternalEventMsg, InfoResponse, Metadata};
 
 fn main() {

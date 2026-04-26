@@ -21,8 +21,14 @@ export default class BuilderService {
 
   constructor(private chainId: number) {}
 
+  private static configuredUrl(): string {
+    const raw = BuilderService.URL;
+    return typeof raw === "string" ? raw.trim() : "";
+  }
+
   public static isAvailable(): boolean {
-    return !!BuilderService.URL;
+    const url = BuilderService.configuredUrl();
+    return /^https?:\/\//i.test(url);
   }
 
   /**
@@ -48,11 +54,12 @@ export default class BuilderService {
     if (!BuilderService.isAvailable()) {
       return null;
     }
+    const baseUrl = BuilderService.configuredUrl();
 
     try {
       // Use the same endpoint as eqty-ownable-builder - no chainId, no API key
       const response = await axios.get(
-        `${BuilderService.URL}${BuilderService.SERVER_WALLETS_ENDPOINT}`
+        `${baseUrl}${BuilderService.SERVER_WALLETS_ENDPOINT}`
       );
 
       if (!response.data) {
@@ -97,11 +104,12 @@ export default class BuilderService {
     if (!BuilderService.isAvailable()) {
       throw new Error("Builder service URL not configured");
     }
+    const baseUrl = BuilderService.configuredUrl();
 
     try {
       const networkCode = this.getNetworkCode();
       const response = await axios.get(
-        `${BuilderService.URL}/api/v1/templateCost?templateId=${templateId}`
+        `${baseUrl}/api/v1/templateCost?templateId=${templateId}`
       );
 
       const costData = response.data[networkCode]?.base;
@@ -135,6 +143,7 @@ export default class BuilderService {
     if (!BuilderService.isAvailable()) {
       throw new Error("Builder service URL not configured");
     }
+    const baseUrl = BuilderService.configuredUrl();
 
     const networkCode = this.getNetworkCode();
     const formData = new FormData();
@@ -172,7 +181,7 @@ export default class BuilderService {
         [BuilderService.NETWORK_PARAM]: networkCode,
       });
       const response = await axios.post(
-        `${BuilderService.URL}/api/v1/upload?${params.toString()}`,
+        `${baseUrl}/api/v1/upload?${params.toString()}`,
         formData,
         {
           headers: {

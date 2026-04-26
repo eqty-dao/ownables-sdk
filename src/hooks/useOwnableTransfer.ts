@@ -47,7 +47,9 @@ export function useOwnableTransfer(
 
     let thumbnail: Binary | undefined;
     try {
-      const globalIdb = await import("@/services/IDB.service").then((m) => m.default.main());
+      const globalIdb = await import(
+        "@ownables/platform-browser/dist/platform-browser/src/index.js"
+      ).then((m) => m.IDBService.main());
       const thumbnailFile = await globalIdb.get(`package:${pkg.cid}`, "thumbnail.webp");
       if (thumbnailFile) {
         const resized = await resizeToThumbnail(thumbnailFile);
@@ -84,8 +86,8 @@ export function useOwnableTransfer(
       const content = await zip.generateAsync({ type: "uint8array" });
       const meta = await constructMeta();
 
-      await relay.sendOwnable(to, content, meta, ownables.anchoring, onProgress);
-      await ownables.submitAnchors(onProgress);
+      await relay.sendOwnable(to, content, meta, ownables.anchoring, onProgress as any);
+      await ownables.submitAnchors(onProgress as any);
 
       enqueueSnackbar("Ownable sent and anchored successfully!", { variant: "success" });
       ctrl.close();
