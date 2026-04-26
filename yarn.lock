@@ -1198,185 +1198,185 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@letsrunit/ai@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/ai@npm:0.14.1"
+"@letsrunit/ai@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/ai@npm:0.19.0"
   dependencies:
     "@ai-sdk/openai": "npm:^2.0.89"
     "@ai-sdk/togetherai": "npm:^1.0.31"
-    "@letsrunit/utils": "npm:0.14.1"
+    "@letsrunit/utils": "npm:0.19.0"
     ai: "npm:^5.0.121"
     cache-manager: "npm:^7.2.8"
     iso-639-1: "npm:^3.1.5"
     langsmith: "npm:^0.4.7"
     mustache: "npm:^4.2.0"
     zod: "npm:^4.3.5"
-  checksum: 10c0/035f02f8a576f74c65c77eff8936654a20de686783c8409f5a3848fabcae98eeea144a627226da6ea306c37dced9612de9f4ed7cbc215b7224dd89a0b422a6b0
+  checksum: 10c0/e764a42a09ff3b2dd030dde1a2f0bf50cc968b33408ad1fc236fd0d80e122568bbe3f507d340aab7b69ad93cad4f47cc70a57e2d2775c36d9dbeef34e7f67d33
   languageName: node
   linkType: hard
 
-"@letsrunit/bdd@npm:0.14.1, @letsrunit/bdd@npm:^0.14.0":
-  version: 0.14.1
-  resolution: "@letsrunit/bdd@npm:0.14.1"
+"@letsrunit/bdd@npm:0.19.0, @letsrunit/bdd@npm:^0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/bdd@npm:0.19.0"
   dependencies:
     "@cucumber/cucumber-expressions": "npm:^18.1.0"
-    "@letsrunit/gherkin": "npm:0.14.1"
-    "@letsrunit/mailbox": "npm:0.14.1"
-    "@letsrunit/playwright": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
-    "@playwright/test": "npm:^1.57.0"
+    "@letsrunit/gherkin": "npm:0.19.0"
+    "@letsrunit/mailbox": "npm:0.19.0"
+    "@letsrunit/playwright": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
+    "@playwright/test": "npm:1.58.2"
     iso-639-1: "npm:^3.1.5"
     metascraper: "npm:^5.49.15"
     metascraper-lang: "npm:^5.49.15"
   peerDependencies:
     "@cucumber/cucumber": ^12.0.0
-  checksum: 10c0/cdf92c1c9c956b53de22c1cfb203f950824d6c8cf2a4d650f4dcd03e12b300c6ef85d9780c0838c38d9050fcd36abfe685fa2c34f73caac80ac575a9049f0eb2
+  checksum: 10c0/3c18fe4650526e230ba8e2f597c173cf5cd9c3c20664bac2de89953801e589759120ecd188031779e17a71a6ddadfaaeacefa2dea9ee437fef235703ad62196a
   languageName: node
   linkType: hard
 
-"@letsrunit/cli@npm:^0.14.0":
-  version: 0.14.1
-  resolution: "@letsrunit/cli@npm:0.14.1"
+"@letsrunit/cli@npm:^0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/cli@npm:0.19.0"
   dependencies:
-    "@letsrunit/executor": "npm:0.14.1"
-    "@letsrunit/gherkin": "npm:0.14.1"
-    "@letsrunit/journal": "npm:0.14.1"
-    "@letsrunit/mailbox": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
+    "@letsrunit/executor": "npm:0.19.0"
+    "@letsrunit/gherkin": "npm:0.19.0"
+    "@letsrunit/journal": "npm:0.19.0"
+    "@letsrunit/mailbox": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
     commander: "npm:^14.0.2"
   bin:
     letsrunit: ./dist/index.js
-  checksum: 10c0/f98b2c6359e0a1228db19ac98357d421e477661037c8d2c27ce9b61a459fea87ad5c22cba770094e4882f13b777c1d44056eb20b61de68873a9aaf4089b51500
+  checksum: 10c0/59037e7c008b4d295a0092ed320dc76efbba9f26cf0b4ceb4ce4fa8aabd798b77c0f14c7d095ab3e53e473399e8a99138c22b56ffa244a74e3e6a7543018c1b6
   languageName: node
   linkType: hard
 
-"@letsrunit/controller@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/controller@npm:0.14.1"
+"@letsrunit/controller@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/controller@npm:0.19.0"
   dependencies:
-    "@letsrunit/bdd": "npm:0.14.1"
-    "@letsrunit/gherker": "npm:0.14.1"
-    "@letsrunit/gherkin": "npm:0.14.1"
-    "@letsrunit/journal": "npm:0.14.1"
-    "@letsrunit/playwright": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
-    "@playwright/test": "npm:^1.57.0"
+    "@letsrunit/bdd": "npm:0.19.0"
+    "@letsrunit/gherker": "npm:0.19.0"
+    "@letsrunit/gherkin": "npm:0.19.0"
+    "@letsrunit/journal": "npm:0.19.0"
+    "@letsrunit/playwright": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
+    "@playwright/test": "npm:1.58.2"
     jsdom: "npm:^27.4.0"
     zod: "npm:^4.3.5"
-  checksum: 10c0/9755871e4721cb4f84295b04da7b2118331909656a70fe3722128b7c7cd2a5890d2d7cb8dded2e45196fd64998ae429dee0e8544917aa8ebc5288597b4fc538e
+  checksum: 10c0/29f0b0f74ba43e71e222d8af9a0cd8e5b6024c8acf038b5f93143e92aa5f015073c930a41cac645b2d23adbb7d71ae01286114dd3be3259531fbe72302d62c97
   languageName: node
   linkType: hard
 
-"@letsrunit/cucumber@npm:^0.14.0":
-  version: 0.14.1
-  resolution: "@letsrunit/cucumber@npm:0.14.1"
+"@letsrunit/cucumber@npm:^0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/cucumber@npm:0.19.0"
   dependencies:
     "@cucumber/messages": "npm:^31.0.0"
-    "@letsrunit/bdd": "npm:0.14.1"
-    "@letsrunit/gherkin": "npm:0.14.1"
-    "@letsrunit/playwright": "npm:0.14.1"
-    "@letsrunit/store": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
-    "@playwright/test": "npm:^1.57.0"
+    "@letsrunit/bdd": "npm:0.19.0"
+    "@letsrunit/gherkin": "npm:0.19.0"
+    "@letsrunit/playwright": "npm:0.19.0"
+    "@letsrunit/store": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
+    "@playwright/test": "npm:1.58.2"
     uuid: "npm:^13.0.0"
   peerDependencies:
     "@cucumber/cucumber": ^12.0.0
-  checksum: 10c0/132762581d5bf293150e160e22443c7022c1c5731f46acc54e648e492c6c6f9432e3395f79d1aa8d3ea4b6b745f76045b6c8278021aa2a864505b7e491e0f8e7
+  checksum: 10c0/2c5468a9fca57c2c23f2740ef9b295e76e9886cff9acbb356ba11f5db85806f18c0fd54e60bee43ec1c8647f2828e6bc20ca05cebab3a3dfb24cf9b6177709fa
   languageName: node
   linkType: hard
 
-"@letsrunit/executor@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/executor@npm:0.14.1"
+"@letsrunit/executor@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/executor@npm:0.19.0"
   dependencies:
-    "@letsrunit/ai": "npm:0.14.1"
-    "@letsrunit/controller": "npm:0.14.1"
-    "@letsrunit/gherkin": "npm:0.14.1"
-    "@letsrunit/journal": "npm:0.14.1"
-    "@letsrunit/mailbox": "npm:0.14.1"
-    "@letsrunit/playwright": "npm:0.14.1"
-    "@letsrunit/store": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
+    "@letsrunit/ai": "npm:0.19.0"
+    "@letsrunit/controller": "npm:0.19.0"
+    "@letsrunit/gherkin": "npm:0.19.0"
+    "@letsrunit/journal": "npm:0.19.0"
+    "@letsrunit/mailbox": "npm:0.19.0"
+    "@letsrunit/playwright": "npm:0.19.0"
+    "@letsrunit/store": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
     zod: "npm:^4.3.5"
-  checksum: 10c0/718cbb3d4153bc8701bd2b7d767377b221a8bf0963423a7033050e93e1523116f1cb13ff98ab5fbbd23922223bb09321c50d6162eb854eed619a5d455da30a8a
+  checksum: 10c0/8717ad9d0767d27a18f4bceda60f2d4b59a6692e9a9e8ffc087fd760c9b6ddf989156ff77d08ea15c2ddd62b7ca274e55b290cca05dbf52569caa396e243d312
   languageName: node
   linkType: hard
 
-"@letsrunit/gherker@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/gherker@npm:0.14.1"
+"@letsrunit/gherker@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/gherker@npm:0.19.0"
   dependencies:
     "@cucumber/cucumber-expressions": "npm:^18.1.0"
     "@cucumber/gherkin": "npm:^37.0.1"
     "@cucumber/messages": "npm:^31.2.0"
-    "@letsrunit/gherkin": "npm:0.14.1"
-  checksum: 10c0/2f35ea75b692c4ffa6cb28ea3dfa9bd7c373a095b49ca18b8835182a86b6032f446bc2c2e4accaf58a0975a2dd0d71c909e161884716347f13555618a2a49e3e
+    "@letsrunit/gherkin": "npm:0.19.0"
+  checksum: 10c0/d131cc68d7a9b270b4e6f44a0676824c8c81632c62bfddd4e8f1084c0d62eb56357a016e9fd080ce6c3e90addfa6fd76a88e392117006dc55a75221a10621530
   languageName: node
   linkType: hard
 
-"@letsrunit/gherkin@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/gherkin@npm:0.14.1"
+"@letsrunit/gherkin@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/gherkin@npm:0.19.0"
   dependencies:
     "@cucumber/cucumber-expressions": "npm:^18.1.0"
     "@cucumber/gherkin": "npm:^37.0.1"
     "@cucumber/messages": "npm:^31.2.0"
-    "@letsrunit/store": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
-  checksum: 10c0/71ff13bdf20cc8f7483610f46eb3bcd5d009a5e0173735278e47b6dbdf6b37f41787e08a833c25c7496b68790abf29b03c24fbe4679725770e77b9d34504ec7a
+    "@letsrunit/store": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
+  checksum: 10c0/7dfbe26372f8eacd3c4686d27a7dadd988e6f68848e87effdf35cf40d707bb7815b94adc01bc12c45a6968016af90d8f34d7e1df50e2b0e7530510f079af0923
   languageName: node
   linkType: hard
 
-"@letsrunit/journal@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/journal@npm:0.14.1"
+"@letsrunit/journal@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/journal@npm:0.19.0"
   dependencies:
-    "@letsrunit/utils": "npm:0.14.1"
+    "@letsrunit/utils": "npm:0.19.0"
     "@supabase/supabase-js": "npm:^2.91.0"
     ansi-escapes: "npm:^7.2.0"
     yaml: "npm:^2.8.2"
-  checksum: 10c0/ca9e92b72c68494476dece148b9cd9edfa70240b79f1b668a9aa099a222d733e1cb9ca6398fbad589dee3693bc7644d8c159756eaedcb1676bf1fa771200fe4f
+  checksum: 10c0/6bd90074328ad990700e2efaa4deafa319d7ff7af9c1a9a7ae8319d0d175759efd72d4cb944c1c6bb3c905d1784c3dedf442d21e97aa9b920a9f3644c3690014
   languageName: node
   linkType: hard
 
-"@letsrunit/mailbox@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/mailbox@npm:0.14.1"
+"@letsrunit/mailbox@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/mailbox@npm:0.19.0"
   dependencies:
-    "@letsrunit/utils": "npm:0.14.1"
+    "@letsrunit/utils": "npm:0.19.0"
     graphql: "npm:^16.12.0"
     graphql-request: "npm:^7.4.0"
-  checksum: 10c0/82086d3e51da09fa6dbd3102808da0b3bd0cb0ad2d13d40a07052eedd4290bf30c94c5a4b7bd4203119486831757850e6c02bb8f08ddfa6808b5e9d575b87575
+  checksum: 10c0/045c6f808b147a545dd14fa8ddecf0473d5467924124d8843fe300126ddcc35a4082a4c65303f6b33e2a6000c281d1266d022f972c44a2fa9d6beee0e365a525
   languageName: node
   linkType: hard
 
-"@letsrunit/mcp-server@npm:^0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/mcp-server@npm:0.14.1"
+"@letsrunit/mcp-server@npm:^0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/mcp-server@npm:0.19.0"
   dependencies:
     "@cucumber/cucumber": "npm:^12.7.0"
-    "@letsrunit/bdd": "npm:0.14.1"
-    "@letsrunit/controller": "npm:0.14.1"
-    "@letsrunit/gherkin": "npm:0.14.1"
-    "@letsrunit/journal": "npm:0.14.1"
-    "@letsrunit/playwright": "npm:0.14.1"
-    "@letsrunit/store": "npm:0.14.1"
-    "@letsrunit/utils": "npm:0.14.1"
+    "@letsrunit/bdd": "npm:0.19.0"
+    "@letsrunit/controller": "npm:0.19.0"
+    "@letsrunit/gherkin": "npm:0.19.0"
+    "@letsrunit/journal": "npm:0.19.0"
+    "@letsrunit/playwright": "npm:0.19.0"
+    "@letsrunit/store": "npm:0.19.0"
+    "@letsrunit/utils": "npm:0.19.0"
     "@modelcontextprotocol/sdk": "npm:^1.26.0"
-    "@playwright/test": "npm:^1.57.0"
+    "@playwright/test": "npm:1.58.2"
     zod: "npm:^4.3.5"
   bin:
     letsrunit-mcp: ./dist/index.js
-  checksum: 10c0/ae72dbb73bd3c18ee174b83e91581c287e71c356be13f9b1202394843ab8cb055899dcb09d80edd75380b29d935378dd1382bac6a50ec339b5b1d03d5fa7c11e
+  checksum: 10c0/1868fe86dd725e4c2008b0bd275c99c4430125a6c47d26ea5e14d149c6185613a1925ed04d85971e156ab4e2f30c6242031b0e44d7308fc8e1f8c98c6ec93ce5
   languageName: node
   linkType: hard
 
-"@letsrunit/playwright@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/playwright@npm:0.14.1"
+"@letsrunit/playwright@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/playwright@npm:0.19.0"
   dependencies:
-    "@letsrunit/utils": "npm:0.14.1"
-    "@playwright/test": "npm:^1.57.0"
+    "@letsrunit/utils": "npm:0.19.0"
+    "@playwright/test": "npm:1.58.2"
     case: "npm:^1.6.3"
     diff: "npm:^8.0.3"
     fast-json-stable-stringify: "npm:^2.1.0"
@@ -1391,28 +1391,28 @@ __metadata:
     rehype-parse: "npm:^9.0.1"
     rehype-stringify: "npm:^10.0.1"
     unified: "npm:^11.0.5"
-  checksum: 10c0/ffa56d6c2141b1dd2de5f8eb80fd5d953d0e832dbe44af4f3ad04ac7620b1ee8207b2470cb7fb5302d7d33c603ca5e1de59f478daece13de78124f32b37d2d89
+  checksum: 10c0/48f53a52c7bb7ac020b223b838e0842b5beca55bd4d3cbd08e4fc088d842e34e960ae9601f82da9fa40f15d7e12a1423579e2e4446206bf2a1fb21c491630936
   languageName: node
   linkType: hard
 
-"@letsrunit/store@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/store@npm:0.14.1"
+"@letsrunit/store@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/store@npm:0.19.0"
   dependencies:
     node-sqlite3-wasm: "npm:^0.8.55"
     uuid: "npm:^13.0.0"
-  checksum: 10c0/47503246674ccf3a00cae28870a8c8e9aba0d5de04a06b83f66f6b9e4f2f256ffe3bfa3555b893400cb627a01bd79f004ef5fff71753a87c493e9fd3c5305e4b
+  checksum: 10c0/a9754107b2bfd8767341a6e2689c2c803cedb51fe088b79243b1e457e931f9b295d6ae90652f325f30a98e738f25cbb9a4fbf163064de666c4a78e3bd4cd2f40
   languageName: node
   linkType: hard
 
-"@letsrunit/utils@npm:0.14.1":
-  version: 0.14.1
-  resolution: "@letsrunit/utils@npm:0.14.1"
+"@letsrunit/utils@npm:0.19.0":
+  version: 0.19.0
+  resolution: "@letsrunit/utils@npm:0.19.0"
   dependencies:
     fast-json-stable-stringify: "npm:^2.1.0"
     lru-cache: "npm:^11.2.4"
     uuid: "npm:^13.0.0"
-  checksum: 10c0/26b3ff6f2d20b9def94c87fa112038989b7632c7e7a48b21600d47f3f9d4a3713d4c8f7b0fde6e56d0d60a4d99890956117a68f479ad626899eedd848bf65e53
+  checksum: 10c0/ed46ad83c4284f5f8553b0b450f0583c4e7c273ef31896c81dd76248e93fc99cddc611c877fef0f0b4121e06c259578e22b850393ac26db75cda6d87945be4cb
   languageName: node
   linkType: hard
 
@@ -2023,10 +2023,10 @@ __metadata:
     "@base-ui/react": "npm:^1.3.0"
     "@cucumber/cucumber": "npm:^12.7.0"
     "@fontsource/montserrat": "npm:^5.2.8"
-    "@letsrunit/bdd": "npm:^0.14.0"
-    "@letsrunit/cli": "npm:^0.14.0"
-    "@letsrunit/cucumber": "npm:^0.14.0"
-    "@letsrunit/mcp-server": "npm:^0.14.1"
+    "@letsrunit/bdd": "npm:^0.19.0"
+    "@letsrunit/cli": "npm:^0.19.0"
+    "@letsrunit/cucumber": "npm:^0.19.0"
+    "@letsrunit/mcp-server": "npm:^0.19.0"
     "@ownables/adapter-viem": "npm:^0.5.1"
     "@ownables/builder-client": "npm:^0.5.1"
     "@ownables/core": "npm:^0.5.1"
@@ -2090,7 +2090,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/test@npm:^1.57.0":
+"@playwright/test@npm:1.58.2":
   version: 1.58.2
   resolution: "@playwright/test@npm:1.58.2"
   dependencies:
