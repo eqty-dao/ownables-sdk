@@ -7,7 +7,6 @@ members = [
   "potion",
   "robot",
   "speakers",
-  "my-first",
 ]
 resolver = "2"
 
