@@ -37,13 +37,18 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
-          cache: "npm"
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+      - name: Enable Corepack
+        run: corepack enable
       - name: Setup wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
+      - name: Install dependencies
+        run: yarn install --immutable
       - name: Build
         env:
           CC: clang
-        run: npm run ownables:build --package=${{ matrix.package }}
+        run: yarn ownables:build ${{ matrix.package }}
       - uses: actions/upload-artifact@v4
         with:
           name: "${{matrix.package}}"
@@ -60,9 +65,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
-          cache: "npm"
-      - name: NPM Install
-        run: npm ci
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Yarn Install
+        run: yarn install --immutable
       - name: Download Ownables packages
         uses: actions/download-artifact@v4
         with:
@@ -75,7 +83,7 @@ jobs:
         env:
           REACT_APP_OWNABLE_EXAMPLES_URL: /ownables
           REACT_APP_WALLETCONNECT_PROJECT_ID: ${{ vars.WALLETCONNECT_PROJECT_ID }}
-        run: npm run build
+        run: yarn build
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
