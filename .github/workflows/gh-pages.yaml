@@ -37,10 +37,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
       - name: Enable Corepack
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare yarn@4.10.3 --activate
       - name: Setup wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
       - name: Install dependencies
@@ -65,10 +65,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
       - name: Enable Corepack
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare yarn@4.10.3 --activate
       - name: Yarn Install
         run: yarn install --immutable
       - name: Download Ownables packages
