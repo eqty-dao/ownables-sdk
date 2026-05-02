@@ -24,19 +24,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Cache Ownable build files
         id: cache-ownables
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           key: ownables-cargo-${{matrix.package}}
           path: |
             ownables/${{matrix.package}}/Cargo.lock
             ownables/${{matrix.package}}/target
       - name: Setup NodeJS
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
       - name: Enable Corepack
         run: |
           corepack enable
@@ -49,7 +49,7 @@ jobs:
         env:
           CC: clang
         run: yarn ownables:build ${{ matrix.package }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: "${{matrix.package}}"
           path: "ownables/${{matrix.package}}.zip"
@@ -60,11 +60,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Setup NodeJS
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
       - name: Enable Corepack
         run: |
           corepack enable
@@ -72,7 +72,7 @@ jobs:
       - name: Yarn Install
         run: yarn install --immutable
       - name: Download Ownables packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ownables
       - name: Copy Ownables packages
@@ -85,6 +85,6 @@ jobs:
           REACT_APP_WALLETCONNECT_PROJECT_ID: ${{ vars.WALLETCONNECT_PROJECT_ID }}
         run: yarn build
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: JamesIves/github-pages-deploy-action@v4.8.0
         with:
           folder: build
