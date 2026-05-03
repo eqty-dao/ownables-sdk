@@ -83,8 +83,12 @@ jobs:
           cp ownables/**/*.zip public/ownables
       - name: Build
         env:
-          REACT_APP_OWNABLE_EXAMPLES_URL: /ownables
-          REACT_APP_WALLETCONNECT_PROJECT_ID: ${{ vars.WALLETCONNECT_PROJECT_ID }}
+          VITE_OWNABLE_EXAMPLES_URL: /ownables
+          VITE_WALLETCONNECT_PROJECT_ID: ${{ vars.WALLETCONNECT_PROJECT_ID }}
+          VITE_BASE_SEPOLIA_RPC_URL: https://sepolia.base.org
+          VITE_BASE_MAINNET_RPC_URL: https://mainnet.base.org
+          VITE_BASE_SEPOLIA_EXPLORER_URL: https://sepolia.basescan.org
+          VITE_BASE_MAINNET_EXPLORER_URL: https://basescan.org
         run: yarn build
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.8.0
