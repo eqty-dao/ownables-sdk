@@ -89,4 +89,4 @@ jobs:
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.8.0
         with:
-          folder: build
+          folder: dist
