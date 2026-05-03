@@ -27,8 +27,12 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
   const address = isE2E ? getE2EAccount().address : walletAddress;
   const walletClient = useWalletClient();
   const publicClient = usePublicClient();
+  const isWalletReady = isE2E || (!!walletClient.data && !!publicClient);
 
-  const key = address && chainId ? `${address}:${chainId}` : null;
+  const key =
+    address && chainId && isWalletReady
+      ? `${address}:${chainId}`
+      : null;
 
   const [container, setContainer] = useState<ServiceContainer | null>(null);
 
@@ -45,19 +49,13 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // Same key, keep current
+      // Same key, keep current container
       if (container?.key === key) {
-        console.log("ServicesProvider: Keeping existing container", { key });
         return;
       }
 
       // Replace previous
       if (container) {
-        console.log("ServicesProvider: Replacing container", {
-          oldKey: container.key,
-          newKey: key,
-          reason: "walletClient.data changed during transaction",
-        });
         const [oldAddress, oldChainId] = container.key.split(":");
         if (oldAddress && oldChainId) {
           RelayService.clearWalletAuth(oldAddress, parseInt(oldChainId));
@@ -82,7 +80,7 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, address, chainId, publicClient]); // removed walletClient.data - it changes during transactions
+  }, [key, address, chainId, isWalletReady, publicClient]);
 
   // Dispose on unmount
   useEffect(() => {

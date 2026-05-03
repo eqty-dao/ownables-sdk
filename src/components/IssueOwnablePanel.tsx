@@ -41,7 +41,9 @@ interface IssueOwnablePanelProps {
 export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   const { onBack, onSelect, onImportFR, onError, onCreate, message } = props;
   const { packages, isLoading, importPackages, importInbox, downloadExample } = usePackageManager();
+  const packageService = useService("packages");
   const builderService = useService("builder");
+  const hasPackageService = !!packageService;
   const hasBuilder = !!builderService;
 
   const filteredPackages = (() => {
@@ -60,6 +62,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   })();
 
   const importAll = async () => {
+    if (!hasPackageService) return;
     const files = await selectFile({ accept: ".zip", multiple: true });
     try {
       await importPackages(files);
@@ -70,6 +73,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   };
 
   const importPackagesFromRelay = async () => {
+    if (!hasPackageService) return;
     try {
       const result = await importInbox();
       if (result == null) return;
@@ -85,6 +89,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   };
 
   const selectPackage = async (pkg: TypedPackage | TypedPackageStub) => {
+    if (!hasPackageService) return;
     if ("stub" in pkg) {
       try {
         const downloadedPkg = await downloadExample(pkg.name);
@@ -120,8 +125,9 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
           <div className="mb-8 grid grid-cols-2 gap-3">
             <Button
               type="button"
-              className={cn(actionButton())}
+              className={cn(actionButton({ disabled: !hasPackageService }))}
               onClick={importAll}
+              disabled={!hasPackageService}
             >
               <FolderUp size={20} className="text-slate-600 dark:text-slate-400" />
               <span>Upload<span className="hidden md:inline"> Package</span></span>
@@ -129,8 +135,9 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
             {message > 0 ? (
               <Button
                 type="button"
-                className={cn(actionButton())}
+                className={cn(actionButton({ disabled: !hasPackageService }))}
                 onClick={importPackagesFromRelay}
+                disabled={!hasPackageService}
               >
                 <FolderUp size={20} className="text-slate-600 dark:text-slate-400" />
                 From Relay ({message})

@@ -152,7 +152,12 @@ export default class ServiceContainer {
       throw new Error(`No service factory registered for key: ${key}`);
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const promise = this.factories.get(key)!(this);
+    const promise = Promise.resolve(this.factories.get(key)!(this)).catch(
+      (error) => {
+        this.cache.delete(key);
+        throw error;
+      }
+    );
     this.cache.set(key, promise);
 
     return await promise;

@@ -13,9 +13,14 @@ export function useService<K extends ServiceKey>(key: K): ServiceMap[K] | null {
     }
 
     let alive = true;
-    container.get(key).then(s => {
-      if (alive) setService(s);
-    });
+    container
+      .get(key)
+      .then((s) => {
+        if (alive) setService(s);
+      })
+      .catch(() => {
+        if (alive) setService(null);
+      });
     return () => { alive = false; };
   }, [container, key]);
 
