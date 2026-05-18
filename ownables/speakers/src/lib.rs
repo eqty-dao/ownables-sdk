@@ -1,6 +1,8 @@
 use cosmwasm_std::MessageInfo;
-use ownable_std::abi::{cbor_from_slice, cbor_to_vec, AbiResponse, AbiResultPayload, HostAbiError};
-use ownable_std::{create_env, ownable_host_abi_v1, ExternalEventMsg, IdbStateDump, load_owned_deps};
+use ownable_std::abi::{AbiResponse, AbiResultPayload, HostAbiError, cbor_from_slice, cbor_to_vec};
+use ownable_std::{
+    IdbStateDump, OwnableEvent, PublicEvent, create_env, load_owned_deps, ownable_host_abi_v1,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -30,10 +32,16 @@ struct AbiQueryRequest {
 }
 
 #[derive(Serialize, Deserialize)]
-struct AbiExternalEventRequest {
-    msg: ExternalEventMsg,
+struct AbiRegisterRequest {
+    msg: PublicEvent,
     info: MessageInfo,
-    ownable_id: String,
+    mem: IdbStateDump,
+}
+
+#[derive(Serialize, Deserialize)]
+struct AbiIngestRequest {
+    msg: OwnableEvent,
+    info: MessageInfo,
     mem: IdbStateDump,
 }
 
@@ -82,17 +90,27 @@ fn query_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
     cbor_to_vec(&payload)
 }
 
-fn external_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let request: AbiExternalEventRequest = cbor_from_slice(input)?;
+fn register_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+    let request: AbiRegisterRequest = cbor_from_slice(input)?;
     let mut deps = load_owned_deps(Some(request.mem));
 
-    let response = contract::register_external_event(
-        request.info,
-        deps.as_mut(),
-        request.msg,
-        request.ownable_id,
-    )
-    .map_err(HostAbiError::from_display)?;
+    let response = contract::register(request.info, deps.as_mut(), request.msg)
+        .map_err(HostAbiError::from_display)?;
+
+    let payload = AbiResultPayload {
+        result: cbor_to_vec(&AbiResponse::from(response))?,
+        mem: Some(IdbStateDump::from(deps.storage)),
+    };
+
+    cbor_to_vec(&payload)
+}
+
+fn ingest_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+    let request: AbiIngestRequest = cbor_from_slice(input)?;
+    let mut deps = load_owned_deps(Some(request.mem));
+
+    let response = contract::ingest(request.info, deps.as_mut(), request.msg)
+        .map_err(HostAbiError::from_display)?;
 
     let payload = AbiResultPayload {
         result: cbor_to_vec(&AbiResponse::from(response))?,
@@ -106,5 +124,6 @@ ownable_host_abi_v1!(
     instantiate = instantiate_handler,
     execute = execute_handler,
     query = query_handler,
-    external_event = external_event_handler,
+    register = register_handler,
+    ingest = ingest_handler,
 );

@@ -1,16 +1,20 @@
+use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{NFT_ITEM, Config, CONFIG, METADATA, LOCKED, PACKAGE_CID, OWNABLE_INFO, NETWORK_ID};
-use cosmwasm_std::{to_json_binary, Binary};
+use crate::state::{
+    CONFIG, Config, LOCKED, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
-use ownable_std::{package_title_from_name, ExternalEventMsg, get_random_color, InfoResponse, Metadata, OwnableInfo, ensure_owner};
-use crate::error::ContractError;
+use ownable_std::{
+    InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent, ensure_owner, get_random_color,
+    package_title_from_name,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 
 pub fn instantiate(
     deps: DepsMut,
@@ -75,85 +79,26 @@ pub fn execute(
     }
 }
 
-pub fn register_external_event(
+pub fn register(
     info: MessageInfo,
     deps: DepsMut,
-    event: ExternalEventMsg,
-    _ownable_id: String,
+    event: PublicEvent,
 ) -> Result<Response, ContractError> {
-    let mut response = Response::new()
-        .add_attribute("method", "register_external_event");
-
-    match event.event_type.as_str() {
-        "lock" => {
-            try_register_lock(
-                info,
-                deps,
-                event,
-            )?;
-            response = response.add_attribute("event_type", "lock");
-        },
-        _ => return Err(ContractError::MatchEventError { val: event.event_type }),
-    };
-
-    Ok(response)
+    let _ = (info, deps);
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
 }
 
-fn try_register_lock(
+pub fn ingest(
     info: MessageInfo,
     deps: DepsMut,
-    event: ExternalEventMsg,
+    event: OwnableEvent,
 ) -> Result<Response, ContractError> {
-    let owner = event.attributes.get("owner")
-        .cloned()
-        .unwrap_or_default();
-    let nft_id = event.attributes.get("token_id")
-        .cloned()
-        .unwrap_or_default();
-    let contract_addr = event.attributes.get("contract")
-        .cloned()
-        .unwrap_or_default();
-
-    if owner.is_empty() || nft_id.is_empty() || contract_addr.is_empty() {
-        return Err(ContractError::InvalidExternalEventArgs {});
-    }
-
-    let nft = NFT_ITEM.load(deps.storage).unwrap();
-    if nft.id.to_string() != nft_id {
-        return Err(ContractError::LockError {
-            val: "nft_id mismatch".to_string()
-        });
-    } else if nft.address != contract_addr {
-        return Err(ContractError::LockError {
-            val: "locking contract mismatch".to_string()
-        });
-    }
-
-    let event_network = event.network.unwrap_or("".to_string());
-    if event_network == "" {
-        return Err(ContractError::MatchChainIdError { val: "No network".to_string() })
-    } else if event_network != nft.network {
-        return Err(ContractError::LockError {
-            val: "network mismatch".to_string()
-        });
-    }
-
-    let caip_2_fields: Vec<&str> = event_network.split(":").collect();
-    let namespace = caip_2_fields.get(0).unwrap();
-
-    match *namespace {
-        "eip155" => {
-            let address = info.sender.clone();
-            if address.to_string() != owner {
-                return Err(ContractError::Unauthorized {
-                    val: "Only the owner can release an ownable".to_string(),
-                });
-            }
-
-            Ok(try_release(info, deps, address)?)
-        }
-        _ => return Err(ContractError::MatchChainIdError { val: event_network }),
-    }
+    let _ = (info, deps);
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
 }
 
 pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
@@ -163,44 +108,19 @@ pub fn try_lock(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractEr
         val: "Unauthorized".into(),
     })?;
 
-    let is_locked = LOCKED.update(
-        deps.storage,
-        |mut is_locked| -> Result<_, ContractError> {
-            if is_locked {
-                return Err(
-                    ContractError::LockError { val: "Already locked".to_string() }
-                );
-            }
-            is_locked = true;
-            Ok(is_locked)
+    let is_locked = LOCKED.update(deps.storage, |mut is_locked| -> Result<_, ContractError> {
+        if is_locked {
+            return Err(ContractError::LockError {
+                val: "Already locked".to_string(),
+            });
         }
-    )?;
+        is_locked = true;
+        Ok(is_locked)
+    })?;
 
     Ok(Response::new()
         .add_attribute("method", "try_lock")
-        .add_attribute("is_locked", is_locked.to_string())
-    )
-}
-
-fn try_release(_info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {
-    let mut is_locked = LOCKED.load(deps.storage)?;
-    if !is_locked {
-        return Err(ContractError::LockError { val: "Not locked".to_string() });
-    }
-
-    // transfer ownership and unlock
-    let mut ownership = OWNABLE_INFO.load(deps.storage)?;
-    ownership.owner = to;
-    is_locked = false;
-
-    OWNABLE_INFO.save(deps.storage, &ownership)?;
-    LOCKED.save(deps.storage, &is_locked)?;
-
-    Ok(Response::new()
-        .add_attribute("method", "try_release")
-        .add_attribute("is_locked", is_locked.to_string())
-        .add_attribute("owner", ownership.owner.to_string())
-    )
+        .add_attribute("is_locked", is_locked.to_string()))
 }
 
 pub fn try_drink(
@@ -231,11 +151,7 @@ pub fn try_drink(
 
     Ok(Response::new()
         .add_attribute("method", "try_drink")
-        .add_attribute(
-            "new_amount",
-            c.current_amount.to_string()
-        )
-    )
+        .add_attribute("new_amount", c.current_amount.to_string()))
 }
 
 pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {
@@ -245,25 +161,25 @@ pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Respon
             val: "Unable to transfer a locked ownable".to_string(),
         });
     }
-    let ownership = OWNABLE_INFO.update(deps.storage, |mut config| -> Result<_, ContractError> {
-        let address = info.sender.clone();
-        if address != config.owner {
-            return Err(ContractError::Unauthorized {
-                val: "Unauthorized transfer attempt".to_string(),
-            });
-        }
-        if address == to {
-            return Err(ContractError::CustomError {
-                val: "Unable to transfer: Recipient address is current owner".to_string(),
-            });
-        }
-        config.owner = to.clone();
-        Ok(config)
-    })?;
+    let ownership =
+        OWNABLE_INFO.update(deps.storage, |mut config| -> Result<_, ContractError> {
+            let address = info.sender.clone();
+            if address != config.owner {
+                return Err(ContractError::Unauthorized {
+                    val: "Unauthorized transfer attempt".to_string(),
+                });
+            }
+            if address == to {
+                return Err(ContractError::CustomError {
+                    val: "Unable to transfer: Recipient address is current owner".to_string(),
+                });
+            }
+            config.owner = to.clone();
+            Ok(config)
+        })?;
     Ok(Response::new()
         .add_attribute("method", "try_transfer")
-        .add_attribute("new_owner", ownership.owner.to_string())
-    )
+        .add_attribute("new_owner", ownership.owner.to_string()))
 }
 
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {

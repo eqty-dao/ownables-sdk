@@ -1,12 +1,12 @@
-use cosmwasm_std::{Addr};
+use cosmwasm_std::Addr;
 use ownable_std::NFT;
+use ownable_std_macros::{
+    ownables_consume, ownables_instantiate_msg, ownables_lock, ownables_query_consumed,
+    ownables_query_info, ownables_query_locked, ownables_query_metadata,
+    ownables_query_widget_state, ownables_transfer,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use ownable_std_macros::{
-    ownables_transfer, ownables_consume, ownables_lock,
-    ownables_query_info, ownables_query_locked, ownables_query_metadata,
-    ownables_query_widget_state, ownables_query_consumed, ownables_instantiate_msg
-};
 
 #[ownables_instantiate_msg]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -28,4 +28,3 @@ pub enum ExecuteMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {}
-
