@@ -26,8 +26,33 @@ interface StateSnapshot {
   timestamp: Date;
 }
 
+interface PublicEvent {
+  chainId: number;
+  contractAddress: string;
+  transactionHash: string;
+  logIndex: number;
+  eventType: string;
+  attributes: TypedDict<string>;
+  data: string;
+}
+
+interface RuntimePublicEvent extends Omit<PublicEvent, "data"> {
+  data: Binary;
+}
+
+interface OwnableEvent {
+  source: {
+    id: string;
+    owner: string;
+    issuer: string;
+  };
+  eventType: string;
+  attributes: TypedDict<string>;
+}
+
 export default class OwnableService {
   private readonly SNAPSHOT_INTERVAL = 50;
+  private readonly PUBLIC_EVENT_REPLAY_STORE_SUFFIX = ".public-event-replays";
 
   constructor(
     private readonly idb: IDBService,
@@ -239,6 +264,33 @@ export default class OwnableService {
     }
   }
 
+  private publicEventReplayStoreId(chainId: string): string {
+    return `ownable:${chainId}${this.PUBLIC_EVENT_REPLAY_STORE_SUFFIX}`;
+  }
+
+  private publicEventReplayKey(event: PublicEvent): string {
+    return `${event.transactionHash}:${event.logIndex}`;
+  }
+
+  private toRegisterRuntimeEvent(
+    event: Omit<PublicEvent, "data"> & { data: string | Uint8Array | Binary }
+  ): PublicEvent {
+    return {
+      ...event,
+      data:
+        typeof event.data === "string"
+          ? event.data
+          : new Binary(event.data).hex,
+    };
+  }
+
+  private toRegisterRpcPayload(event: PublicEvent): RuntimePublicEvent {
+    return {
+      ...event,
+      data: Binary.fromHex(event.data),
+    };
+  }
+
   private async applyEvent(
     rpc: WorkerRPC,
     event: Event,
@@ -260,15 +312,11 @@ export default class OwnableService {
       case "execute_msg.json":
         result = await rpc.execute(msg, info, stateDump);
         break;
-      case "external_event_msg.json":
-        const message = {
-          msg: {
-            event_type: msg.type,
-            attributes: msg.attributes,
-            network: "",
-          },
-        };
-        result = await rpc.externalEvent(message, info, stateDump);
+      case "register_public_event_msg.json":
+        result = await rpc.register(this.toRegisterRpcPayload(msg as PublicEvent), info, stateDump);
+        break;
+      case "ingest_event_msg.json":
+        result = await rpc.ingest(msg as OwnableEvent, info, stateDump);
         break;
       default:
         throw new Error(`Unknown event type`);
@@ -375,6 +423,48 @@ export default class OwnableService {
     );
   }
 
+  async registerPublicEvent(
+    chain: EventChain,
+    event: Omit<PublicEvent, "data"> & { data: string | Uint8Array | Binary },
+    onProgress?: LogProgress
+  ): Promise<void> {
+    const stateDump = await this.eventChains.getStateDump(chain.id, chain.state.hex);
+    if (!stateDump) throw Error("State mismatch for register public event");
+
+    const publicEvent = this.toRegisterRuntimeEvent(event);
+    const replayStoreId = this.publicEventReplayStoreId(chain.id);
+    const replayKey = this.publicEventReplayKey(publicEvent);
+
+    if ((await this.idb.hasStore(replayStoreId)) && (await this.idb.get(replayStoreId, replayKey))) {
+      return;
+    }
+
+    const info: MessageInfo = {
+      sender: this.eqty.address,
+      funds: [],
+    };
+    const { state: newStateDump } = await this.rpc(chain.id).register(
+      this.toRegisterRpcPayload(publicEvent),
+      info,
+      stateDump
+    );
+
+    await withProgress(onProgress)("signPublicEvent", () =>
+      this.eqty.sign(
+        new Event({
+          "@context": "register_public_event_msg.json",
+          ...publicEvent,
+        }).addTo(chain)
+      )
+    );
+
+    await this.store(chain, newStateDump);
+    if (!(await this.idb.hasStore(replayStoreId))) {
+      await this.idb.createStore(replayStoreId);
+    }
+    await this.idb.set(replayStoreId, replayKey, true);
+  }
+
   async canConsume(
     consumer: { chain: EventChain; package: string },
     info: TypedOwnableInfo
@@ -429,19 +519,24 @@ export default class OwnableService {
       | { contract?: string; type: string; attributes: TypedDict<string> }
       | undefined = events.find((event) => event.type === "consume");
     if (!consumeEvent) throw Error("No consume event emitted");
-    consumeEvent.contract = consumable.id;
+    const consumableInfo = (await this.rpc(consumable.id).query(
+      { get_info: {} },
+      consumableStateDump
+    )) as TypedOwnableInfo;
 
-    const externalEventMsg = {
-      msg: {
-        attributes: consumeEvent.attributes,
-        network: "",
-        event_type: consumeEvent.type,
+    const ingestEvent: OwnableEvent = {
+      source: {
+        id: consumable.id,
+        owner: consumableInfo.owner,
+        issuer: consumableInfo.issuer,
       },
+      attributes: consumeEvent.attributes,
+      eventType: consumeEvent.type,
     };
 
     const { state: consumerStateDump } = await this.rpc(
       consumer.id
-    ).externalEvent(externalEventMsg, info, consumerState);
+    ).ingest(ingestEvent, info, consumerState);
 
     await withProgress(onProgress)("signConsumableEvent", () =>
       this.eqty.sign(
@@ -454,8 +549,8 @@ export default class OwnableService {
     await withProgress(onProgress)("signConsumerEvent", () =>
       this.eqty.sign(
         new Event({
-          "@context": "external_event_msg.json",
-          ...consumeEvent,
+          "@context": "ingest_event_msg.json",
+          ...ingestEvent,
         }).addTo(consumer)
       )
     );
