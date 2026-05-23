@@ -1,18 +1,65 @@
 import { EventChain, Event, Binary } from "eqty-core";
-import EQTYService from "./EQTY.service";
-import IDBService from "./IDB.service";
 import TypedDict from "@/interfaces/TypedDict";
-import PackageService from "./Package.service";
 import JSZip from "jszip";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
-import EventChainService from "./EventChain.service";
 import WorkerRPC from "./WorkerRPC";
 
 import workerJsSource from "@/assets/worker.js?raw";
 import { LogProgress, withProgress } from "@/contexts/Progress.context";
 
 export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;
+
+interface IDBLike {
+  hasStore(name: string): Promise<boolean>;
+  createStore(...names: string[]): Promise<void>;
+  deleteStore(name: string): Promise<void>;
+  get(store: string, key: string): Promise<any>;
+  getAll(store: string): Promise<any[]>;
+  set(store: string, key: string, value: any): Promise<void>;
+  setAll(data: Record<string, any>): Promise<void>;
+  keys(store: string): Promise<string[]>;
+  delete(store: string, key: string): Promise<void>;
+}
+
+interface EventChainsLike {
+  anchoring: boolean;
+  loadAll(): Promise<
+    Array<{
+      chain: EventChain;
+      package: string;
+      created: Date;
+      keywords: string[];
+      uniqueMessageHash?: string;
+      isConsumed?: boolean;
+    }>
+  >;
+  getStateDump(chainId: string, state: string): Promise<StateDump | null>;
+  delete(id: string): Promise<void>;
+  deleteAll(): Promise<void>;
+}
+
+interface EqtyLike {
+  address: string;
+  chainId: number;
+  sign(event: Event): Promise<void>;
+  anchor(...anchors: Array<any>): Promise<void>;
+  submitAnchors(): Promise<string | undefined>;
+}
+
+interface PackagesLike {
+  getAsset(
+    cid: string,
+    fileName: string,
+    reader: (fileReader: FileReader, file: Blob | File) => void
+  ): Promise<ArrayBuffer | string>;
+  info(cid: string, uniqueMessageHash?: string): {
+    keywords?: string[];
+    uniqueMessageHash?: string;
+    isConsumer?: boolean;
+  };
+  zip(cid: string): Promise<JSZip>;
+}
 
 interface MessageInfo {
   sender: string;
@@ -55,10 +102,10 @@ export default class OwnableService {
   private readonly PUBLIC_EVENT_REPLAY_STORE_SUFFIX = ".public-event-replays";
 
   constructor(
-    private readonly idb: IDBService,
-    private readonly eventChains: EventChainService,
-    private readonly eqty: EQTYService,
-    private readonly packages: PackageService
+    private readonly idb: IDBLike,
+    private readonly eventChains: EventChainsLike,
+    private readonly eqty: EqtyLike,
+    private readonly packages: PackagesLike
   ) {}
 
   private readonly _rpc = new Map<string, WorkerRPC>();
@@ -109,7 +156,7 @@ export default class OwnableService {
     const wasm = (await this.packages.getAsset(
       cid,
       "ownable_bg.wasm",
-      (fr, file) => fr.readAsArrayBuffer(file)
+      (fr: FileReader, file: Blob | File) => fr.readAsArrayBuffer(file)
     )) as ArrayBuffer;
 
     const workerRpc = new WorkerRPC(id);
@@ -197,13 +244,13 @@ export default class OwnableService {
       const keys = await this.idb.keys(snapshotStoreId);
       if (keys.length > 3) {
         const sortedKeys = keys
-          .map((key) => parseInt(key.replace("snapshot_", "")))
-          .sort((a, b) => b - a);
+          .map((key: string) => parseInt(key.replace("snapshot_", "")))
+          .sort((a: number, b: number) => b - a);
 
         // Delete oldest snapshots, keep the 3 most recent
         const keysToDelete = sortedKeys
           .slice(3)
-          .map((index) => `snapshot_${index}`);
+          .map((index: number) => `snapshot_${index}`);
 
         for (const key of keysToDelete) {
           await this.idb.delete(snapshotStoreId, key);
@@ -229,8 +276,8 @@ export default class OwnableService {
     if (snapshots.length === 0) return null;
 
     const latestKey = snapshots
-      .map((key) => parseInt(key.replace("snapshot_", "")))
-      .sort((a, b) => b - a)[0];
+      .map((key: string) => parseInt(key.replace("snapshot_", "")))
+      .sort((a: number, b: number) => b - a)[0];
 
     return await this.idb.get(snapshotStoreId, `snapshot_${latestKey}`);
   }
@@ -245,11 +292,11 @@ export default class OwnableService {
 
     const snapshots = await this.idb.keys(snapshotStoreId);
     const sortedKeys = snapshots
-      .map((key) => parseInt(key.replace("snapshot_", "")))
-      .sort((a, b) => a - b);
+      .map((key: string) => parseInt(key.replace("snapshot_", "")))
+      .sort((a: number, b: number) => a - b);
 
     return Promise.all(
-      sortedKeys.map((index) =>
+      sortedKeys.map((index: number) =>
         this.idb.get(snapshotStoreId, `snapshot_${index}`)
       )
     );

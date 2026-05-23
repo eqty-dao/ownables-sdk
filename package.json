@@ -59,7 +59,8 @@
     "ownables:deploy": "cp ./ownables/*.zip ./public/ownables/",
     "ownables:cid": "node bin/package-cid.mjs",
     "typecheck": "tsc --noEmit",
-    "ownables:copy": "node bin/ownables-copy.mjs"
+    "ownables:copy": "node bin/ownables-copy.mjs",
+    "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts"
   },
   "repository": {
     "type": "git",
