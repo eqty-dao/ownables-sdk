@@ -6,7 +6,8 @@ use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
-    InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent, package_title_from_name,
+    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
+    package_title_from_name,
 };
 
 // version info for migration info
@@ -106,6 +107,12 @@ pub fn ingest(
     let _ = (info, deps);
     Err(ContractError::MatchEventError {
         val: event.event_type,
+    })
+}
+
+pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>, ContractError> {
+    Err(ContractError::MatchEventError {
+        val: request.event_type,
     })
 }
 

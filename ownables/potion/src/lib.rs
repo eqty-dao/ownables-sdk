@@ -1,7 +1,8 @@
 use cosmwasm_std::MessageInfo;
 use ownable_std::abi::{AbiResponse, AbiResultPayload, HostAbiError, cbor_from_slice, cbor_to_vec};
 use ownable_std::{
-    IdbStateDump, OwnableEvent, PublicEvent, create_env, load_owned_deps, ownable_host_abi_v1,
+    EncodePublicEventRequest, IdbStateDump, OwnableEvent, PublicEvent, create_env, load_owned_deps,
+    ownable_host_abi_v1,
 };
 use serde::{Deserialize, Serialize};
 
@@ -120,10 +121,16 @@ fn ingest_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
     cbor_to_vec(&payload)
 }
 
+fn encode_public_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+    let request: EncodePublicEventRequest = cbor_from_slice(input)?;
+    contract::encode_public_event(request).map_err(HostAbiError::from_display)
+}
+
 ownable_host_abi_v1!(
     instantiate = instantiate_handler,
     execute = execute_handler,
     query = query_handler,
     register = register_handler,
     ingest = ingest_handler,
+    encode_public_event = encode_public_event_handler,
 );
