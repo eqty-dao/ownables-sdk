@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { Event, EventChain } from "eqty-core";
+import { decode, encode } from "cbor-x";
 import OwnableService, { StateDump } from "../services/Ownable.service";
+import WorkerRPC from "../services/WorkerRPC";
 
 type StoreMap = Map<string, any>;
 
@@ -93,6 +95,7 @@ function createRpcMock(chainId: string) {
     ingest: [] as any[],
     execute: [] as any[],
     query: [] as any[],
+    encodePublicEvent: [] as any[],
   };
   return {
     calls,
@@ -124,12 +127,39 @@ function createRpcMock(chainId: string) {
       return {};
     },
     async encodePublicEvent(_eventType: string, payload: Uint8Array) {
+      calls.encodePublicEvent.push({ eventType: _eventType, payload });
       return payload;
     },
     setWidgetWindow(_win: Window | null) {},
     terminate() {},
     async refresh(_state: StateDump) {},
   };
+}
+
+class FakeWorker extends EventTarget {
+  messages: any[] = [];
+
+  postMessage(message: any): void {
+    this.messages.push(message);
+    if (message.type !== "encode_public_event") {
+      this.dispatchEvent(
+        new MessageEvent("message", { data: { err: `unexpected type ${message.type}` } })
+      );
+      return;
+    }
+
+    const request = decode(new Uint8Array(message.input)) as {
+      eventType: string;
+      data: Uint8Array;
+    };
+    const output = encode({
+      success: true,
+      payload: request.data,
+    });
+    this.dispatchEvent(new MessageEvent("message", { data: { output } }));
+  }
+
+  terminate(): void {}
 }
 
 async function verifyReplayContexts() {
@@ -223,9 +253,69 @@ async function verifyConsumeFlow() {
   assert.equal(eqty.signed.length, 2, "consume flow should sign both producer and consumer events");
 }
 
+async function verifyRegisterPublicEventFlow() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+
+  const publicEvent = {
+    chainId: eqty.chainId,
+    contractAddress: "0x1111111111111111111111111111111111111111",
+    transactionHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    logIndex: 7,
+    eventType: "consume",
+    attributes: { amount: "10" },
+    data: new Uint8Array([1, 2, 3]),
+  };
+
+  await service.registerPublicEvent(chain, publicEvent);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+  await service.registerPublicEvent(chain, publicEvent);
+
+  assert.equal(rpc.calls.register.length, 1, "duplicate public event replay must be ignored");
+  assert.equal(eqty.signed.length, 1, "deduped public event should sign once");
+  assert.equal(
+    eqty.signed[0].parsedData["@context"],
+    "register_public_event_msg.json",
+    "registerPublicEvent must persist a register replay event"
+  );
+}
+
+async function verifyEncodePublicEventBridge() {
+  const rpc = new WorkerRPC("bridge-test") as any;
+  const worker = new FakeWorker();
+  rpc.worker = worker;
+
+  const payload = new Uint8Array([9, 8, 7]);
+  const encoded = await rpc.encodePublicEvent("consume", payload);
+
+  assert.deepEqual(Array.from(encoded), [9, 8, 7], "bridge must return encoded payload bytes");
+  assert.equal(worker.messages.length, 1, "bridge should post exactly one worker message");
+  assert.equal(worker.messages[0].type, "encode_public_event");
+  const request = decode(new Uint8Array(worker.messages[0].input)) as {
+    eventType: string;
+    data: Uint8Array;
+  };
+  assert.equal(request.eventType, "consume");
+  assert.deepEqual(Array.from(request.data), [9, 8, 7]);
+}
+
 async function main() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
+  await verifyRegisterPublicEventFlow();
+  await verifyEncodePublicEventBridge();
   console.log("external-events runtime verification passed");
 }
 
