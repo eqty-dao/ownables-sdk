@@ -193,7 +193,7 @@ async function verifyReplayContexts() {
   service._rpc.set(registerChain.id, registerRpc);
 
   new Event({
-    "@context": "register_public_event_msg.json",
+    "@context": "register_msg.json",
     source: eqty.address,
     transactionHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     blockNumber: 1,
@@ -210,7 +210,7 @@ async function verifyReplayContexts() {
   service._rpc.set(ingestChain.id, ingestRpc);
 
   new Event({
-    "@context": "ingest_event_msg.json",
+    "@context": "ingest_msg.json",
     source: { id: "source-1", owner: "owner-1", issuer: "issuer-1" },
     eventType: "consume",
     attributes: { amount: "10" },
@@ -302,7 +302,7 @@ async function verifyRegisterPublicEventFlow() {
   assert.equal(eqty.signed.length, 1, "deduped public event should sign once");
   assert.equal(
     eqty.signed[0].parsedData["@context"],
-    "register_public_event_msg.json",
+    "register_msg.json",
     "registerPublicEvent must persist a register replay event"
   );
 }
@@ -354,7 +354,7 @@ async function verifyEmitPublicEventFlow() {
   );
   assert.equal(
     eqty.signed[0].parsedData["@context"],
-    "register_public_event_msg.json",
+    "register_msg.json",
     "emit flow must persist a register replay event"
   );
 }

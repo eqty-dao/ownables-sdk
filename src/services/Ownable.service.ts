@@ -365,10 +365,10 @@ export default class OwnableService {
       case "execute_msg.json":
         result = await rpc.execute(msg, info, stateDump);
         break;
-      case "register_public_event_msg.json":
+      case "register_msg.json":
         result = await rpc.register(this.toRegisterRpcPayload(msg as PublicEvent), info, stateDump);
         break;
-      case "ingest_event_msg.json":
+      case "ingest_msg.json":
         result = await rpc.ingest(msg as OwnableEvent, info, stateDump);
         break;
       default:
@@ -505,7 +505,7 @@ export default class OwnableService {
     await withProgress(onProgress)("signPublicEvent", () =>
       this.eqty.sign(
         new Event({
-          "@context": "register_public_event_msg.json",
+          "@context": "register_msg.json",
           ...publicEvent,
         }).addTo(chain)
       )
@@ -617,7 +617,7 @@ export default class OwnableService {
     await withProgress(onProgress)("signConsumerEvent", () =>
       this.eqty.sign(
         new Event({
-          "@context": "ingest_event_msg.json",
+          "@context": "ingest_msg.json",
           ...ingestEvent,
         }).addTo(consumer)
       )
