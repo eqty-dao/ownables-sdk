@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import WorkerRPC from "./WorkerRPC";
+import { encode } from "cbor-x";
 
 import workerJsSource from "@/assets/worker.js?raw";
 import { LogProgress, withProgress } from "@/contexts/Progress.context";
@@ -43,6 +44,11 @@ interface EqtyLike {
   address: string;
   chainId: number;
   sign(event: Event): Promise<void>;
+  emitPublicEvent(
+    chainId: string,
+    eventType: string,
+    data: Uint8Array
+  ): Promise<Omit<PublicEvent, "data"> & { data: string | Uint8Array | Binary }>;
   anchor(...anchors: Array<any>): Promise<void>;
   submitAnchors(): Promise<string | undefined>;
 }
@@ -74,12 +80,12 @@ interface StateSnapshot {
 }
 
 interface PublicEvent {
-  chainId: number;
-  contractAddress: string;
+  source: string;
   transactionHash: string;
+  blockNumber: number;
+  transactionIndex: number;
   logIndex: number;
   eventType: string;
-  attributes: TypedDict<string>;
   data: string;
 }
 
@@ -510,6 +516,21 @@ export default class OwnableService {
       await this.idb.createStore(replayStoreId);
     }
     await this.idb.set(replayStoreId, replayKey, true);
+  }
+
+  async emitPublicEvent(
+    chain: EventChain,
+    eventType: string,
+    payload: TypedDict,
+    onProgress?: LogProgress
+  ): Promise<void> {
+    const encodedPayload = await withProgress(onProgress)("encodePublicEvent", () =>
+      this.rpc(chain.id).encodePublicEvent(eventType, encode(payload) as Uint8Array)
+    );
+    const publicEvent = await withProgress(onProgress)("emitPublicEvent", () =>
+      this.eqty.emitPublicEvent(chain.id, eventType, encodedPayload)
+    );
+    await this.registerPublicEvent(chain, publicEvent, onProgress);
   }
 
   async canConsume(

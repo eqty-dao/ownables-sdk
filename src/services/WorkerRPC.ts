@@ -29,12 +29,12 @@ interface OwnableEvent {
 }
 
 interface PublicEvent {
-  chainId: number;
-  contractAddress: string;
+  source: string;
   transactionHash: string;
+  blockNumber: number;
+  transactionIndex: number;
   logIndex: number;
   eventType: string;
-  attributes: TypedDict<string>;
   data: string;
 }
 

@@ -71,6 +71,7 @@ class MockEqty {
   address = "0x0000000000000000000000000000000000000001";
   chainId = 84532;
   signed: Event[] = [];
+  emitted: Array<{ chainId: string; eventType: string; data: Uint8Array }> = [];
   private signer = {
     getAddress: async () => this.address,
     signTypedData: async () =>
@@ -80,6 +81,19 @@ class MockEqty {
   async sign(event: Event): Promise<void> {
     await event.signWith(this.signer as any);
     this.signed.push(event);
+  }
+
+  async emitPublicEvent(chainId: string, eventType: string, data: Uint8Array) {
+    this.emitted.push({ chainId, eventType, data });
+    return {
+      source: this.address,
+      transactionHash: "0x" + "44".repeat(32),
+      blockNumber: 1,
+      transactionIndex: 0,
+      logIndex: this.emitted.length,
+      eventType,
+      data,
+    };
   }
 
   async anchor(..._anchors: Array<any>): Promise<void> {}
@@ -179,12 +193,12 @@ async function verifyReplayContexts() {
 
   new Event({
     "@context": "register_public_event_msg.json",
-    chainId: eqty.chainId,
-    contractAddress: "0x1111111111111111111111111111111111111111",
+    source: eqty.address,
     transactionHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    blockNumber: 1,
+    transactionIndex: 0,
     logIndex: 0,
     eventType: "consume",
-    attributes: { amount: "10" },
     data: "0x1234",
   }).addTo(registerChain);
 
@@ -270,12 +284,12 @@ async function verifyRegisterPublicEventFlow() {
   eventChains.setStateDump(chain.id, chain.state.hex, []);
 
   const publicEvent = {
-    chainId: eqty.chainId,
-    contractAddress: "0x1111111111111111111111111111111111111111",
+    source: eqty.address,
     transactionHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    blockNumber: 1,
+    transactionIndex: 0,
     logIndex: 7,
     eventType: "consume",
-    attributes: { amount: "10" },
     data: new Uint8Array([1, 2, 3]),
   };
 
@@ -311,11 +325,45 @@ async function verifyEncodePublicEventBridge() {
   assert.deepEqual(Array.from(request.data), [9, 8, 7]);
 }
 
+async function verifyEmitPublicEventFlow() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+
+  await service.emitPublicEvent(chain, "consume", { amount: "10" });
+
+  assert.equal(rpc.calls.encodePublicEvent.length, 1, "emit flow must encode the public event");
+  assert.equal(eqty.emitted.length, 1, "emit flow must publish through EQTY");
+  assert.equal(rpc.calls.register.length, 1, "emitted public event must be registered locally");
+  assert.deepEqual(
+    Array.from(eqty.emitted[0].data),
+    Array.from(rpc.calls.encodePublicEvent[0].payload),
+    "published data must be the worker-encoded payload"
+  );
+  assert.equal(
+    eqty.signed[0].parsedData["@context"],
+    "register_public_event_msg.json",
+    "emit flow must persist a register replay event"
+  );
+}
+
 async function main() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
   await verifyRegisterPublicEventFlow();
   await verifyEncodePublicEventBridge();
+  await verifyEmitPublicEventFlow();
   console.log("external-events runtime verification passed");
 }
 

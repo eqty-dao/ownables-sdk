@@ -122,6 +122,66 @@ export default class EQTYService {
     }
   }
 
+  async emitPublicEvent(
+    subjectId: string,
+    eventType: string,
+    data: Uint8Array
+  ) {
+    const transactionHash = await (this.walletClient as any).writeContract({
+      account: (this.walletClient as any).account,
+      address: AnchorClient.contractAddress(this.chainId) as `0x${string}`,
+      abi: [
+        {
+          type: "function",
+          name: "emitPublicEvent",
+          stateMutability: "payable",
+          inputs: [
+            { name: "subjectId", type: "bytes32" },
+            { name: "eventType", type: "string" },
+            { name: "data", type: "bytes" },
+          ],
+          outputs: [],
+        },
+      ],
+      functionName: "emitPublicEvent",
+      args: [subjectId, eventType, data],
+    });
+    const receipt = await (this.publicClient as any).waitForTransactionReceipt({
+      hash: transactionHash,
+    });
+    const publicEventAbi = parseAbiItem(
+      "event PublicEvent(bytes32 indexed subjectId, address indexed source, string eventType, bytes data, uint64 timestamp)"
+    );
+    const logs = await (this.publicClient as any).getLogs({
+      address: AnchorClient.contractAddress(this.chainId) as `0x${string}`,
+      event: publicEventAbi,
+      fromBlock: receipt.blockNumber,
+      toBlock: receipt.blockNumber,
+    });
+    const log = logs.find(
+      (entry: any) =>
+        entry.transactionHash === transactionHash &&
+        entry.args?.subjectId?.toLowerCase?.() === subjectId.toLowerCase()
+    );
+
+    if (!log) {
+      throw new Error("PublicEvent log not found in transaction receipt");
+    }
+
+    return {
+      source: log.args.source as string,
+      eventType: log.args.eventType as string,
+      data:
+        typeof log.args.data === "string"
+          ? Binary.fromHex(log.args.data).hex
+          : new Binary(log.args.data as Uint8Array).hex,
+      blockNumber: Number(receipt.blockNumber),
+      transactionHash,
+      transactionIndex: Number(receipt.transactionIndex ?? receipt.index ?? 0),
+      logIndex: Number(log.logIndex),
+    };
+  }
+
   async sign(...subjects: Array<Event | Message>): Promise<void> {
     for (const subject of subjects) {
       await subject.signWith(this.signer);

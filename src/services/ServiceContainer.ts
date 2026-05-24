@@ -1,7 +1,7 @@
 import { isE2E } from "@/utils/isE2E";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
-import { EQTYService } from "@ownables/adapter-viem";
+import EQTYService from "./EQTY.service";
 import {
   IDBService,
   LocalStorageService,
