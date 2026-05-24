@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { Event, EventChain } from "eqty-core";
 import { decode, encode } from "cbor-x";
 import OwnableService, { StateDump } from "../services/Ownable.service";
+import EQTYService from "../services/EQTY.service";
 import WorkerRPC from "../services/WorkerRPC";
 
 type StoreMap = Map<string, any>;
@@ -358,12 +359,76 @@ async function verifyEmitPublicEventFlow() {
   );
 }
 
+async function verifyEqtyPublicEventFeeForwarding() {
+  const transactionHash = "0x" + "55".repeat(32);
+  let writeContractInput: any;
+
+  const walletClient = {
+    account: "0x0000000000000000000000000000000000000001",
+    writeContract: async (input: any) => {
+      writeContractInput = input;
+      return transactionHash;
+    },
+  };
+  const publicClient = {
+    readContract: async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "quoteEqtyCost":
+          return 12n;
+        case "eqtyToken":
+          return "0x1111111111111111111111111111111111111111";
+        case "allowance":
+          return 0n;
+        case "quoteEthCost":
+          return 34n;
+        default:
+          throw new Error(`unexpected readContract ${functionName}`);
+      }
+    },
+    waitForTransactionReceipt: async () => ({
+      blockNumber: 123n,
+      transactionIndex: 4,
+    }),
+    getLogs: async () => [
+      {
+        transactionHash,
+        logIndex: 9,
+        args: {
+          subjectId: "0x" + "66".repeat(32),
+          source: "0x0000000000000000000000000000000000000001",
+          eventType: "consume",
+          data: "0x010203",
+        },
+      },
+    ],
+  };
+  const service = new EQTYService(
+    "0x0000000000000000000000000000000000000001",
+    84532,
+    walletClient as any,
+    publicClient as any
+  );
+
+  const event = await service.emitPublicEvent(
+    "0x" + "66".repeat(32),
+    "consume",
+    Uint8Array.from([1, 2, 3])
+  );
+
+  assert.equal(writeContractInput.value, 34n, "public event emit must forward required ETH fee");
+  assert.equal(event.transactionHash, transactionHash);
+  assert.equal(event.transactionIndex, 4);
+  assert.equal(event.logIndex, 9);
+  assert.equal(event.data, "0x010203");
+}
+
 async function main() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
   await verifyRegisterPublicEventFlow();
   await verifyEncodePublicEventBridge();
   await verifyEmitPublicEventFlow();
+  await verifyEqtyPublicEventFeeForwarding();
   console.log("external-events runtime verification passed");
 }
 

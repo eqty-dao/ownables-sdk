@@ -14,6 +14,7 @@ import {
   getAddress,
   http,
   parseAbiItem,
+  zeroAddress,
 } from "viem";
 import { base, baseSepolia } from "viem/chains";
 
@@ -79,6 +80,7 @@ export default class EQTYService {
   }
 
   private static get ethereum(): any {
+    if (typeof window === "undefined") return undefined;
     return (window as any).ethereum;
   }
 
@@ -125,8 +127,10 @@ export default class EQTYService {
   async emitPublicEvent(
     subjectId: string,
     eventType: string,
-    data: Uint8Array
+    data: Uint8Array,
+    txOptions?: { value?: bigint }
   ) {
+    const nextTxOptions = txOptions ?? (await this.resolveAnchorTxOptions(1));
     const transactionHash = await (this.walletClient as any).writeContract({
       account: (this.walletClient as any).account,
       address: AnchorClient.contractAddress(this.chainId) as `0x${string}`,
@@ -145,6 +149,7 @@ export default class EQTYService {
       ],
       functionName: "emitPublicEvent",
       args: [subjectId, eventType, data],
+      value: nextTxOptions.value,
     });
     const receipt = await (this.publicClient as any).waitForTransactionReceipt({
       hash: transactionHash,
@@ -180,6 +185,107 @@ export default class EQTYService {
       transactionIndex: Number(receipt.transactionIndex ?? receipt.index ?? 0),
       logIndex: Number(log.logIndex),
     };
+  }
+
+  async quoteEqtyCost(count: bigint): Promise<bigint> {
+    return (await (this.publicClient as any).readContract({
+      address: AnchorClient.contractAddress(this.chainId),
+      abi: [
+        {
+          name: "quoteEqtyCost",
+          type: "function",
+          stateMutability: "view",
+          inputs: [{ name: "count", type: "uint256" }],
+          outputs: [{ name: "cost", type: "uint256" }],
+        },
+      ],
+      functionName: "quoteEqtyCost",
+      args: [count],
+    })) as bigint;
+  }
+
+  async quoteEthCost(count: bigint): Promise<bigint> {
+    return (await (this.publicClient as any).readContract({
+      address: AnchorClient.contractAddress(this.chainId),
+      abi: [
+        {
+          name: "quoteEthCost",
+          type: "function",
+          stateMutability: "view",
+          inputs: [{ name: "count", type: "uint256" }],
+          outputs: [{ name: "cost", type: "uint256" }],
+        },
+      ],
+      functionName: "quoteEthCost",
+      args: [count],
+    })) as bigint;
+  }
+
+  async eqtyToken(): Promise<string> {
+    return (await (this.publicClient as any).readContract({
+      address: AnchorClient.contractAddress(this.chainId),
+      abi: [
+        {
+          name: "eqtyToken",
+          type: "function",
+          stateMutability: "view",
+          inputs: [],
+          outputs: [{ name: "token", type: "address" }],
+        },
+      ],
+      functionName: "eqtyToken",
+      args: [],
+    })) as string;
+  }
+
+  async allowance(
+    tokenAddress: string,
+    owner: string,
+    spender: string
+  ): Promise<bigint> {
+    return (await (this.publicClient as any).readContract({
+      address: tokenAddress as `0x${string}`,
+      abi: [
+        {
+          name: "allowance",
+          type: "function",
+          stateMutability: "view",
+          inputs: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+          ],
+          outputs: [{ name: "remaining", type: "uint256" }],
+        },
+      ],
+      functionName: "allowance",
+      args: [owner, spender],
+    })) as bigint;
+  }
+
+  private async resolveAnchorTxOptions(count: number): Promise<{ value?: bigint }> {
+    const batchSize = BigInt(count);
+    const quotedEqtyCost = await this.quoteEqtyCost(batchSize);
+
+    if (quotedEqtyCost === 0n) {
+      return { value: 0n };
+    }
+
+    const eqtyTokenAddress = await this.eqtyToken();
+    if (eqtyTokenAddress !== zeroAddress) {
+      const anchorAddress = AnchorClient.contractAddress(this.chainId);
+      const allowance = await this.allowance(
+        eqtyTokenAddress,
+        this.address,
+        anchorAddress
+      );
+
+      if (allowance >= quotedEqtyCost) {
+        return { value: 0n };
+      }
+    }
+
+    const quotedEthCost = await this.quoteEthCost(batchSize);
+    return { value: quotedEthCost };
   }
 
   async sign(...subjects: Array<Event | Message>): Promise<void> {
