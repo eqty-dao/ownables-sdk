@@ -56,7 +56,7 @@
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
     "ownables:build": "node bin/ownables-build.mjs",
     "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/Cargo.lock",
-    "ownables:deploy": "cp ./ownables/*.zip ./public/ownables/",
+    "ownables:deploy": "mkdir -p ./public/ownables && cp ./ownables/*.zip ./public/ownables/",
     "ownables:cid": "node bin/package-cid.mjs",
     "typecheck": "tsc --noEmit",
     "ownables:copy": "node bin/ownables-copy.mjs",
