@@ -1967,7 +1967,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@npm:^0.6.0":
+"@ownables/adapter-viem@npm:^0.6.1":
   version: 0.6.1
   resolution: "@ownables/adapter-viem@npm:0.6.1"
   dependencies:
@@ -1978,7 +1978,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/builder-client@npm:^0.6.0":
+"@ownables/builder-client@npm:^0.6.1":
   version: 0.6.1
   resolution: "@ownables/builder-client@npm:0.6.1"
   dependencies:
@@ -1987,7 +1987,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/core@npm:0.6.1, @ownables/core@npm:^0.6.0":
+"@ownables/core@npm:0.6.1, @ownables/core@npm:^0.6.1":
   version: 0.6.1
   resolution: "@ownables/core@npm:0.6.1"
   dependencies:
@@ -1998,7 +1998,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@npm:^0.6.0":
+"@ownables/platform-browser@npm:^0.6.1":
   version: 0.6.1
   resolution: "@ownables/platform-browser@npm:0.6.1"
   dependencies:
@@ -2027,10 +2027,10 @@ __metadata:
     "@letsrunit/cli": "npm:^0.19.0"
     "@letsrunit/cucumber": "npm:^0.19.0"
     "@letsrunit/mcp-server": "npm:^0.19.0"
-    "@ownables/adapter-viem": "npm:^0.6.0"
-    "@ownables/builder-client": "npm:^0.6.0"
-    "@ownables/core": "npm:^0.6.0"
-    "@ownables/platform-browser": "npm:^0.6.0"
+    "@ownables/adapter-viem": "npm:^0.6.1"
+    "@ownables/builder-client": "npm:^0.6.1"
+    "@ownables/core": "npm:^0.6.1"
+    "@ownables/platform-browser": "npm:^0.6.1"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
     "@tanstack/react-query": "npm:^5.90.5"
