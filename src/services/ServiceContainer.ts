@@ -1,7 +1,7 @@
 import { isE2E } from "@/utils/isE2E";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
-import { EQTYService } from "@ownables/adapter-viem";
+import EQTYService from "./EQTY.service";
 import {
   IDBService,
   LocalStorageService,
@@ -10,11 +10,10 @@ import {
 } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 import {
   EventChainService,
-  OwnableService,
   PollingService,
 } from "@ownables/core";
 import { BuilderService } from "@ownables/builder-client";
-import workerJsSource from "@/assets/worker.js?raw";
+import OwnableService from "./Ownable.service";
 import { PACKAGE_EXAMPLES, PACKAGE_EXAMPLE_URL } from "@/config/examples";
 
 export interface ServiceMap {
@@ -106,10 +105,7 @@ export default class ServiceContainer {
           await c.get("idb"),
           await c.get("eventChains"),
           await c.get("eqty"),
-          await c.get("packages"),
-          {
-            getWorkerSource: () => workerJsSource,
-          }
+          await c.get("packages")
         )
     );
 

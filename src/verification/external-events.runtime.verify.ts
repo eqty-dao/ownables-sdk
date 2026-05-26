@@ -1,0 +1,439 @@
+import assert from "node:assert/strict";
+import { Event, EventChain } from "eqty-core";
+import { decode, encode } from "cbor-x";
+import OwnableService, { StateDump } from "../services/Ownable.service";
+import EQTYService from "../services/EQTY.service";
+import WorkerRPC from "../services/WorkerRPC";
+
+type StoreMap = Map<string, any>;
+
+class MemoryIDB {
+  private stores = new Map<string, StoreMap>();
+
+  async hasStore(name: string): Promise<boolean> {
+    return this.stores.has(name);
+  }
+
+  async createStore(...names: string[]): Promise<void> {
+    for (const name of names) {
+      if (!this.stores.has(name)) this.stores.set(name, new Map());
+    }
+  }
+
+  async get(store: string, key: string): Promise<any> {
+    return this.stores.get(store)?.get(key);
+  }
+
+  async set(store: string, key: string, value: any): Promise<void> {
+    if (!this.stores.has(store)) this.stores.set(store, new Map());
+    this.stores.get(store)!.set(key, value);
+  }
+
+  async keys(store: string): Promise<string[]> {
+    return Array.from(this.stores.get(store)?.keys() ?? []);
+  }
+
+  async getAll(store: string): Promise<any[]> {
+    return Array.from(this.stores.get(store)?.values() ?? []);
+  }
+
+  async setAll(data: Record<string, any>): Promise<void> {
+    for (const [store, value] of Object.entries(data)) {
+      if (!this.stores.has(store)) this.stores.set(store, new Map());
+      const target = this.stores.get(store)!;
+      if (value instanceof Map) {
+        target.clear();
+        for (const [k, v] of value.entries()) target.set(k, v);
+      } else if (value && typeof value === "object") {
+        for (const [k, v] of Object.entries(value)) target.set(k, v);
+      }
+    }
+  }
+}
+
+class MockEventChains {
+  anchoring = false;
+  private readonly dumps = new Map<string, StateDump>();
+
+  setStateDump(chainId: string, stateHex: string, dump: StateDump): void {
+    this.dumps.set(`${chainId}:${stateHex}`, dump);
+  }
+
+  async getStateDump(chainId: string, state: string): Promise<StateDump | null> {
+    return this.dumps.get(`${chainId}:${state}`) ?? null;
+  }
+
+  async loadAll(): Promise<any[]> {
+    return [];
+  }
+}
+
+class MockEqty {
+  address = "0x0000000000000000000000000000000000000001";
+  chainId = 84532;
+  signed: Event[] = [];
+  emitted: Array<{ chainId: string; eventType: string; data: Uint8Array }> = [];
+  private signer = {
+    getAddress: async () => this.address,
+    signTypedData: async () =>
+      "0x" + "11".repeat(65),
+  };
+
+  async sign(event: Event): Promise<void> {
+    await event.signWith(this.signer as any);
+    this.signed.push(event);
+  }
+
+  async emitPublicEvent(chainId: string, eventType: string, data: Uint8Array) {
+    this.emitted.push({ chainId, eventType, data });
+    return {
+      source: this.address,
+      transactionHash: "0x" + "44".repeat(32),
+      blockNumber: 1,
+      transactionIndex: 0,
+      logIndex: this.emitted.length,
+      eventType,
+      data,
+    };
+  }
+
+  async anchor(..._anchors: Array<any>): Promise<void> {}
+
+  async submitAnchors(): Promise<string | undefined> {
+    return undefined;
+  }
+}
+
+function createRpcMock(chainId: string) {
+  const calls = {
+    register: [] as any[],
+    ingest: [] as any[],
+    execute: [] as any[],
+    query: [] as any[],
+    encodePublicEvent: [] as any[],
+  };
+  return {
+    calls,
+    async instantiate() {
+      return { attributes: {}, state: [] as StateDump };
+    },
+    async execute(msg: any, _info: any, _state: StateDump) {
+      calls.execute.push(msg);
+      return {
+        attributes: {},
+        events: [{ type: "consume", attributes: { amount: "10", chainId } }],
+        data: "",
+        state: [] as StateDump,
+      };
+    },
+    async register(event: any, info: any, _state: StateDump) {
+      calls.register.push({ event, info });
+      return { attributes: {}, events: [], data: "", state: [] as StateDump };
+    },
+    async ingest(event: any, info: any, _state: StateDump) {
+      calls.ingest.push({ event, info });
+      return { attributes: {}, events: [], data: "", state: [] as StateDump };
+    },
+    async query(msg: any) {
+      calls.query.push(msg);
+      if (msg?.get_info) {
+        return { owner: "owner-1", issuer: "issuer-1", ownable_type: "potion" };
+      }
+      return {};
+    },
+    async encodePublicEvent(_eventType: string, payload: Uint8Array) {
+      calls.encodePublicEvent.push({ eventType: _eventType, payload });
+      return payload;
+    },
+    setWidgetWindow(_win: Window | null) {},
+    terminate() {},
+    async refresh(_state: StateDump) {},
+  };
+}
+
+class FakeWorker extends EventTarget {
+  messages: any[] = [];
+
+  postMessage(message: any): void {
+    this.messages.push(message);
+    if (message.type !== "encode_public_event") {
+      this.dispatchEvent(
+        new MessageEvent("message", { data: { err: `unexpected type ${message.type}` } })
+      );
+      return;
+    }
+
+    const request = decode(new Uint8Array(message.input)) as {
+      eventType: string;
+      data: Uint8Array;
+    };
+    const output = encode({
+      success: true,
+      payload: request.data,
+    });
+    this.dispatchEvent(new MessageEvent("message", { data: { output } }));
+  }
+
+  terminate(): void {}
+}
+
+async function verifyReplayContexts() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const registerChain = EventChain.create(eqty.address, eqty.chainId);
+  const registerRpc = createRpcMock(registerChain.id);
+  service._rpc.set(registerChain.id, registerRpc);
+
+  new Event({
+    "@context": "register_msg.json",
+    source: eqty.address,
+    transactionHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    blockNumber: 1,
+    transactionIndex: 0,
+    logIndex: 0,
+    eventType: "consume",
+    data: "0x1234",
+  }).addTo(registerChain);
+
+  await service.apply(registerChain, []);
+
+  const ingestChain = EventChain.create(eqty.address, eqty.chainId);
+  const ingestRpc = createRpcMock(ingestChain.id);
+  service._rpc.set(ingestChain.id, ingestRpc);
+
+  new Event({
+    "@context": "ingest_msg.json",
+    source: { id: "source-1", owner: "owner-1", issuer: "issuer-1" },
+    eventType: "consume",
+    attributes: { amount: "10" },
+  }).addTo(ingestChain);
+
+  await service.apply(ingestChain, []);
+
+  assert.equal(registerRpc.calls.register.length, 1, "register replay must be invoked once");
+  assert.equal(ingestRpc.calls.ingest.length, 1, "ingest replay must be invoked once");
+  assert.equal(
+    registerRpc.calls.register[0].info.sender,
+    eqty.address,
+    "replay sender should resolve to active signer address"
+  );
+}
+
+async function verifyConsumeFlow() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const consumable = EventChain.create(eqty.address, eqty.chainId);
+  const consumer = EventChain.create(eqty.address, eqty.chainId);
+
+  eventChains.setStateDump(consumable.id, consumable.state.hex, []);
+  eventChains.setStateDump(consumer.id, consumer.state.hex, []);
+
+  await idb.createStore(
+    `ownable:${consumable.id}`,
+    `ownable:${consumable.id}.state`,
+    `ownable:${consumer.id}`,
+    `ownable:${consumer.id}.state`
+  );
+
+  const consumableRpc = createRpcMock(consumable.id);
+  const consumerRpc = createRpcMock(consumer.id);
+  service._rpc.set(consumable.id, consumableRpc);
+  service._rpc.set(consumer.id, consumerRpc);
+
+  await service.consume(consumer, consumable);
+
+  assert.equal(consumableRpc.calls.execute.length, 1, "consume producer execute must run");
+  assert.equal(consumerRpc.calls.ingest.length, 1, "consumer ingest must run");
+  assert.equal(
+    consumerRpc.calls.ingest[0].event.source.id,
+    consumable.id,
+    "ingest source id must match consumable chain id"
+  );
+  assert.equal(eqty.signed.length, 2, "consume flow should sign both producer and consumer events");
+}
+
+async function verifyRegisterPublicEventFlow() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+
+  const publicEvent = {
+    source: eqty.address,
+    transactionHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    blockNumber: 1,
+    transactionIndex: 0,
+    logIndex: 7,
+    eventType: "consume",
+    data: new Uint8Array([1, 2, 3]),
+  };
+
+  await service.registerPublicEvent(chain, publicEvent);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+  await service.registerPublicEvent(chain, publicEvent);
+
+  assert.equal(rpc.calls.register.length, 1, "duplicate public event replay must be ignored");
+  assert.equal(eqty.signed.length, 1, "deduped public event should sign once");
+  assert.equal(
+    eqty.signed[0].parsedData["@context"],
+    "register_msg.json",
+    "registerPublicEvent must persist a register replay event"
+  );
+}
+
+async function verifyEncodePublicEventBridge() {
+  const rpc = new WorkerRPC("bridge-test") as any;
+  const worker = new FakeWorker();
+  rpc.worker = worker;
+
+  const payload = new Uint8Array([9, 8, 7]);
+  const encoded = await rpc.encodePublicEvent("consume", payload);
+
+  assert.deepEqual(Array.from(encoded), [9, 8, 7], "bridge must return encoded payload bytes");
+  assert.equal(worker.messages.length, 1, "bridge should post exactly one worker message");
+  assert.equal(worker.messages[0].type, "encode_public_event");
+  const request = decode(new Uint8Array(worker.messages[0].input)) as {
+    eventType: string;
+    data: Uint8Array;
+  };
+  assert.equal(request.eventType, "consume");
+  assert.deepEqual(Array.from(request.data), [9, 8, 7]);
+}
+
+async function verifyEmitPublicEventFlow() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+
+  await service.emitPublicEvent(chain, "consume", { amount: "10" });
+
+  assert.equal(rpc.calls.encodePublicEvent.length, 1, "emit flow must encode the public event");
+  assert.equal(eqty.emitted.length, 1, "emit flow must publish through EQTY");
+  assert.equal(rpc.calls.register.length, 1, "emitted public event must be registered locally");
+  assert.deepEqual(
+    Array.from(eqty.emitted[0].data),
+    Array.from(rpc.calls.encodePublicEvent[0].payload),
+    "published data must be the worker-encoded payload"
+  );
+  assert.equal(
+    eqty.signed[0].parsedData["@context"],
+    "register_msg.json",
+    "emit flow must persist a register replay event"
+  );
+}
+
+async function verifyEqtyPublicEventFeeForwarding() {
+  const transactionHash = "0x" + "55".repeat(32);
+  let writeContractInput: any;
+
+  const walletClient = {
+    account: "0x0000000000000000000000000000000000000001",
+    writeContract: async (input: any) => {
+      writeContractInput = input;
+      return transactionHash;
+    },
+  };
+  const publicClient = {
+    readContract: async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "quoteEqtyCost":
+          return 12n;
+        case "eqtyToken":
+          return "0x1111111111111111111111111111111111111111";
+        case "allowance":
+          return 0n;
+        case "quoteEthCost":
+          return 34n;
+        default:
+          throw new Error(`unexpected readContract ${functionName}`);
+      }
+    },
+    waitForTransactionReceipt: async () => ({
+      blockNumber: 123n,
+      transactionIndex: 4,
+    }),
+    getLogs: async () => [
+      {
+        transactionHash,
+        logIndex: 9,
+        args: {
+          subjectId: "0x" + "66".repeat(32),
+          source: "0x0000000000000000000000000000000000000001",
+          eventType: "consume",
+          data: "0x010203",
+        },
+      },
+    ],
+  };
+  const service = new EQTYService(
+    "0x0000000000000000000000000000000000000001",
+    84532,
+    walletClient as any,
+    publicClient as any
+  );
+
+  const event = await service.emitPublicEvent(
+    "0x" + "66".repeat(32),
+    "consume",
+    Uint8Array.from([1, 2, 3])
+  );
+
+  assert.equal(writeContractInput.value, 34n, "public event emit must forward required ETH fee");
+  assert.equal(event.transactionHash, transactionHash);
+  assert.equal(event.transactionIndex, 4);
+  assert.equal(event.logIndex, 9);
+  assert.equal(event.data, "0x010203");
+}
+
+async function main() {
+  await verifyReplayContexts();
+  await verifyConsumeFlow();
+  await verifyRegisterPublicEventFlow();
+  await verifyEncodePublicEventBridge();
+  await verifyEmitPublicEventFlow();
+  await verifyEqtyPublicEventFeeForwarding();
+  console.log("external-events runtime verification passed");
+}
+
+main().catch((error) => {
+  console.error("external-events runtime verification failed");
+  console.error(error);
+  process.exit(1);
+});

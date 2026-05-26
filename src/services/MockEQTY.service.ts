@@ -61,6 +61,22 @@ export default class MockEQTYService {
     return `0x${"a".repeat(64)}`;
   }
 
+  async emitPublicEvent(
+    _subjectId: string,
+    eventType: string,
+    data: Uint8Array
+  ) {
+    return {
+      source: this.address,
+      eventType,
+      data: new Binary(data).hex,
+      blockNumber: 1,
+      transactionHash: `0x${"c".repeat(64)}`,
+      transactionIndex: 0,
+      logIndex: 0,
+    };
+  }
+
   async sign(...subjects: Array<Event | Message>): Promise<void> {
     for (const subject of subjects) {
       await subject.signWith(this.signer as any);

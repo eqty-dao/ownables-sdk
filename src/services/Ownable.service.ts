@@ -1,18 +1,71 @@
 import { EventChain, Event, Binary } from "eqty-core";
-import EQTYService from "./EQTY.service";
-import IDBService from "./IDB.service";
 import TypedDict from "@/interfaces/TypedDict";
-import PackageService from "./Package.service";
 import JSZip from "jszip";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
-import EventChainService from "./EventChain.service";
 import WorkerRPC from "./WorkerRPC";
+import { encode } from "cbor-x";
 
 import workerJsSource from "@/assets/worker.js?raw";
 import { LogProgress, withProgress } from "@/contexts/Progress.context";
 
 export type StateDump = Array<[ArrayLike<number>, ArrayLike<number>]>;
+
+interface IDBLike {
+  hasStore(name: string): Promise<boolean>;
+  createStore(...names: string[]): Promise<void>;
+  deleteStore(name: string): Promise<void>;
+  get(store: string, key: string): Promise<any>;
+  getAll(store: string): Promise<any[]>;
+  set(store: string, key: string, value: any): Promise<void>;
+  setAll(data: Record<string, any>): Promise<void>;
+  keys(store: string): Promise<string[]>;
+  delete(store: string, key: string): Promise<void>;
+}
+
+interface EventChainsLike {
+  anchoring: boolean;
+  loadAll(): Promise<
+    Array<{
+      chain: EventChain;
+      package: string;
+      created: Date;
+      keywords: string[];
+      uniqueMessageHash?: string;
+      isConsumed?: boolean;
+    }>
+  >;
+  getStateDump(chainId: string, state: string): Promise<StateDump | null>;
+  delete(id: string): Promise<void>;
+  deleteAll(): Promise<void>;
+}
+
+interface EqtyLike {
+  address: string;
+  chainId: number;
+  sign(event: Event): Promise<void>;
+  emitPublicEvent(
+    chainId: string,
+    eventType: string,
+    data: Uint8Array
+  ): Promise<Omit<PublicEvent, "data"> & { data: string | Uint8Array | Binary }>;
+  anchor(...anchors: Array<any>): Promise<void>;
+  submitAnchors(): Promise<string | undefined>;
+}
+
+interface PackagesLike {
+  getAsset(
+    cid: string,
+    fileName: string,
+    reader: (fileReader: FileReader, file: Blob | File) => void
+  ): Promise<ArrayBuffer | string>;
+  info(cid: string, uniqueMessageHash?: string): {
+    keywords?: string[];
+    uniqueMessageHash?: string;
+    isConsumer?: boolean;
+  };
+  zip(cid: string): Promise<JSZip>;
+}
 
 interface MessageInfo {
   sender: string;
@@ -26,14 +79,39 @@ interface StateSnapshot {
   timestamp: Date;
 }
 
+interface PublicEvent {
+  source: string;
+  transactionHash: string;
+  blockNumber: number;
+  transactionIndex: number;
+  logIndex: number;
+  eventType: string;
+  data: string;
+}
+
+interface RuntimePublicEvent extends Omit<PublicEvent, "data"> {
+  data: Binary;
+}
+
+interface OwnableEvent {
+  source: {
+    id: string;
+    owner: string;
+    issuer: string;
+  };
+  eventType: string;
+  attributes: TypedDict<string>;
+}
+
 export default class OwnableService {
   private readonly SNAPSHOT_INTERVAL = 50;
+  private readonly PUBLIC_EVENT_REPLAY_STORE_SUFFIX = ".public-event-replays";
 
   constructor(
-    private readonly idb: IDBService,
-    private readonly eventChains: EventChainService,
-    private readonly eqty: EQTYService,
-    private readonly packages: PackageService
+    private readonly idb: IDBLike,
+    private readonly eventChains: EventChainsLike,
+    private readonly eqty: EqtyLike,
+    private readonly packages: PackagesLike
   ) {}
 
   private readonly _rpc = new Map<string, WorkerRPC>();
@@ -84,7 +162,7 @@ export default class OwnableService {
     const wasm = (await this.packages.getAsset(
       cid,
       "ownable_bg.wasm",
-      (fr, file) => fr.readAsArrayBuffer(file)
+      (fr: FileReader, file: Blob | File) => fr.readAsArrayBuffer(file)
     )) as ArrayBuffer;
 
     const workerRpc = new WorkerRPC(id);
@@ -172,13 +250,13 @@ export default class OwnableService {
       const keys = await this.idb.keys(snapshotStoreId);
       if (keys.length > 3) {
         const sortedKeys = keys
-          .map((key) => parseInt(key.replace("snapshot_", "")))
-          .sort((a, b) => b - a);
+          .map((key: string) => parseInt(key.replace("snapshot_", "")))
+          .sort((a: number, b: number) => b - a);
 
         // Delete oldest snapshots, keep the 3 most recent
         const keysToDelete = sortedKeys
           .slice(3)
-          .map((index) => `snapshot_${index}`);
+          .map((index: number) => `snapshot_${index}`);
 
         for (const key of keysToDelete) {
           await this.idb.delete(snapshotStoreId, key);
@@ -204,8 +282,8 @@ export default class OwnableService {
     if (snapshots.length === 0) return null;
 
     const latestKey = snapshots
-      .map((key) => parseInt(key.replace("snapshot_", "")))
-      .sort((a, b) => b - a)[0];
+      .map((key: string) => parseInt(key.replace("snapshot_", "")))
+      .sort((a: number, b: number) => b - a)[0];
 
     return await this.idb.get(snapshotStoreId, `snapshot_${latestKey}`);
   }
@@ -220,11 +298,11 @@ export default class OwnableService {
 
     const snapshots = await this.idb.keys(snapshotStoreId);
     const sortedKeys = snapshots
-      .map((key) => parseInt(key.replace("snapshot_", "")))
-      .sort((a, b) => a - b);
+      .map((key: string) => parseInt(key.replace("snapshot_", "")))
+      .sort((a: number, b: number) => a - b);
 
     return Promise.all(
-      sortedKeys.map((index) =>
+      sortedKeys.map((index: number) =>
         this.idb.get(snapshotStoreId, `snapshot_${index}`)
       )
     );
@@ -237,6 +315,33 @@ export default class OwnableService {
     if (await this.idb.hasStore(snapshotStoreId)) {
       await this.idb.deleteStore(snapshotStoreId);
     }
+  }
+
+  private publicEventReplayStoreId(chainId: string): string {
+    return `ownable:${chainId}${this.PUBLIC_EVENT_REPLAY_STORE_SUFFIX}`;
+  }
+
+  private publicEventReplayKey(event: PublicEvent): string {
+    return `${event.transactionHash}:${event.logIndex}`;
+  }
+
+  private toRegisterRuntimeEvent(
+    event: Omit<PublicEvent, "data"> & { data: string | Uint8Array | Binary }
+  ): PublicEvent {
+    return {
+      ...event,
+      data:
+        typeof event.data === "string"
+          ? event.data
+          : new Binary(event.data).hex,
+    };
+  }
+
+  private toRegisterRpcPayload(event: PublicEvent): RuntimePublicEvent {
+    return {
+      ...event,
+      data: Binary.fromHex(event.data),
+    };
   }
 
   private async applyEvent(
@@ -260,15 +365,11 @@ export default class OwnableService {
       case "execute_msg.json":
         result = await rpc.execute(msg, info, stateDump);
         break;
-      case "external_event_msg.json":
-        const message = {
-          msg: {
-            event_type: msg.type,
-            attributes: msg.attributes,
-            network: "",
-          },
-        };
-        result = await rpc.externalEvent(message, info, stateDump);
+      case "register_msg.json":
+        result = await rpc.register(this.toRegisterRpcPayload(msg as PublicEvent), info, stateDump);
+        break;
+      case "ingest_msg.json":
+        result = await rpc.ingest(msg as OwnableEvent, info, stateDump);
         break;
       default:
         throw new Error(`Unknown event type`);
@@ -375,6 +476,63 @@ export default class OwnableService {
     );
   }
 
+  async registerPublicEvent(
+    chain: EventChain,
+    event: Omit<PublicEvent, "data"> & { data: string | Uint8Array | Binary },
+    onProgress?: LogProgress
+  ): Promise<void> {
+    const stateDump = await this.eventChains.getStateDump(chain.id, chain.state.hex);
+    if (!stateDump) throw Error("State mismatch for register public event");
+
+    const publicEvent = this.toRegisterRuntimeEvent(event);
+    const replayStoreId = this.publicEventReplayStoreId(chain.id);
+    const replayKey = this.publicEventReplayKey(publicEvent);
+
+    if ((await this.idb.hasStore(replayStoreId)) && (await this.idb.get(replayStoreId, replayKey))) {
+      return;
+    }
+
+    const info: MessageInfo = {
+      sender: this.eqty.address,
+      funds: [],
+    };
+    const { state: newStateDump } = await this.rpc(chain.id).register(
+      this.toRegisterRpcPayload(publicEvent),
+      info,
+      stateDump
+    );
+
+    await withProgress(onProgress)("signPublicEvent", () =>
+      this.eqty.sign(
+        new Event({
+          "@context": "register_msg.json",
+          ...publicEvent,
+        }).addTo(chain)
+      )
+    );
+
+    await this.store(chain, newStateDump);
+    if (!(await this.idb.hasStore(replayStoreId))) {
+      await this.idb.createStore(replayStoreId);
+    }
+    await this.idb.set(replayStoreId, replayKey, true);
+  }
+
+  async emitPublicEvent(
+    chain: EventChain,
+    eventType: string,
+    payload: TypedDict,
+    onProgress?: LogProgress
+  ): Promise<void> {
+    const encodedPayload = await withProgress(onProgress)("encodePublicEvent", () =>
+      this.rpc(chain.id).encodePublicEvent(eventType, encode(payload) as Uint8Array)
+    );
+    const publicEvent = await withProgress(onProgress)("emitPublicEvent", () =>
+      this.eqty.emitPublicEvent(chain.id, eventType, encodedPayload)
+    );
+    await this.registerPublicEvent(chain, publicEvent, onProgress);
+  }
+
   async canConsume(
     consumer: { chain: EventChain; package: string },
     info: TypedOwnableInfo
@@ -429,19 +587,24 @@ export default class OwnableService {
       | { contract?: string; type: string; attributes: TypedDict<string> }
       | undefined = events.find((event) => event.type === "consume");
     if (!consumeEvent) throw Error("No consume event emitted");
-    consumeEvent.contract = consumable.id;
+    const consumableInfo = (await this.rpc(consumable.id).query(
+      { get_info: {} },
+      consumableStateDump
+    )) as TypedOwnableInfo;
 
-    const externalEventMsg = {
-      msg: {
-        attributes: consumeEvent.attributes,
-        network: "",
-        event_type: consumeEvent.type,
+    const ingestEvent: OwnableEvent = {
+      source: {
+        id: consumable.id,
+        owner: consumableInfo.owner,
+        issuer: consumableInfo.issuer,
       },
+      attributes: consumeEvent.attributes,
+      eventType: consumeEvent.type,
     };
 
     const { state: consumerStateDump } = await this.rpc(
       consumer.id
-    ).externalEvent(externalEventMsg, info, consumerState);
+    ).ingest(ingestEvent, info, consumerState);
 
     await withProgress(onProgress)("signConsumableEvent", () =>
       this.eqty.sign(
@@ -454,8 +617,8 @@ export default class OwnableService {
     await withProgress(onProgress)("signConsumerEvent", () =>
       this.eqty.sign(
         new Event({
-          "@context": "external_event_msg.json",
-          ...consumeEvent,
+          "@context": "ingest_msg.json",
+          ...ingestEvent,
         }).addTo(consumer)
       )
     );
