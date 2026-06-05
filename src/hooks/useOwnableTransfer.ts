@@ -1,12 +1,11 @@
 import { useCallback } from "react";
-import { Binary, EventChain, IMessageMeta } from "eqty-core";
+import { EventChain } from "eqty-core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import TypedDict from "@/interfaces/TypedDict";
 import { LogProgress } from "@/contexts/Progress.context";
 import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
 import { enqueueSnackbar } from "notistack";
-import { PACKAGE_TYPE } from "@/constants";
 
 type ExecuteFn = (msg: TypedDict, onProgress?: LogProgress, submitAnchors?: boolean) => Promise<void>;
 
@@ -16,66 +15,24 @@ export function useOwnableTransfer(
   execute: ExecuteFn
 ) {
   const ownables = useService("ownables");
-  const relay = useService("relay");
+  const hub = useService("hub");
   const progress = useProgress();
 
-  const resizeToThumbnail = useCallback(async (file: File): Promise<Blob> => {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = URL.createObjectURL(file);
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = 50;
-    canvas.height = 50;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Failed to get canvas context");
-    ctx.drawImage(img, 0, 0, 50, 50);
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/webp", 0.8)
-    );
-    if (!blob) throw new Error("Failed to create thumbnail blob");
-    if (blob.size > 256 * 1024) throw new Error("Compressed thumbnail still exceeds 256KB");
-    return blob;
-  }, []);
-
-  const constructMeta = useCallback(async (): Promise<Partial<IMessageMeta>> => {
-    if (!pkg) return {};
-
-    let thumbnail: Binary | undefined;
-    try {
-      const globalIdb = await import(
-        "@ownables/platform-browser/dist/platform-browser/src/index.js"
-      ).then((m) => m.IDBService.main());
-      const thumbnailFile = await globalIdb.get(`package:${pkg.cid}`, "thumbnail.webp");
-      if (thumbnailFile) {
-        const resized = await resizeToThumbnail(thumbnailFile);
-        thumbnail = Binary.from(new Uint8Array(await resized.arrayBuffer()));
-      }
-    } catch (e) {
-      console.warn("Failed to get thumbnail for package:", e);
-    }
-
-    return { type: PACKAGE_TYPE, title: pkg.title, description: pkg.description ?? "", thumbnail: thumbnail?.base64 };
-  }, [pkg, resizeToThumbnail]);
-
   const transfer = useCallback(async (to: string): Promise<void> => {
-    if (!relay || !ownables || !pkg) return;
+    if (!hub || !ownables || !pkg) return;
 
-    const available = await relay.isAvailable();
+    const available = await hub.isAvailable();
     if (!available) {
-      enqueueSnackbar("Relay server is down", { variant: "error" });
+      enqueueSnackbar("Hub is unavailable", { variant: "error" });
       return;
     }
 
     const steps = [
       { id: "signEvent", label: "Sign the event" },
-      { id: "signMessage", label: "Sign the Relay message" },
+      { id: "hubUpload", label: "Upload to Hub" },
+      { id: "hubReplay", label: "Update Hub owner state" },
     ];
-    if (ownables.anchoring) steps.push({ id: "anchor", label: "Anchor the event & Relay message" });
+    if (ownables.anchoring) steps.push({ id: "anchor", label: "Anchor the event" });
 
     try {
       const [ctrl, onProgress] = progress.open({ title: "Transferring Ownable", steps });
@@ -84,16 +41,15 @@ export function useOwnableTransfer(
 
       const zip = await ownables.zip(chain);
       const content = await zip.generateAsync({ type: "uint8array" });
-      const meta = await constructMeta();
 
-      await relay.sendOwnable(to, content, meta, ownables.anchoring, onProgress as any);
+      const upload = await hub.uploadOwnable(content, `${chain.id}.zip`, onProgress as any);
+      await hub.downloadOwnable(upload.cid, onProgress as any);
       await ownables.submitAnchors(onProgress as any);
 
-      enqueueSnackbar("Ownable sent and anchored successfully!", { variant: "success" });
+      enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
       ctrl.close();
 
       if (pkg.uniqueMessageHash) {
-        await relay.removeOwnable(pkg.uniqueMessageHash);
         await ownables.delete(chain.id);
       }
     } catch (error) {
@@ -103,7 +59,7 @@ export function useOwnableTransfer(
         { variant: "error" }
       );
     }
-  }, [relay, ownables, pkg, chain, execute, constructMeta, progress]);
+  }, [hub, ownables, pkg, chain, execute, progress]);
 
   return { transfer };
 }

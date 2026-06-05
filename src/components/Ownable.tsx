@@ -27,7 +27,6 @@ export default function Ownable(props: OwnableProps) {
   const idb = useService("idb");
   const ownables = useService("ownables");
   const eventChains = useService("eventChains");
-  const relay = useService("relay");
 
   const pkg: TypedPackage | undefined = useMemo(() => {
     if (!packages) return undefined;
@@ -53,7 +52,7 @@ export default function Ownable(props: OwnableProps) {
     execute({ unlock: {} });
   }, [execute]);
 
-  if (!ownables || !packages || !idb || !eventChains || !relay || !pkg) return <></>;
+  if (!ownables || !packages || !idb || !eventChains || !pkg) return <></>;
 
   return (
     <OwnableDetail

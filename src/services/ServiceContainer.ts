@@ -14,6 +14,7 @@ import {
 } from "@ownables/core";
 import { BuilderService } from "@ownables/builder-client";
 import OwnableService from "./Ownable.service";
+import HubService from "./Hub.service";
 import { PACKAGE_EXAMPLES, PACKAGE_EXAMPLE_URL } from "@/config/examples";
 
 export interface ServiceMap {
@@ -26,6 +27,7 @@ export interface ServiceMap {
   ownables: OwnableService;
   polling: PollingService;
   builder: BuilderService;
+  hub: HubService;
 }
 
 export type ServiceKey = keyof ServiceMap;
@@ -77,6 +79,8 @@ export default class ServiceContainer {
           relayUrl: import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL,
         })
     );
+
+    this.register("hub", () => new HubService());
 
     this.register(
       "eventChains",

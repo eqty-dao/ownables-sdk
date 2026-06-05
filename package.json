@@ -60,7 +60,8 @@
     "ownables:cid": "node bin/package-cid.mjs",
     "typecheck": "tsc --noEmit",
     "ownables:copy": "node bin/ownables-copy.mjs",
-    "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts"
+    "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts",
+    "verify:hub-transfer": "node bin/verify-hub-transfer.mjs"
   },
   "repository": {
     "type": "git",

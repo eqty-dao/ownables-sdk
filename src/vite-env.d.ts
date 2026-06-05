@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_OWNABLE_EXAMPLES_URL?: string;
   readonly VITE_RELAY?: string;
   readonly VITE_LOCAL?: string;
+  readonly VITE_HUB?: string;
   readonly VITE_BUILDER?: string;
   readonly VITE_BUILDER_SERVER_WALLETS_ENDPOINT?: string;
   readonly VITE_BUILDER_NETWORK_PARAM?: string;

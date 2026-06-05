@@ -141,6 +141,7 @@ Create a .env file in the project root (or use your existing one) and ensure the
 - VITE_E2E_MNEMONIC
 - VITE_E2E_ACCOUNT_INDEX
 - VITE_E2E_RPC_URL
+- VITE_HUB
 - VITE_RELAY
 - VITE_LOCAL
 - VITE_OWNABLE_EXAMPLES_URL
@@ -160,4 +161,5 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 Notes:
 - This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
+- `VITE_HUB` is the active Hub endpoint for transfer upload/download flows. `VITE_RELAY` and `VITE_LOCAL` remain legacy fallbacks for older Relay-based paths.
 - If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.
