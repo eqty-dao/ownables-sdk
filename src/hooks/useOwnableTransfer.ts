@@ -52,8 +52,13 @@ export function useOwnableTransfer(
         try {
           const delivery = await hub.getDeliveryStatus(upload.cid, upload.ownerAccount);
           if (delivery.status !== "delivered") {
+            const message =
+              delivery.status === "not_configured" ||
+              delivery.status === "not_subscribed"
+                ? `Transfer succeeded, but Web3Inbox delivery is ${delivery.status.replaceAll("_", " ")}. If VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true, use the Notifications drawer local dev discovery path on localhost.`
+                : `Transfer succeeded, but notification delivery is ${delivery.status.replaceAll("_", " ")}.`;
             enqueueSnackbar(
-              `Transfer succeeded, but notification delivery is ${delivery.status.replaceAll("_", " ")}.`,
+              message,
               { variant: "warning" }
             );
           }

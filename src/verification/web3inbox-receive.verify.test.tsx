@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import NotificationsDrawer from "@/components/NotificationsDrawer";
 import { useOwnables } from "@/hooks/useOwnables";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
+import { LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE } from "@/services/Hub.service";
 
 const { serviceMap, accountState, enqueueSnackbar } = vi.hoisted(() => ({
   serviceMap: {} as Record<string, any>,
@@ -72,6 +73,90 @@ function TransferHarness({
   return <button onClick={() => void transfer("0xdef")}>Transfer</button>;
 }
 
+const ACCOUNT = "eip155:84532:0xabc";
+const CANONICAL_URL = "https://hub.example/ownables/bafy/download";
+const CANONICAL_KEY = `ownables.v1.available|${CANONICAL_URL}`;
+
+function createNotification(overrides: Record<string, any> = {}) {
+  return {
+    id: "notif-1",
+    title: "Transfer ready",
+    body: "Import your Ownable from Hub",
+    sentAt: "2026-06-06T12:34:56.000Z",
+    url: CANONICAL_URL,
+    isRead: false,
+    type: "ownables.v1.available",
+    read: vi.fn(),
+    ...overrides,
+  };
+}
+
+function createLocalNotification(overrides: Record<string, any> = {}) {
+  return {
+    id: "localdev:1",
+    scope: "local-dev",
+    title: "Ownable available on localhost",
+    body: "Import this Ownable from your local Hub.",
+    sentAt: "2026-06-06T12:34:56.000Z",
+    url: CANONICAL_URL,
+    type: "ownables.v1.available",
+    ...overrides,
+  };
+}
+
+function createNotificationsService(overrides: Record<string, any> = {}) {
+  return {
+    isConfigured: true,
+    configurationError: () => null,
+    toAccount: () => ACCOUNT,
+    getRegistrationStatus: vi.fn().mockResolvedValue(true),
+    watchSubscription: vi.fn().mockImplementation(async (_account, cb) => {
+      cb({ unreadNotificationCount: 1 });
+      return () => {};
+    }),
+    pageNotifications: vi.fn().mockImplementation(async (_account, onUpdate) => {
+      const data = {
+        notifications: [],
+        hasMore: false,
+        hasMoreUnread: false,
+      };
+      onUpdate(data);
+      return {
+        data,
+        nextPage: vi.fn(),
+        stopWatchingNotifications: vi.fn(),
+      };
+    }),
+    markNotificationsAsRead: vi.fn(),
+    enable: vi.fn(),
+    disable: vi.fn(),
+    ...overrides,
+  };
+}
+
+function createStorage(initialState: Record<string, any> = {}) {
+  const values = { ...initialState };
+
+  return {
+    values,
+    get: vi.fn((key: string) => values[key]),
+    set: vi.fn((key: string, value: any) => {
+      values[key] = value;
+    }),
+  };
+}
+
+function renderDrawer(props: Record<string, any> = {}) {
+  return render(
+    <NotificationsDrawer
+      open={true}
+      onClose={() => {}}
+      onImported={vi.fn().mockResolvedValue(undefined)}
+      {...props}
+    />
+  );
+}
+
 describe("web3inbox receive verifier", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -80,30 +165,147 @@ describe("web3inbox receive verifier", () => {
     accountState.isConnected = true;
   });
 
-  it("lists notifications, tracks unread state, and keeps imported items visible", async () => {
+  it("keeps the drawer Web3Inbox-only when local developer notifications are disabled", async () => {
+    const web3InboxNotification = createNotification();
+    const notificationsService = createNotificationsService({
+      pageNotifications: vi.fn().mockImplementation(async (_account, onUpdate) => {
+        const data = {
+          notifications: [web3InboxNotification],
+          hasMore: false,
+          hasMoreUnread: false,
+        };
+        onUpdate(data);
+        return {
+          data,
+          nextPage: vi.fn(),
+          stopWatchingNotifications: vi.fn(),
+        };
+      }),
+    });
+    const localDiscovery = vi.fn();
+
+    serviceMap.notifications = notificationsService;
+    serviceMap.hub = {
+      localDeveloperNotificationsEnabled: false,
+      isConfigured: true,
+      getLocalDeveloperNotifications: localDiscovery,
+    };
+    serviceMap.localStorage = createStorage();
+
+    renderDrawer();
+
+    expect(await screen.findByText("Transfer ready")).toBeTruthy();
+    expect(localDiscovery).not.toHaveBeenCalled();
+    expect(screen.queryByText("Local dev")).toBeNull();
+  });
+
+  it("shows local developer entries when Reown is missing and imports without touching Relay", async () => {
     const user = userEvent.setup();
-    const setStorage = vi.fn();
-    const markNotificationsAsRead = vi.fn();
-    const notification = {
-      id: "notif-1",
-      title: "Transfer ready",
-      body: "Import your Ownable from Hub",
-      sentAt: Date.now(),
-      url: "https://hub.example/ownables/bafy/download",
-      isRead: false,
-      type: "ownables.v1.available",
-      read: vi.fn(),
+    const storage = createStorage();
+    const localNotification = createLocalNotification();
+    const importedPackage = {
+      cid: "bafy",
+      chain: { id: "ownable-1" },
+    };
+    const relay = {
+      importFromRelay: vi.fn(),
+      sendOwnable: vi.fn(),
     };
 
-    serviceMap.notifications = {
+    serviceMap.notifications = createNotificationsService({
+      isConfigured: false,
+      configurationError: () =>
+        "VITE_REOWN_PROJECT_ID or VITE_WALLETCONNECT_PROJECT_ID must be configured for notifications",
+    });
+    serviceMap.hub = {
+      localDeveloperNotificationsEnabled: true,
       isConfigured: true,
-      configurationError: () => null,
-      toAccount: () => "eip155:84532:0xabc",
-      getRegistrationStatus: vi.fn().mockResolvedValue(true),
-      watchSubscription: vi.fn().mockImplementation(async (_account, cb) => {
-        cb({ unreadNotificationCount: 2 });
-        return () => {};
+      getLocalDeveloperNotifications: vi.fn().mockResolvedValue({
+        owner: ACCOUNT,
+        entries: [localNotification],
       }),
+      importFromNotificationUrl: vi
+        .fn()
+        .mockResolvedValue(new File(["zip"], "bafy.zip", { type: "application/zip" })),
+    };
+    serviceMap.packages = {
+      importFromHub: vi.fn().mockResolvedValue(importedPackage),
+    };
+    serviceMap.localStorage = storage;
+    serviceMap.relay = relay;
+
+    renderDrawer();
+
+    expect(
+      await screen.findByText(
+        "Web3Inbox is not configured for this environment. Local developer notifications are available below and do not prove Reown delivery."
+      )
+    ).toBeTruthy();
+    expect(await screen.findByText("Ownable available on localhost")).toBeTruthy();
+    expect(await screen.findByText("Local dev")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /Import ownable/i }));
+
+    await waitFor(() =>
+      expect(serviceMap.hub.importFromNotificationUrl).toHaveBeenCalledWith(
+        CANONICAL_URL
+      )
+    );
+    expect(serviceMap.packages.importFromHub).toHaveBeenCalled();
+    expect(relay.importFromRelay).not.toHaveBeenCalled();
+    expect(relay.sendOwnable).not.toHaveBeenCalled();
+  });
+
+  it("dedupes local developer entries by canonical type and URL and keeps the Web3Inbox row", async () => {
+    const web3InboxNotification = createNotification({
+      title: "Transfer ready",
+      body: "Imported from Web3Inbox",
+    });
+    const duplicateLocalNotification = createLocalNotification({
+      title: "Local duplicate",
+      body: "This should be suppressed",
+    });
+
+    serviceMap.notifications = createNotificationsService({
+      pageNotifications: vi.fn().mockImplementation(async (_account, onUpdate) => {
+        const data = {
+          notifications: [web3InboxNotification],
+          hasMore: false,
+          hasMoreUnread: false,
+        };
+        onUpdate(data);
+        return {
+          data,
+          nextPage: vi.fn(),
+          stopWatchingNotifications: vi.fn(),
+        };
+      }),
+    });
+    serviceMap.hub = {
+      localDeveloperNotificationsEnabled: true,
+      isConfigured: true,
+      getLocalDeveloperNotifications: vi.fn().mockResolvedValue({
+        owner: ACCOUNT,
+        entries: [duplicateLocalNotification],
+      }),
+    };
+    serviceMap.localStorage = createStorage();
+
+    renderDrawer();
+
+    expect(await screen.findByText("Transfer ready")).toBeTruthy();
+    expect(screen.queryByText("Local duplicate")).toBeNull();
+    expect(screen.queryByText("Local dev")).toBeNull();
+  });
+
+  it("migrates legacy imported Web3Inbox IDs into canonical imported history keys", async () => {
+    const storage = createStorage({
+      [`web3inbox:imported:${ACCOUNT}`]: ["notif-legacy"],
+      [`notifications:imported:${ACCOUNT}`]: [],
+    });
+    const notification = createNotification({ id: "notif-legacy" });
+
+    serviceMap.notifications = createNotificationsService({
       pageNotifications: vi.fn().mockImplementation(async (_account, onUpdate) => {
         const data = {
           notifications: [notification],
@@ -117,71 +319,197 @@ describe("web3inbox receive verifier", () => {
           stopWatchingNotifications: vi.fn(),
         };
       }),
-      markNotificationsAsRead,
-      enable: vi.fn(),
-      disable: vi.fn(),
-    };
+    });
     serviceMap.hub = {
-      importFromNotificationUrl: vi
-        .fn()
-        .mockResolvedValue(new File(["zip"], "bafy.zip", { type: "application/zip" })),
+      localDeveloperNotificationsEnabled: false,
+      isConfigured: true,
+      getLocalDeveloperNotifications: vi.fn(),
     };
-    const importedPackage = {
-      cid: "bafy",
-      chain: { id: "ownable-1" },
-    };
-    serviceMap.packages = {
-      importFromHub: vi.fn().mockResolvedValue(importedPackage),
-    };
-    serviceMap.localStorage = {
-      get: vi.fn().mockReturnValue([]),
-      set: setStorage,
-    };
+    serviceMap.localStorage = storage;
 
-    const onImported = vi.fn().mockResolvedValue(undefined);
-    const onUnreadCountChange = vi.fn();
-
-    render(
-      <NotificationsDrawer
-        open={true}
-        onClose={() => {}}
-        onImported={onImported}
-        onUnreadCountChange={onUnreadCountChange}
-      />
-    );
+    renderDrawer();
 
     expect(await screen.findByText("Transfer ready")).toBeTruthy();
-    await waitFor(() => expect(onUnreadCountChange).toHaveBeenLastCalledWith(2));
-    expect(screen.queryByText("Not subscribed")).toBeNull();
+    await waitFor(() =>
+      expect(storage.set).toHaveBeenCalledWith(`notifications:imported:${ACCOUNT}`, [
+        CANONICAL_KEY,
+      ])
+    );
+    expect(screen.getByRole("button", { name: "Imported" })).toBeTruthy();
+  });
 
+  it("persists local developer read state across reloads", async () => {
+    const user = userEvent.setup();
+    const storage = createStorage();
+    const localNotification = createLocalNotification();
+
+    serviceMap.notifications = createNotificationsService({
+      isConfigured: false,
+      configurationError: () => null,
+    });
+    serviceMap.hub = {
+      localDeveloperNotificationsEnabled: true,
+      isConfigured: true,
+      getLocalDeveloperNotifications: vi.fn().mockResolvedValue({
+        owner: ACCOUNT,
+        entries: [localNotification],
+      }),
+    };
+    serviceMap.localStorage = storage;
+
+    const view = renderDrawer();
+
+    expect(await screen.findByText("Ownable available on localhost")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Mark read/i }));
 
     await waitFor(() =>
-      expect(markNotificationsAsRead).toHaveBeenCalledWith(
-        ["notif-1"],
-        "eip155:84532:0xabc"
-      )
+      expect(storage.set).toHaveBeenCalledWith(`notifications:read:${ACCOUNT}`, [
+        CANONICAL_KEY,
+      ])
     );
 
-    await user.click(screen.getByRole("button", { name: /Import ownable/i }));
+    view.unmount();
+    renderDrawer();
+
+    expect(await screen.findByText("Read")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Mark read/i })).toBeNull();
+  });
+
+  it("rejects unsupported local developer notification types before import", async () => {
+    const user = userEvent.setup();
+    const notification = createLocalNotification({
+      id: "localdev:unsupported",
+      type: "marketing.v1.broadcast",
+      title: "Marketing update",
+    });
+
+    serviceMap.notifications = createNotificationsService({
+      isConfigured: false,
+    });
+    serviceMap.hub = {
+      localDeveloperNotificationsEnabled: true,
+      isConfigured: true,
+      getLocalDeveloperNotifications: vi.fn().mockResolvedValue({
+        owner: ACCOUNT,
+        entries: [notification],
+      }),
+      importFromNotificationUrl: vi.fn(),
+    };
+    serviceMap.packages = {
+      importFromHub: vi.fn(),
+    };
+    serviceMap.localStorage = createStorage();
+
+    renderDrawer();
+
+    const button = await screen.findByRole("button", {
+      name: "Unsupported type",
+    });
+
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    await user.click(button);
+    expect(serviceMap.hub.importFromNotificationUrl).not.toHaveBeenCalled();
+    expect(serviceMap.packages.importFromHub).not.toHaveBeenCalled();
+  });
+
+  it("rejects off-origin local developer notification URLs through the existing Hub import guard", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { default: HubService } = await import("@/services/Hub.service");
+    const hubInstance = new HubService("https://hub.example");
+
+    serviceMap.notifications = createNotificationsService({
+      isConfigured: false,
+    });
+    serviceMap.hub = {
+      localDeveloperNotificationsEnabled: true,
+      isConfigured: true,
+      getLocalDeveloperNotifications: vi.fn().mockResolvedValue({
+        owner: ACCOUNT,
+        entries: [
+          createLocalNotification({
+            url: "https://evil.example/ownables/bafy/download",
+          }),
+        ],
+      }),
+      importFromNotificationUrl: hubInstance.importFromNotificationUrl.bind(hubInstance),
+    };
+    serviceMap.packages = {
+      importFromHub: vi.fn(),
+    };
+    serviceMap.localStorage = createStorage();
+
+    renderDrawer();
+
+    await user.click(await screen.findByRole("button", { name: /Import ownable/i }));
 
     await waitFor(() =>
-      expect(serviceMap.hub.importFromNotificationUrl).toHaveBeenCalledWith(
-        "https://hub.example/ownables/bafy/download"
+      expect(enqueueSnackbar).toHaveBeenCalledWith(
+        "Notification URL must use the configured Hub origin",
+        { variant: "error" }
       )
     );
-    expect(serviceMap.packages.importFromHub).toHaveBeenCalled();
-    expect(onImported).toHaveBeenCalledWith(importedPackage);
-    expect(setStorage).toHaveBeenCalledWith(
-      "web3inbox:imported:eip155:84532:0xabc",
-      ["notif-1"]
-    );
-    expect(
-      (screen.getByRole("button", { name: "Imported" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
-    expect(screen.getByText("Transfer ready")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(serviceMap.packages.importFromHub).not.toHaveBeenCalled();
   });
+
+  it.each([
+    "not_configured",
+    "not_subscribed",
+  ])(
+    "updates localhost transfer warning copy when Web3Inbox delivery is %s",
+    async (status) => {
+      const user = userEvent.setup();
+      const execute = vi.fn().mockResolvedValue(undefined);
+
+      serviceMap.hub = {
+        isAvailable: vi.fn().mockResolvedValue(true),
+        uploadOwnable: vi.fn().mockResolvedValue({
+          cid: "bafy",
+          ownerAccount: "eip155:84532:0xdef",
+        }),
+        downloadOwnable: vi.fn().mockResolvedValue(
+          new File(["zip"], "bafy.zip", { type: "application/zip" })
+        ),
+        getDeliveryStatus: vi.fn().mockResolvedValue({
+          cid: "bafy",
+          owner: "eip155:84532:0xdef",
+          status,
+        }),
+      };
+      serviceMap.ownables = {
+        anchoring: false,
+        zip: vi.fn().mockResolvedValue({
+          generateAsync: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+        }),
+        submitAnchors: vi.fn().mockResolvedValue(undefined),
+        delete: vi.fn().mockResolvedValue(undefined),
+      };
+
+      render(
+        <TransferHarness
+          chain={{ id: "ownable-1" }}
+          pkg={{ uniqueMessageHash: undefined }}
+          execute={execute}
+        />
+      );
+
+      await user.click(screen.getByRole("button", { name: "Transfer" }));
+
+      await waitFor(() =>
+        expect(serviceMap.hub.getDeliveryStatus).toHaveBeenCalledWith(
+          "bafy",
+          "eip155:84532:0xdef"
+        )
+      );
+      expect(enqueueSnackbar).toHaveBeenCalledWith(
+        `Transfer succeeded, but Web3Inbox delivery is ${status.replaceAll("_", " ")}. If VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true, use the Notifications drawer local dev discovery path on localhost.`,
+        { variant: "warning" }
+      );
+    }
+  );
 
   it("persists imported ownables through the durable ownable storage path", async () => {
     const user = userEvent.setup();
@@ -244,62 +572,7 @@ describe("web3inbox receive verifier", () => {
     );
   });
 
-  it("warns when transfer succeeds but delivery status is not delivered", async () => {
-    const user = userEvent.setup();
-    const execute = vi.fn().mockResolvedValue(undefined);
-
-    serviceMap.hub = {
-      isAvailable: vi.fn().mockResolvedValue(true),
-      uploadOwnable: vi.fn().mockResolvedValue({
-        cid: "bafy",
-        ownerAccount: "eip155:84532:0xdef",
-      }),
-      downloadOwnable: vi.fn().mockResolvedValue(
-        new File(["zip"], "bafy.zip", { type: "application/zip" })
-      ),
-      getDeliveryStatus: vi.fn().mockResolvedValue({
-        cid: "bafy",
-        owner: "eip155:84532:0xdef",
-        status: "pending",
-      }),
-    };
-    serviceMap.ownables = {
-      anchoring: false,
-      zip: vi.fn().mockResolvedValue({
-        generateAsync: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-      }),
-      submitAnchors: vi.fn().mockResolvedValue(undefined),
-      delete: vi.fn().mockResolvedValue(undefined),
-    };
-
-    render(
-      <TransferHarness
-        chain={{ id: "ownable-1" }}
-        pkg={{ uniqueMessageHash: undefined }}
-        execute={execute}
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Transfer" }));
-
-    await waitFor(() =>
-      expect(serviceMap.hub.getDeliveryStatus).toHaveBeenCalledWith(
-        "bafy",
-        "eip155:84532:0xdef"
-      )
-    );
-    expect(enqueueSnackbar).toHaveBeenCalledWith(
-      "Transfer succeeded, but notification delivery is pending.",
-      { variant: "warning" }
-    );
-  });
-
-  it("uses strict Hub origin for imports and delivery-status lookups", async () => {
-    vi.resetModules();
-    Object.assign(import.meta.env, {
-      VITE_HUB: "https://hub.example",
-    });
-
+  it("uses strict Hub routes for import, delivery status, and local developer discovery", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -312,8 +585,20 @@ describe("web3inbox receive verifier", () => {
         new Response(
           JSON.stringify({
             cid: "bafy",
-            owner: "eip155:84532:0xabc",
+            owner: ACCOUNT,
             status: "delivered",
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            owner: ACCOUNT,
+            entries: [createLocalNotification()],
           }),
           {
             status: 200,
@@ -326,143 +611,34 @@ describe("web3inbox receive verifier", () => {
     const { default: HubService } = await import("@/services/Hub.service");
     const hub = new HubService("https://hub.example");
 
-    await hub.importFromNotificationUrl("https://hub.example/ownables/bafy/download");
-    await hub.getDeliveryStatus("bafy", "eip155:84532:0xabc");
+    await hub.importFromNotificationUrl(CANONICAL_URL);
+    await hub.getDeliveryStatus("bafy", ACCOUNT);
+    await hub.getLocalDeveloperNotifications(ACCOUNT);
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      "https://hub.example/ownables/bafy/download"
-    );
+    expect(fetchMock).toHaveBeenNthCalledWith(1, CANONICAL_URL);
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "https://hub.example/notify/delivery-status?cid=bafy&owner=eip155%3A84532%3A0xabc"
+      `https://hub.example/notify/delivery-status?cid=bafy&owner=${encodeURIComponent(
+        ACCOUNT
+      )}`
     );
-
-    await expect(
-      hub.importFromNotificationUrl("https://evil.example/ownables/bafy/download")
-    ).rejects.toThrow("Notification URL must use the configured Hub origin");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `https://hub.example/notify/local/discovery?owner=${encodeURIComponent(ACCOUNT)}`
+    );
   });
 
-  it("rejects same-origin notifications whose type is not ownables.v1.available", async () => {
-    const user = userEvent.setup();
-    const notification = {
-      id: "notif-unsupported",
-      title: "Marketing update",
-      body: "This came from Hub but is not an Ownables delivery",
-      sentAt: Date.now(),
-      url: "https://hub.example/ownables/bafy/download",
-      isRead: false,
-      type: "marketing.v1.broadcast",
-      read: vi.fn(),
-    };
-
-    serviceMap.notifications = {
-      isConfigured: true,
-      configurationError: () => null,
-      toAccount: () => "eip155:84532:0xabc",
-      getRegistrationStatus: vi.fn().mockResolvedValue(true),
-      watchSubscription: vi.fn().mockImplementation(async (_account, cb) => {
-        cb({ unreadNotificationCount: 1 });
-        return () => {};
-      }),
-      pageNotifications: vi.fn().mockImplementation(async (_account, onUpdate) => {
-        const data = {
-          notifications: [notification],
-          hasMore: false,
-          hasMoreUnread: false,
-        };
-        onUpdate(data);
-        return {
-          data,
-          nextPage: vi.fn(),
-          stopWatchingNotifications: vi.fn(),
-        };
-      }),
-      markNotificationsAsRead: vi.fn(),
-      enable: vi.fn(),
-      disable: vi.fn(),
-    };
-    serviceMap.hub = {
-      importFromNotificationUrl: vi.fn(),
-    };
-    serviceMap.packages = {
-      importFromHub: vi.fn(),
-    };
-    serviceMap.localStorage = {
-      get: vi.fn().mockReturnValue([]),
-      set: vi.fn(),
-    };
-
-    render(
-      <NotificationsDrawer
-        open={true}
-        onClose={() => {}}
-        onImported={vi.fn().mockResolvedValue(undefined)}
-      />
+  it("surfaces a non-blocking Hub local discovery warning when the route is unavailable", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("missing", { status: 404, statusText: "Not Found" })
     );
+    vi.stubGlobal("fetch", fetchMock);
 
-    const button = await screen.findByRole("button", {
-      name: "Unsupported type",
-    });
+    const { default: HubService } = await import("@/services/Hub.service");
+    const hub = new HubService("https://hub.example");
 
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-
-    await act(async () => {
-      await user.click(button);
-    });
-
-    expect(serviceMap.hub.importFromNotificationUrl).not.toHaveBeenCalled();
-    expect(serviceMap.packages.importFromHub).not.toHaveBeenCalled();
-  });
-
-  it("enables notifications through Web3Inbox registration and subscription", async () => {
-    vi.resetModules();
-    Object.assign(import.meta.env, {
-      VITE_REOWN_PROJECT_ID: "reown-project",
-      VITE_REOWN_APP_DOMAIN: "hub.ownables.example",
-      VITE_WALLETCONNECT_PROJECT_ID: "",
-    });
-
-    const client = {
-      setAccount: vi.fn().mockResolvedValue(undefined),
-      prepareRegistration: vi.fn().mockReturnValue({
-        message: "Authorize notifications",
-        registerParams: { domain: "hub.ownables.example" },
-      }),
-      register: vi.fn().mockResolvedValue("identity-key"),
-      subscribeToDapp: vi.fn().mockResolvedValue(undefined),
-    };
-
-    vi.doMock("@web3inbox/core", () => ({
-      Web3InboxClient: {
-        init: vi.fn().mockResolvedValue(client),
-      },
-    }));
-
-    const { default: Web3InboxService } = await import(
-      "@/services/Web3Inbox.service"
+    await expect(hub.getLocalDeveloperNotifications(ACCOUNT)).rejects.toThrow(
+      LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE
     );
-
-    const walletClient = {
-      account: "0xabc",
-      signMessage: vi.fn().mockResolvedValue("0xsigned"),
-    };
-    const service = new Web3InboxService(walletClient as any, 84532);
-
-    await service.enable("eip155:84532:0xabc");
-
-    expect(client.setAccount).toHaveBeenCalledWith("eip155:84532:0xabc");
-    expect(client.prepareRegistration).toHaveBeenCalledWith({
-      account: "eip155:84532:0xabc",
-    });
-    expect(walletClient.signMessage).toHaveBeenCalledWith({
-      account: "0xabc",
-      message: "Authorize notifications",
-    });
-    expect(client.register).toHaveBeenCalledWith({
-      registerParams: { domain: "hub.ownables.example" },
-      signature: "0xsigned",
-    });
-    expect(client.subscribeToDapp).toHaveBeenCalledWith("eip155:84532:0xabc");
   });
 });

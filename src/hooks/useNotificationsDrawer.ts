@@ -3,17 +3,84 @@ import { enqueueSnackbar } from "notistack";
 import { useAccount } from "wagmi";
 import type { TypedPackage } from "@/interfaces/TypedPackage";
 import type {
+  HubLocalDeveloperNotificationEntry,
+} from "@/services/Hub.service";
+import {
+  LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE,
+} from "@/services/Hub.service";
+import type {
   Web3InboxNotification,
   Web3InboxNotificationPage,
 } from "@/services/Web3Inbox.service";
 import { useService } from "./useService";
 
-const IMPORTED_KEY_PREFIX = "web3inbox:imported:";
+const LEGACY_IMPORTED_KEY_PREFIX = "web3inbox:imported:";
+const IMPORTED_KEY_PREFIX = "notifications:imported:";
+const LOCAL_READ_KEY_PREFIX = "notifications:read:";
+const OWNABLES_NOTIFICATION_TYPE = "ownables.v1.available";
+const LOCAL_DEVELOPER_NOTIFICATIONS_MISSING_HUB_MESSAGE =
+  "VITE_HUB must be configured when VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true";
+const LOCAL_DEVELOPER_NOTIFICATIONS_WARNING =
+  "Web3Inbox is not configured for this environment. Local developer notifications are available below and do not prove Reown delivery.";
 
-const toImportedSet = (value: unknown): Set<string> => {
+export interface DrawerNotification {
+  id: string;
+  canonicalKey: string;
+  source: "web3inbox" | "local-dev";
+  scope?: "local-dev";
+  title: string;
+  body: string;
+  sentAt: string | number;
+  url?: string | null;
+  type: string;
+  isRead: boolean;
+  read?: () => void;
+}
+
+export interface NotificationsDrawerState {
+  account: string | null;
+  isConfigured: boolean;
+  configurationError: string | null;
+  localDeveloperDiscoveryError: string | null;
+  isLocalDeveloperNotificationsEnabled: boolean;
+  isRegistered: boolean;
+  isSubscribed: boolean;
+  unreadCount: number;
+  notifications: DrawerNotification[];
+  importedKeys: Set<string>;
+  isLoading: boolean;
+  isEnabling: boolean;
+  isDisabling: boolean;
+  loadingNotificationId: string | null;
+  hasMore: boolean;
+  enableNotifications: () => Promise<void>;
+  disableNotifications: () => Promise<void>;
+  markAsRead: (notification: DrawerNotification) => Promise<void>;
+  importNotification: (notification: DrawerNotification) => Promise<void>;
+  loadMore: () => Promise<void>;
+}
+
+const toStoredSet = (value: unknown): Set<string> => {
   if (!Array.isArray(value)) return new Set<string>();
   return new Set(value.filter((item): item is string => typeof item === "string"));
 };
+
+const normalizeNotificationUrl = (url?: string | null): string => {
+  if (!url) return "";
+
+  try {
+    return new URL(url).toString();
+  } catch {
+    return url.trim();
+  }
+};
+
+const toCanonicalKey = (notification: Pick<DrawerNotification, "type" | "url">) =>
+  `${notification.type}|${normalizeNotificationUrl(notification.url)}`;
+
+const isOwnablesNotification = (
+  notification: Pick<DrawerNotification, "type">
+) => notification.type === OWNABLES_NOTIFICATION_TYPE;
 
 const markReadInPage = (
   page: Web3InboxNotificationPage,
@@ -30,32 +97,65 @@ const markReadInPage = (
   ),
 });
 
-export interface NotificationsDrawerState {
-  account: string | null;
-  isConfigured: boolean;
-  configurationError: string | null;
-  isRegistered: boolean;
-  isSubscribed: boolean;
-  unreadCount: number;
-  notifications: Web3InboxNotification[];
-  importedIds: Set<string>;
-  isLoading: boolean;
-  isEnabling: boolean;
-  isDisabling: boolean;
-  loadingNotificationId: string | null;
-  hasMore: boolean;
-  enableNotifications: () => Promise<void>;
-  disableNotifications: () => Promise<void>;
-  markAsRead: (notification: Web3InboxNotification) => Promise<void>;
-  importNotification: (notification: Web3InboxNotification) => Promise<void>;
-  loadMore: () => Promise<void>;
-}
+const sortBySentAtDescending = (a: DrawerNotification, b: DrawerNotification) =>
+  new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime();
 
-const OWNABLES_NOTIFICATION_TYPE = "ownables.v1.available";
+const toDrawerNotification = (
+  notification: Web3InboxNotification
+): DrawerNotification => ({
+  id: notification.id,
+  canonicalKey: toCanonicalKey(notification),
+  source: "web3inbox",
+  title: notification.title,
+  body: notification.body,
+  sentAt: notification.sentAt,
+  url: notification.url,
+  type: notification.type,
+  isRead: notification.isRead,
+  read: notification.read,
+});
 
-const isOwnablesNotification = (
-  notification: Pick<Web3InboxNotification, "type">
-) => notification.type === OWNABLES_NOTIFICATION_TYPE;
+const toLocalDeveloperDrawerNotification = (
+  notification: HubLocalDeveloperNotificationEntry,
+  localReadKeys: Set<string>
+): DrawerNotification => {
+  const canonicalKey = toCanonicalKey(notification);
+
+  return {
+    id: notification.id,
+    canonicalKey,
+    source: "local-dev",
+    scope: notification.scope,
+    title: notification.title,
+    body: notification.body,
+    sentAt: notification.sentAt,
+    url: notification.url,
+    type: notification.type,
+    isRead: localReadKeys.has(canonicalKey),
+  };
+};
+
+const mergeNotifications = (
+  web3InboxNotifications: Web3InboxNotification[],
+  localDeveloperNotifications: HubLocalDeveloperNotificationEntry[],
+  localReadKeys: Set<string>
+): DrawerNotification[] => {
+  const merged = new Map<string, DrawerNotification>();
+
+  for (const notification of web3InboxNotifications) {
+    const row = toDrawerNotification(notification);
+    merged.set(row.canonicalKey, row);
+  }
+
+  for (const notification of localDeveloperNotifications) {
+    const row = toLocalDeveloperDrawerNotification(notification, localReadKeys);
+    if (!merged.has(row.canonicalKey)) {
+      merged.set(row.canonicalKey, row);
+    }
+  }
+
+  return Array.from(merged.values()).sort(sortBySentAtDescending);
+};
 
 export function useNotificationsDrawer(
   onImported: (pkg: TypedPackage) => Promise<void>
@@ -68,6 +168,9 @@ export function useNotificationsDrawer(
 
   const [account, setAccount] = useState<string | null>(null);
   const [configurationError, setConfigurationError] = useState<string | null>(null);
+  const [localDeveloperDiscoveryError, setLocalDeveloperDiscoveryError] = useState<
+    string | null
+  >(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -76,7 +179,11 @@ export function useNotificationsDrawer(
     hasMore: false,
     hasMoreUnread: false,
   });
-  const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
+  const [localDeveloperNotifications, setLocalDeveloperNotifications] = useState<
+    HubLocalDeveloperNotificationEntry[]
+  >([]);
+  const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
+  const [localReadKeys, setLocalReadKeys] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
@@ -86,6 +193,27 @@ export function useNotificationsDrawer(
   const importedStorageKey = useMemo(
     () => (account ? `${IMPORTED_KEY_PREFIX}${account}` : null),
     [account]
+  );
+  const legacyImportedStorageKey = useMemo(
+    () => (account ? `${LEGACY_IMPORTED_KEY_PREFIX}${account}` : null),
+    [account]
+  );
+  const localReadStorageKey = useMemo(
+    () => (account ? `${LOCAL_READ_KEY_PREFIX}${account}` : null),
+    [account]
+  );
+
+  const isLocalDeveloperNotificationsEnabled =
+    hub?.localDeveloperNotificationsEnabled ?? false;
+
+  const mergedNotifications = useMemo(
+    () =>
+      mergeNotifications(
+        page.notifications,
+        localDeveloperNotifications,
+        localReadKeys
+      ),
+    [localDeveloperNotifications, localReadKeys, page.notifications]
   );
 
   useEffect(() => {
@@ -97,26 +225,72 @@ export function useNotificationsDrawer(
 
     try {
       setAccount(notifications.toAccount(address));
-      setConfigurationError(notifications.configurationError());
+      const nextError = notifications.configurationError();
+      if (nextError && isLocalDeveloperNotificationsEnabled) {
+        setConfigurationError(LOCAL_DEVELOPER_NOTIFICATIONS_WARNING);
+      } else {
+        setConfigurationError(nextError);
+      }
     } catch (error) {
       setAccount(null);
       setConfigurationError(
         error instanceof Error ? error.message : "Notifications are unavailable"
       );
     }
-  }, [address, isConnected, notifications]);
+  }, [address, isConnected, isLocalDeveloperNotificationsEnabled, notifications]);
 
   useEffect(() => {
     if (!storage || !importedStorageKey) {
-      setImportedIds(new Set());
+      setImportedKeys(new Set());
       return;
     }
 
-    setImportedIds(toImportedSet(storage.get(importedStorageKey)));
+    setImportedKeys(toStoredSet(storage.get(importedStorageKey)));
   }, [importedStorageKey, storage]);
 
   useEffect(() => {
-    if (!notifications || !account) {
+    if (!storage || !localReadStorageKey) {
+      setLocalReadKeys(new Set());
+      return;
+    }
+
+    setLocalReadKeys(toStoredSet(storage.get(localReadStorageKey)));
+  }, [localReadStorageKey, storage]);
+
+  useEffect(() => {
+    if (!storage || !importedStorageKey || !legacyImportedStorageKey) {
+      return;
+    }
+
+    const legacyImportedIds = toStoredSet(storage.get(legacyImportedStorageKey));
+    if (legacyImportedIds.size === 0) {
+      return;
+    }
+
+    const migratedKeys = new Set(importedKeys);
+
+    for (const notification of page.notifications) {
+      if (legacyImportedIds.has(notification.id)) {
+        migratedKeys.add(toCanonicalKey(notification));
+      }
+    }
+
+    if (migratedKeys.size === importedKeys.size) {
+      return;
+    }
+
+    storage.set(importedStorageKey, Array.from(migratedKeys));
+    setImportedKeys(migratedKeys);
+  }, [
+    importedKeys,
+    importedStorageKey,
+    legacyImportedStorageKey,
+    page.notifications,
+    storage,
+  ]);
+
+  useEffect(() => {
+    if (!notifications || !account || !notifications.isConfigured) {
       setIsRegistered(false);
       setIsSubscribed(false);
       setUnreadCount(0);
@@ -152,7 +326,7 @@ export function useNotificationsDrawer(
   }, [account, notifications]);
 
   useEffect(() => {
-    if (!notifications || !account || !isSubscribed) {
+    if (!notifications || !account || !isSubscribed || !notifications.isConfigured) {
       setPage({
         notifications: [],
         hasMore: false,
@@ -199,13 +373,61 @@ export function useNotificationsDrawer(
     };
   }, [account, isSubscribed, notifications]);
 
-  const persistImportedIds = useCallback(
+  useEffect(() => {
+    if (!hub || !account || !isLocalDeveloperNotificationsEnabled) {
+      setLocalDeveloperNotifications([]);
+      setLocalDeveloperDiscoveryError(null);
+      return;
+    }
+
+    if (!hub.isConfigured) {
+      setLocalDeveloperNotifications([]);
+      setLocalDeveloperDiscoveryError(
+        LOCAL_DEVELOPER_NOTIFICATIONS_MISSING_HUB_MESSAGE
+      );
+      return;
+    }
+
+    let active = true;
+
+    (async () => {
+      try {
+        const discovery = await hub.getLocalDeveloperNotifications(account);
+        if (!active) return;
+        setLocalDeveloperNotifications(discovery.entries);
+        setLocalDeveloperDiscoveryError(null);
+      } catch (error) {
+        if (!active) return;
+        setLocalDeveloperNotifications([]);
+        setLocalDeveloperDiscoveryError(
+          error instanceof Error
+            ? error.message
+            : LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE
+        );
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [account, hub, isLocalDeveloperNotificationsEnabled]);
+
+  const persistImportedKeys = useCallback(
     (next: Set<string>) => {
       if (storage && importedStorageKey) {
         storage.set(importedStorageKey, Array.from(next));
       }
     },
     [importedStorageKey, storage]
+  );
+
+  const persistLocalReadKeys = useCallback(
+    (next: Set<string>) => {
+      if (storage && localReadStorageKey) {
+        storage.set(localReadStorageKey, Array.from(next));
+      }
+    },
+    [localReadStorageKey, storage]
   );
 
   const enableNotifications = useCallback(async () => {
@@ -249,21 +471,34 @@ export function useNotificationsDrawer(
   }, [account, notifications]);
 
   const markAsRead = useCallback(
-    async (notification: Web3InboxNotification) => {
-      if (!notifications || !account || notification.isRead) {
+    async (notification: DrawerNotification) => {
+      if (notification.source === "web3inbox") {
+        if (!notifications || !account || notification.isRead) {
+          return;
+        }
+
+        await notifications.markNotificationsAsRead([notification.id], account);
+        notification.read?.();
+        setPage((current) => markReadInPage(current, notification.id));
+        setUnreadCount((current) => Math.max(0, current - 1));
         return;
       }
 
-      await notifications.markNotificationsAsRead([notification.id], account);
-      notification.read?.();
-      setPage((current) => markReadInPage(current, notification.id));
-      setUnreadCount((current) => Math.max(0, current - 1));
+      if (notification.isRead) {
+        return;
+      }
+
+      setLocalReadKeys((current) => {
+        const next = new Set(current).add(notification.canonicalKey);
+        persistLocalReadKeys(next);
+        return next;
+      });
     },
-    [account, notifications]
+    [account, notifications, persistLocalReadKeys]
   );
 
   const importNotification = useCallback(
-    async (notification: Web3InboxNotification) => {
+    async (notification: DrawerNotification) => {
       if (!isOwnablesNotification(notification)) {
         throw new Error("Unsupported notification type");
       }
@@ -278,9 +513,9 @@ export function useNotificationsDrawer(
         const pkg = await packages.importFromHub(file);
         await onImported(pkg);
         await markAsRead(notification);
-        setImportedIds((current) => {
-          const next = new Set(current).add(notification.id);
-          persistImportedIds(next);
+        setImportedKeys((current) => {
+          const next = new Set(current).add(notification.canonicalKey);
+          persistImportedKeys(next);
           return next;
         });
         enqueueSnackbar("Ownable imported from notification", {
@@ -295,18 +530,20 @@ export function useNotificationsDrawer(
         setLoadingNotificationId(null);
       }
     },
-    [hub, markAsRead, onImported, packages, persistImportedIds]
+    [hub, markAsRead, onImported, packages, persistImportedKeys]
   );
 
   return {
     account,
     isConfigured: notifications?.isConfigured ?? false,
     configurationError,
+    localDeveloperDiscoveryError,
+    isLocalDeveloperNotificationsEnabled,
     isRegistered,
     isSubscribed,
     unreadCount,
-    notifications: page.notifications,
-    importedIds,
+    notifications: mergedNotifications,
+    importedKeys,
     isLoading,
     isEnabling,
     isDisabling,

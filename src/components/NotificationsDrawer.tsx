@@ -55,11 +55,13 @@ export default function NotificationsDrawer({
     account,
     isConfigured,
     configurationError,
+    localDeveloperDiscoveryError,
+    isLocalDeveloperNotificationsEnabled,
     isRegistered,
     isSubscribed,
     unreadCount,
     notifications,
-    importedIds,
+    importedKeys,
     isLoading,
     isEnabling,
     isDisabling,
@@ -101,6 +103,11 @@ export default function NotificationsDrawer({
             {isRegistered ? (
               <span className={cn(statePill({ tone: "neutral" }))}>Registered</span>
             ) : null}
+            {isLocalDeveloperNotificationsEnabled ? (
+              <span className={cn(statePill({ tone: "neutral" }))}>
+                Local dev discovery enabled
+              </span>
+            ) : null}
             {account ? (
               <span className="truncate text-[0.7rem] text-slate-500 dark:text-slate-400">
                 {account}
@@ -120,11 +127,19 @@ export default function NotificationsDrawer({
             </Alert>
           ) : null}
 
+          {localDeveloperDiscoveryError ? (
+            <Alert severity="warning" className="mt-3">
+              {localDeveloperDiscoveryError}
+            </Alert>
+          ) : null}
+
           {account && isConfigured ? (
             <Box className="mt-4 flex gap-2">
               {!isSubscribed ? (
                 <Button
-                  onClick={() => void enableNotifications()}
+                  onClick={() => {
+                    void enableNotifications().catch(() => {});
+                  }}
                   disabled={isEnabling}
                   className="flex-1"
                 >
@@ -132,7 +147,9 @@ export default function NotificationsDrawer({
                 </Button>
               ) : (
                 <Button
-                  onClick={() => void disableNotifications()}
+                  onClick={() => {
+                    void disableNotifications().catch(() => {});
+                  }}
                   disabled={isDisabling}
                   className="flex-1"
                   variant="ghost"
@@ -167,12 +184,14 @@ export default function NotificationsDrawer({
           <Box className="mt-3 rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
             {isSubscribed
               ? "No notifications yet."
-              : "Enable notifications to start receiving Ownable deliveries."}
+              : isLocalDeveloperNotificationsEnabled
+                ? "Enable Web3Inbox notifications or use local developer notifications when they are available."
+                : "Enable notifications to start receiving Ownable deliveries."}
           </Box>
         ) : (
           <List className="mt-3">
             {notifications.map((notification) => {
-              const isImported = importedIds.has(notification.id);
+              const isImported = importedKeys.has(notification.canonicalKey);
               const isBusy = loadingNotificationId === notification.id;
               const isSupportedType =
                 notification.type === "ownables.v1.available";
@@ -194,6 +213,11 @@ export default function NotificationsDrawer({
                         >
                           {notification.isRead ? "Read" : "Unread"}
                         </span>
+                        {notification.source === "local-dev" ? (
+                          <span className={cn(statePill({ tone: "warning" }))}>
+                            Local dev
+                          </span>
+                        ) : null}
                         {isImported ? (
                           <span className={cn(statePill({ tone: "success" }))}>
                             Imported
@@ -203,6 +227,11 @@ export default function NotificationsDrawer({
                       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                         {notification.body}
                       </p>
+                      {notification.source === "local-dev" ? (
+                        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                          Local developer discovery is SDK-only and does not prove Reown delivery.
+                        </p>
+                      ) : null}
                       <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                         {new Date(notification.sentAt).toLocaleString()}
                       </p>
@@ -214,7 +243,9 @@ export default function NotificationsDrawer({
                       <Button
                         size="small"
                         variant="ghost"
-                        onClick={() => void markAsRead(notification)}
+                        onClick={() => {
+                          void markAsRead(notification).catch(() => {});
+                        }}
                       >
                         <CheckCheck className="mr-1 h-4 w-4" />
                         Mark read
@@ -222,7 +253,9 @@ export default function NotificationsDrawer({
                     ) : null}
                     <Button
                       size="small"
-                      onClick={() => void importNotification(notification)}
+                      onClick={() => {
+                        void importNotification(notification).catch(() => {});
+                      }}
                       disabled={isImported || isBusy || !isSupportedType}
                     >
                       {isBusy ? (
@@ -247,7 +280,9 @@ export default function NotificationsDrawer({
           <Button
             variant="ghost"
             className="mt-4 w-full"
-            onClick={() => void loadMore()}
+            onClick={() => {
+              void loadMore().catch(() => {});
+            }}
           >
             Load more
           </Button>

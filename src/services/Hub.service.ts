@@ -24,13 +24,41 @@ export interface HubDeliveryStatus {
   detail?: string;
 }
 
+export interface HubLocalDeveloperNotificationEntry {
+  id: string;
+  scope: "local-dev";
+  type: string;
+  title: string;
+  body: string;
+  url: string;
+  sentAt: string;
+  cid?: string;
+  ownerStateVersion?: number;
+  triggerKind?: string;
+}
+
+export interface HubLocalDeveloperNotificationDiscoveryResponse {
+  owner: string;
+  entries: HubLocalDeveloperNotificationEntry[];
+}
+
+export const LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE =
+  "Local developer notifications are enabled, but the Hub local discovery endpoint is unavailable.";
+
 export default class HubService {
   public static readonly URL = (import.meta.env.VITE_HUB || "").trim();
+  public static readonly LOCAL_DEVELOPER_NOTIFICATIONS_ENABLED =
+    (import.meta.env.VITE_LOCAL_DEVELOPER_NOTIFICATIONS || "").trim().toLowerCase() ===
+    "true";
 
   constructor(private readonly url: string = HubService.URL) {}
 
   get isConfigured(): boolean {
     return this.url.trim().length > 0;
+  }
+
+  get localDeveloperNotificationsEnabled(): boolean {
+    return HubService.LOCAL_DEVELOPER_NOTIFICATIONS_ENABLED;
   }
 
   get origin(): string {
@@ -150,6 +178,40 @@ export default class HubService {
     }
 
     return (await response.json()) as HubDeliveryStatus;
+  }
+
+  async getLocalDeveloperNotifications(
+    ownerAccount: string
+  ): Promise<HubLocalDeveloperNotificationDiscoveryResponse> {
+    const query = new URLSearchParams({
+      owner: ownerAccount,
+    });
+
+    try {
+      const response = await fetch(
+        this.endpoint(`/notify/local/discovery?${query.toString()}`)
+      );
+
+      if (response.status === 404 || response.status === 501) {
+        throw new Error(LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE);
+      }
+
+      if (!response.ok) {
+        const message = await readError(response);
+        throw new Error(`Hub local discovery failed: ${message}`);
+      }
+
+      return (await response.json()) as HubLocalDeveloperNotificationDiscoveryResponse;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE
+      ) {
+        throw error;
+      }
+
+      throw new Error(LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE);
+    }
   }
 }
 
