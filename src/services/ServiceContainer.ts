@@ -2,12 +2,7 @@ import { isE2E } from "@/utils/isE2E";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
 import EQTYService from "./EQTY.service";
-import {
-  IDBService,
-  LocalStorageService,
-  PackageService,
-  RelayService,
-} from "@ownables/platform-browser/dist/platform-browser/src/index.js";
+import IDBService from "./IDB.service";
 import {
   EventChainService,
   PollingService,
@@ -15,7 +10,10 @@ import {
 import { BuilderService } from "@ownables/builder-client";
 import OwnableService from "./Ownable.service";
 import HubService from "./Hub.service";
-import { PACKAGE_EXAMPLES, PACKAGE_EXAMPLE_URL } from "@/config/examples";
+import Web3InboxService from "./Web3Inbox.service";
+import LocalStorageService from "./LocalStorage.service";
+import PackageService from "./Package.service";
+import { RelayService } from "./Relay.service";
 
 export interface ServiceMap {
   relay: RelayService;
@@ -28,6 +26,7 @@ export interface ServiceMap {
   polling: PollingService;
   builder: BuilderService;
   hub: HubService;
+  notifications: Web3InboxService;
 }
 
 export type ServiceKey = keyof ServiceMap;
@@ -74,13 +73,14 @@ export default class ServiceContainer {
 
     this.register(
       "relay",
-      async (c) =>
-        new RelayService(await c.get("eqty"), {
-          relayUrl: import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL,
-        })
+      async (c) => new RelayService(await c.get("eqty"))
     );
 
     this.register("hub", () => new HubService());
+    this.register(
+      "notifications",
+      (c) => new Web3InboxService(c.walletClient, c.chainId)
+    );
 
     this.register(
       "eventChains",
@@ -96,10 +96,7 @@ export default class ServiceContainer {
       // Packages are stored globally and not per account
       const idb = await IDBService.main();
       const storage = new LocalStorageService();
-      return new PackageService(idb, await c.get("relay"), storage, {
-        exampleUrl: PACKAGE_EXAMPLE_URL,
-        examples: PACKAGE_EXAMPLES,
-      });
+      return new PackageService(idb, await c.get("relay"), storage);
     });
 
     this.register(

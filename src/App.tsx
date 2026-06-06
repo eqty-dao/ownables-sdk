@@ -2,12 +2,10 @@ import React, { useEffect, useState } from "react";
 import { isE2E } from "@/utils/isE2E";
 import { Box } from "@/components/ui";
 import LoginDialog from "@/components/LoginDialog";
-import { ViewMessagesBar } from "@/components/ViewMessagesBar";
+import NotificationsDrawer from "@/components/NotificationsDrawer";
 import AppToolbar from "@/components/AppToolbar";
 import { SnackbarProvider } from "notistack";
-import { usePackageManager } from "@/hooks/usePackageManager";
 import { useAccount, useChainId, useConnect } from "wagmi";
-import { useMessageCount } from "@/hooks/useMessageCount";
 import CreateOwnableDialog from "@/components/CreateOwnableDialog";
 import Sidebar from "@/components/Sidebar";
 import GetStarted from "@/components/GetStarted";
@@ -24,15 +22,13 @@ const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDD
 
 export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const [showViewMessagesBar, setShowViewMessagesBar] = useState(false);
+  const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
   const [showCreateOwnable, setShowCreateOwnable] = useState(false);
-  const [message, setMessages] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   const packageService = useService("packages");
-  const { isLoading: isPackageManagerLoading } = usePackageManager();
-  const { setMessageCount } = useMessageCount();
   const { showError } = useDialogs();
 
   const { address, isConnected, isConnecting } = useAccount();
@@ -44,7 +40,7 @@ export default function App() {
     setShowDetail(true);
   };
 
-  const { ownables, setOwnables, loaded, forge, relayImport, removeOwnable, deleteOwnable, reset, factoryReset } =
+  const { ownables, setOwnables, loaded, forge, addImportedOwnable, removeOwnable, deleteOwnable, reset, factoryReset } =
     useOwnables({ onSelect: (id) => { setSelectedChainId(id); setShowDetail(true); } });
 
   const { consuming, consumeEligibility, startConsuming, cancelConsuming, consume } =
@@ -52,7 +48,7 @@ export default function App() {
 
   useEffect(() => {
     setShowSidebar(false);
-    setShowViewMessagesBar(false);
+    setShowNotificationsDrawer(false);
     cancelConsuming();
     if (!isConnected) setOwnables([]);
   }, [address, isConnected, chainId]);
@@ -76,8 +72,8 @@ export default function App() {
       {!EMBEDDED && (
         <AppToolbar
           onMenuClick={() => setShowSidebar(true)}
-          onNotificationClick={() => setShowViewMessagesBar(true)}
-          messagesCount={message}
+          onNotificationClick={() => setShowNotificationsDrawer(true)}
+          messagesCount={notificationCount}
           chainId={chainId}
           isConnected={isConnected}
         />
@@ -106,7 +102,6 @@ export default function App() {
           showDetail={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
-          message={message}
           onBack={() => { setSelectedChainId(null); setShowDetail(false); }}
           onConsume={(info) => {
             const o = ownables.find((o) => o.chain.id === selectedChainId);
@@ -117,11 +112,6 @@ export default function App() {
           onRemove={removeOwnable}
           onError={showError}
           onForge={forge}
-          onImportFR={async (pkg, refresh) => {
-            await relayImport(pkg, refresh);
-            await setMessageCount(0);
-            setMessages(0);
-          }}
           onCreate={() => setShowCreateOwnable(true)}
         />
       </Box>
@@ -135,11 +125,11 @@ export default function App() {
             onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
           />
 
-          <ViewMessagesBar
-            open={showViewMessagesBar}
-            onClose={() => setShowViewMessagesBar(false)}
-            messagesCount={message}
-            setOwnables={setOwnables}
+          <NotificationsDrawer
+            open={showNotificationsDrawer}
+            onClose={() => setShowNotificationsDrawer(false)}
+            onImported={addImportedOwnable}
+            onUnreadCountChange={setNotificationCount}
           />
 
           {!isConnected && !isE2E && <LoginDialog open={true} />}

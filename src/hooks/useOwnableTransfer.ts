@@ -47,6 +47,21 @@ export function useOwnableTransfer(
       await ownables.submitAnchors(onProgress as any);
 
       enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
+
+      if (upload.ownerAccount) {
+        try {
+          const delivery = await hub.getDeliveryStatus(upload.cid, upload.ownerAccount);
+          if (delivery.status !== "delivered") {
+            enqueueSnackbar(
+              `Transfer succeeded, but notification delivery is ${delivery.status.replaceAll("_", " ")}.`,
+              { variant: "warning" }
+            );
+          }
+        } catch (error) {
+          console.warn("Unable to confirm Hub delivery status", error);
+        }
+      }
+
       ctrl.close();
 
       if (pkg.uniqueMessageHash) {

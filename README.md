@@ -41,6 +41,15 @@ The page will reload if you make edits. You will also see any lint errors in the
 
 Runs the Cucumber-based end-to-end tests.
 
+This command is not accepted proof for the Hub/Web3Inbox receive flow in the
+`feat/hub` workstream because the current suite has no active scenarios.
+
+### `yarn verify:web3inbox-receive`
+
+Runs the accepted Vitest/jsdom verifier for the Web3Inbox-backed Notifications
+drawer, strict Hub notification imports, and transfer-side delivery-status
+warning behavior.
+
 ### `yarn build`
 
 Builds the app for production to the `build` folder. It correctly bundles React in production mode and optimizes the
@@ -144,6 +153,8 @@ Create a .env file in the project root (or use your existing one) and ensure the
 - VITE_HUB
 - VITE_RELAY
 - VITE_LOCAL
+- VITE_REOWN_APP_DOMAIN
+- VITE_REOWN_PROJECT_ID (preferred) or VITE_WALLETCONNECT_PROJECT_ID
 - VITE_OWNABLE_EXAMPLES_URL
 - VITE_BUILDER
 - VITE_BUILDER_SERVER_WALLETS_ENDPOINT (optional, default: `/api/v1/ServerWalletAddresses`)
@@ -161,5 +172,8 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 Notes:
 - This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
-- `VITE_HUB` is the active Hub endpoint for transfer upload/download flows. `VITE_RELAY` and `VITE_LOCAL` remain legacy fallbacks for older Relay-based paths.
+- `VITE_HUB` is required for active Hub upload, download, delivery-status, and notification import flows. Notification URLs are rejected unless their origin matches `new URL(VITE_HUB).origin`.
+- `VITE_REOWN_APP_DOMAIN` must match the verified public Reown/Web3Inbox app domain used for the in-app Notifications drawer.
+- `VITE_REOWN_PROJECT_ID` is preferred for Web3Inbox notifications. If it is unset, the notifications client falls back to `VITE_WALLETCONNECT_PROJECT_ID` so the existing RainbowKit/wagmi setup keeps working.
+- `VITE_RELAY` and `VITE_LOCAL` remain legacy-only compatibility knobs and are no longer part of the active Notifications drawer path.
 - If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.

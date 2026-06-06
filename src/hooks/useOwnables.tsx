@@ -7,7 +7,7 @@ import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
-import { LocalStorageService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
+import LocalStorageService from "@/services/LocalStorage.service";
 import { Button } from "@/components/ui";
 
 export interface OwnableEntry {
@@ -115,6 +115,24 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     }
   }, [onSelect, showError, showAlert]);
 
+  const addImportedOwnable = useCallback((pkg: TypedPackage) => {
+    if (!pkg.chain) {
+      throw new Error("Imported notification package is missing chain state");
+    }
+
+    setOwnables((prev) => {
+      const next = [
+        ...prev.filter((entry) => entry.chain.id !== pkg.chain!.id),
+        {
+          chain: pkg.chain,
+          package: pkg.cid,
+        },
+      ];
+      onSelect(pkg.chain.id);
+      return next;
+    });
+  }, [onSelect]);
+
   const removeOwnable = useCallback((id: string) => {
     setOwnables((prev) => prev.filter((o) => o.chain.id !== id));
   }, []);
@@ -172,5 +190,17 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     });
   }, [idb, showConfirm]);
 
-  return { ownables, setOwnables, loaded, setLoaded, forge, relayImport, removeOwnable, deleteOwnable, reset, factoryReset };
+  return {
+    ownables,
+    setOwnables,
+    loaded,
+    setLoaded,
+    forge,
+    relayImport,
+    addImportedOwnable,
+    removeOwnable,
+    deleteOwnable,
+    reset,
+    factoryReset,
+  };
 }

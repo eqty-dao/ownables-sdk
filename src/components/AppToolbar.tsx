@@ -64,7 +64,7 @@ export default function AppToolbar({
             {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
 
             <IconButton
-              aria-label="messages"
+              aria-label="notifications"
               className={cn(toolbarIconButton())}
               onClick={onNotificationClick}
             >

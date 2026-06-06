@@ -35,7 +35,6 @@ interface MainSectionProps {
   showDetail: boolean;
   consuming: ConsumingState | null;
   consumeEligibility: Record<string, boolean>;
-  message: number;
   onBack: () => void;
   onConsume: (info: TypedOwnableInfo) => void;
   onConsumeComplete: (consumer: EventChain, consumable: EventChain) => void;
@@ -43,7 +42,6 @@ interface MainSectionProps {
   onRemove: (id: string) => void;
   onError: (title: string, message: string) => void;
   onForge: (pkg: TypedPackage) => void;
-  onImportFR: (pkg: TypedPackage[] | null, triggerRefresh: boolean) => void;
   onCreate: () => void;
 }
 
@@ -53,14 +51,12 @@ export default function MainSection({
   showIssuePanel,
   showDetail,
   consuming,
-  message,
   onBack,
   onConsume,
   onDelete,
   onRemove,
   onError,
   onForge,
-  onImportFR,
   onCreate,
 }: MainSectionProps) {
   const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedChainId);
@@ -74,10 +70,8 @@ export default function MainSection({
       {showIssuePanel && (
         <IssueOwnablePanel
           onSelect={onForge}
-          onImportFR={onImportFR}
           onError={onError}
           onCreate={onCreate}
-          message={message}
           onBack={onBack}
         />
       )}

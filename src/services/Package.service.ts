@@ -380,17 +380,43 @@ export default class PackageService {
   ) {
     let chainJson: any;
     let files: File[];
-    let packageJson: TypedDict;
 
     //Extract files
     if (isNotLocal) {
       files = await this.extractAssets(message.data.buffer, false);
-      packageJson = await this.getPackageJson("package.json", files);
       chainJson = await this.getChainJson("chain.json", message.data.buffer);
     } else {
       files = message; // Local files
-      packageJson = await this.getPackageJson("package.json", files);
     }
+
+    return this.finalizeImportedPackage(
+      files,
+      chainJson,
+      uniqueMessageHash,
+      isNotLocal
+    );
+  }
+
+  async importFromHub(zipFile: File): Promise<TypedPackage> {
+    const files = await this.extractAssets(zipFile);
+    const chainJson = await this.getChainJson("chain.json", zipFile);
+    const pkg = await this.finalizeImportedPackage(files, chainJson, undefined, true);
+
+    if (!pkg?.chain) {
+      throw new Error("Hub notification package did not include chain state");
+    }
+
+    return pkg;
+  }
+
+  private async finalizeImportedPackage(
+    files: File[],
+    chainJson?: any,
+    uniqueMessageHash?: string,
+    isNotLocal = false
+  ) {
+    let packageJson: TypedDict;
+    packageJson = await this.getPackageJson("package.json", files);
 
     //Check for required JSON files
     if (!packageJson) {
