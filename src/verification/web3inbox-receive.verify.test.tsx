@@ -641,4 +641,22 @@ describe("web3inbox receive verifier", () => {
       LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE
     );
   });
+
+  it("preserves Hub local discovery errors outside the unavailable fallback", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: "server exploded" }), {
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { default: HubService } = await import("@/services/Hub.service");
+    const hub = new HubService("https://hub.example");
+
+    await expect(hub.getLocalDeveloperNotifications(ACCOUNT)).rejects.toThrow(
+      "Hub local discovery failed: server exploded"
+    );
+  });
 });

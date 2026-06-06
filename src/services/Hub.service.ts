@@ -203,6 +203,10 @@ export default class HubService {
 
       return (await response.json()) as HubLocalDeveloperNotificationDiscoveryResponse;
     } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Hub local discovery failed:")) {
+        throw error;
+      }
+
       if (
         error instanceof Error &&
         error.message === LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE
