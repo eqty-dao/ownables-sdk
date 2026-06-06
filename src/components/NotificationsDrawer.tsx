@@ -18,7 +18,7 @@ import { cn } from "@/utils/cn";
 interface NotificationsDrawerProps {
   open: boolean;
   onClose: () => void;
-  onImported: (pkg: TypedPackage) => void;
+  onImported: (pkg: TypedPackage) => Promise<void>;
   onUnreadCountChange?: (count: number) => void;
 }
 
@@ -174,6 +174,8 @@ export default function NotificationsDrawer({
             {notifications.map((notification) => {
               const isImported = importedIds.has(notification.id);
               const isBusy = loadingNotificationId === notification.id;
+              const isSupportedType =
+                notification.type === "ownables.v1.available";
 
               return (
                 <ListItem key={notification.id} className={cn(notificationItem())}>
@@ -221,14 +223,18 @@ export default function NotificationsDrawer({
                     <Button
                       size="small"
                       onClick={() => void importNotification(notification)}
-                      disabled={isImported || isBusy}
+                      disabled={isImported || isBusy || !isSupportedType}
                     >
                       {isBusy ? (
                         <LoaderCircle className="mr-1 h-4 w-4 animate-spin" />
                       ) : (
                         <Download className="mr-1 h-4 w-4" />
                       )}
-                      {isImported ? "Imported" : "Import ownable"}
+                      {isImported
+                        ? "Imported"
+                        : isSupportedType
+                          ? "Import ownable"
+                          : "Unsupported type"}
                     </Button>
                   </Box>
                 </ListItem>

@@ -115,10 +115,16 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     }
   }, [onSelect, showError, showAlert]);
 
-  const addImportedOwnable = useCallback((pkg: TypedPackage) => {
+  const addImportedOwnable = useCallback(async (pkg: TypedPackage) => {
     if (!pkg.chain) {
       throw new Error("Imported notification package is missing chain state");
     }
+
+    if (!ownableService) {
+      throw new Error("Ownable service not ready");
+    }
+
+    await ownableService.init(pkg.chain, pkg.cid);
 
     setOwnables((prev) => {
       const next = [
@@ -131,7 +137,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       onSelect(pkg.chain.id);
       return next;
     });
-  }, [onSelect]);
+  }, [onSelect, ownableService]);
 
   const removeOwnable = useCallback((id: string) => {
     setOwnables((prev) => prev.filter((o) => o.chain.id !== id));

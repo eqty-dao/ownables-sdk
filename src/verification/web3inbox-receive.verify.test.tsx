@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import NotificationsDrawer from "@/components/NotificationsDrawer";
+import { useOwnables } from "@/hooks/useOwnables";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 
 const { serviceMap, accountState, enqueueSnackbar } = vi.hoisted(() => ({
@@ -25,6 +26,7 @@ vi.mock("@/hooks/useService", () => ({
 
 vi.mock("wagmi", () => ({
   useAccount: () => accountState,
+  useChainId: () => 84532,
 }));
 
 vi.mock("@/contexts/Progress.context", () => ({
@@ -32,6 +34,30 @@ vi.mock("@/contexts/Progress.context", () => ({
     open: vi.fn(() => [{ close: vi.fn() }, vi.fn()]),
   }),
 }));
+
+vi.mock("@/contexts/Dialogs.context", () => ({
+  useDialogs: () => ({
+    showError: vi.fn(),
+    showConfirm: vi.fn(),
+    showAlert: vi.fn(),
+  }),
+}));
+
+function OwnablesHarness({ importedPackage }: { importedPackage: any }) {
+  const { ownables, loaded, addImportedOwnable } = useOwnables({
+    onSelect: () => {},
+  });
+
+  return (
+    <>
+      <div data-testid="loaded">{loaded ? "loaded" : "loading"}</div>
+      <div data-testid="ownable-count">{String(ownables.length)}</div>
+      <button onClick={() => void addImportedOwnable(importedPackage)}>
+        Import persisted ownable
+      </button>
+    </>
+  );
+}
 
 function TransferHarness({
   chain,
@@ -112,7 +138,7 @@ describe("web3inbox receive verifier", () => {
       set: setStorage,
     };
 
-    const onImported = vi.fn();
+    const onImported = vi.fn().mockResolvedValue(undefined);
     const onUnreadCountChange = vi.fn();
 
     render(
@@ -155,6 +181,67 @@ describe("web3inbox receive verifier", () => {
         .disabled
     ).toBe(true);
     expect(screen.getByText("Transfer ready")).toBeTruthy();
+  });
+
+  it("persists imported ownables through the durable ownable storage path", async () => {
+    const user = userEvent.setup();
+    const persistedOwnables: any[] = [];
+    const importedPackage = {
+      cid: "bafy",
+      chain: { id: "ownable-1" },
+    };
+
+    serviceMap.ownables = {
+      loadAll: vi.fn().mockImplementation(async () => [...persistedOwnables]),
+      initWorker: vi.fn().mockResolvedValue(undefined),
+      init: vi.fn().mockImplementation(async (chain, cid) => {
+        persistedOwnables.splice(0, persistedOwnables.length, {
+          chain,
+          package: cid,
+          created: new Date("2026-06-06T00:00:00.000Z"),
+          keywords: [],
+          uniqueMessageHash: undefined,
+        });
+      }),
+    };
+    serviceMap.packages = {
+      info: vi.fn().mockReturnValue({ title: "Imported ownable" }),
+    };
+    serviceMap.relay = {
+      removeOwnable: vi.fn().mockResolvedValue(undefined),
+    };
+    serviceMap.idb = {
+      deleteAllDatabases: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const firstRender = render(
+      <OwnablesHarness importedPackage={importedPackage} />
+    );
+
+    await screen.findByText("loaded");
+    expect(screen.getByTestId("ownable-count").textContent).toBe("0");
+
+    await user.click(
+      screen.getByRole("button", { name: "Import persisted ownable" })
+    );
+
+    await waitFor(() =>
+      expect(serviceMap.ownables.init).toHaveBeenCalledWith(
+        importedPackage.chain,
+        importedPackage.cid
+      )
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("ownable-count").textContent).toBe("1")
+    );
+
+    firstRender.unmount();
+
+    render(<OwnablesHarness importedPackage={importedPackage} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("ownable-count").textContent).toBe("1")
+    );
   });
 
   it("warns when transfer succeeds but delivery status is not delivered", async () => {
@@ -254,6 +341,78 @@ describe("web3inbox receive verifier", () => {
     await expect(
       hub.importFromNotificationUrl("https://evil.example/ownables/bafy/download")
     ).rejects.toThrow("Notification URL must use the configured Hub origin");
+  });
+
+  it("rejects same-origin notifications whose type is not ownables.v1.available", async () => {
+    const user = userEvent.setup();
+    const notification = {
+      id: "notif-unsupported",
+      title: "Marketing update",
+      body: "This came from Hub but is not an Ownables delivery",
+      sentAt: Date.now(),
+      url: "https://hub.example/ownables/bafy/download",
+      isRead: false,
+      type: "marketing.v1.broadcast",
+      read: vi.fn(),
+    };
+
+    serviceMap.notifications = {
+      isConfigured: true,
+      configurationError: () => null,
+      toAccount: () => "eip155:84532:0xabc",
+      getRegistrationStatus: vi.fn().mockResolvedValue(true),
+      watchSubscription: vi.fn().mockImplementation(async (_account, cb) => {
+        cb({ unreadNotificationCount: 1 });
+        return () => {};
+      }),
+      pageNotifications: vi.fn().mockImplementation(async (_account, onUpdate) => {
+        const data = {
+          notifications: [notification],
+          hasMore: false,
+          hasMoreUnread: false,
+        };
+        onUpdate(data);
+        return {
+          data,
+          nextPage: vi.fn(),
+          stopWatchingNotifications: vi.fn(),
+        };
+      }),
+      markNotificationsAsRead: vi.fn(),
+      enable: vi.fn(),
+      disable: vi.fn(),
+    };
+    serviceMap.hub = {
+      importFromNotificationUrl: vi.fn(),
+    };
+    serviceMap.packages = {
+      importFromHub: vi.fn(),
+    };
+    serviceMap.localStorage = {
+      get: vi.fn().mockReturnValue([]),
+      set: vi.fn(),
+    };
+
+    render(
+      <NotificationsDrawer
+        open={true}
+        onClose={() => {}}
+        onImported={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const button = await screen.findByRole("button", {
+      name: "Unsupported type",
+    });
+
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => {
+      await user.click(button);
+    });
+
+    expect(serviceMap.hub.importFromNotificationUrl).not.toHaveBeenCalled();
+    expect(serviceMap.packages.importFromHub).not.toHaveBeenCalled();
   });
 
   it("enables notifications through Web3Inbox registration and subscription", async () => {

@@ -51,8 +51,14 @@ export interface NotificationsDrawerState {
   loadMore: () => Promise<void>;
 }
 
+const OWNABLES_NOTIFICATION_TYPE = "ownables.v1.available";
+
+const isOwnablesNotification = (
+  notification: Pick<Web3InboxNotification, "type">
+) => notification.type === OWNABLES_NOTIFICATION_TYPE;
+
 export function useNotificationsDrawer(
-  onImported: (pkg: TypedPackage) => void
+  onImported: (pkg: TypedPackage) => Promise<void>
 ): NotificationsDrawerState {
   const notifications = useService("notifications");
   const hub = useService("hub");
@@ -258,6 +264,10 @@ export function useNotificationsDrawer(
 
   const importNotification = useCallback(
     async (notification: Web3InboxNotification) => {
+      if (!isOwnablesNotification(notification)) {
+        throw new Error("Unsupported notification type");
+      }
+
       if (!hub || !packages || !notification.url) {
         throw new Error("Notification is missing a Hub import URL");
       }
@@ -266,7 +276,7 @@ export function useNotificationsDrawer(
       try {
         const file = await hub.importFromNotificationUrl(notification.url);
         const pkg = await packages.importFromHub(file);
-        onImported(pkg);
+        await onImported(pkg);
         await markAsRead(notification);
         setImportedIds((current) => {
           const next = new Set(current).add(notification.id);
