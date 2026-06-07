@@ -9,7 +9,6 @@ const checks = [
       "relay.sendOwnable(",
       "Relay server is down",
       "hub.downloadOwnable(upload.cid",
-      "hubReplay",
       "Update Hub owner state",
     ],
   },
@@ -21,7 +20,7 @@ const checks = [
   {
     file: "src/services/Hub.service.ts",
     includes: ["/info", "/ownables/upload", "/ownables/${encodeURIComponent(cid)}/download"],
-    excludes: ["/messages"],
+    excludes: ["/messages", "hubReplay"],
   },
 ];
 

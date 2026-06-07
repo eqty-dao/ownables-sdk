@@ -134,7 +134,7 @@ export default class HubService {
   async downloadOwnable(cid: string, onProgress?: LogProgress): Promise<File> {
     const step = withProgress(onProgress);
 
-    return await step("hubReplay", async () => {
+    return await step("hubDownload", async () => {
       const response = await fetch(this.endpoint(`/ownables/${encodeURIComponent(cid)}/download`));
 
       if (!response.ok) {
