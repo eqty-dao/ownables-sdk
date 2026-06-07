@@ -10,7 +10,6 @@ import {
 import { BuilderService } from "@ownables/builder-client";
 import OwnableService from "./Ownable.service";
 import HubService from "./Hub.service";
-import Web3InboxService from "./Web3Inbox.service";
 import LocalStorageService from "./LocalStorage.service";
 import PackageService from "./Package.service";
 import { RelayService } from "./Relay.service";
@@ -26,7 +25,6 @@ export interface ServiceMap {
   polling: PollingService;
   builder: BuilderService;
   hub: HubService;
-  notifications: Web3InboxService;
 }
 
 export type ServiceKey = keyof ServiceMap;
@@ -77,10 +75,6 @@ export default class ServiceContainer {
     );
 
     this.register("hub", () => new HubService());
-    this.register(
-      "notifications",
-      (c) => new Web3InboxService(c.walletClient, c.chainId)
-    );
 
     this.register(
       "eventChains",

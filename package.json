@@ -17,7 +17,6 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@web3inbox/core": "^1.4.0",
     "all-inline": "^0.1.7",
     "axios": "^1.13.6",
     "blockstore-core": "^6.1.2",
@@ -63,7 +62,7 @@
     "ownables:copy": "node bin/ownables-copy.mjs",
     "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts",
     "verify:hub-transfer": "node bin/verify-hub-transfer.mjs",
-    "verify:web3inbox-receive": "vitest run src/verification/web3inbox-receive.verify.test.tsx"
+    "verify:main-list-discovery": "vitest run src/verification/main-list-discovery.verify.test.tsx"
   },
   "repository": {
     "type": "git",

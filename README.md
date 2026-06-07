@@ -41,14 +41,15 @@ The page will reload if you make edits. You will also see any lint errors in the
 
 Runs the Cucumber-based end-to-end tests.
 
-This command is not accepted proof for the Hub/Web3Inbox receive flow in the
+This command is not accepted proof for the Hub receive flow in the
 `feat/hub` workstream because the current suite has no active scenarios.
 
-### `yarn verify:web3inbox-receive`
+### `yarn verify:main-list-discovery`
 
-Runs the accepted Vitest/jsdom verifier for the Web3Inbox-backed Notifications
-drawer, Hub-backed local developer discovery merge behavior, strict Hub
-notification imports, and transfer-side delivery-status warning behavior.
+Runs the accepted Vitest/jsdom verifier for Hub-backed main-list discovery,
+strict Hub import origin guards, per-account dismiss persistence, and the
+combined imported-plus-available list behavior, including wallet/account
+switching while the next discovery fetch is in flight.
 
 ### `yarn build`
 
@@ -153,8 +154,6 @@ Create a .env file in the project root (or use your existing one) and ensure the
 - VITE_HUB
 - VITE_RELAY
 - VITE_LOCAL
-- VITE_REOWN_APP_DOMAIN
-- VITE_REOWN_PROJECT_ID (preferred) or VITE_WALLETCONNECT_PROJECT_ID
 - VITE_LOCAL_DEVELOPER_NOTIFICATIONS
 - VITE_OWNABLE_EXAMPLES_URL
 - VITE_BUILDER
@@ -173,10 +172,9 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 Notes:
 - This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
-- `VITE_HUB` is required for active Hub upload, download, delivery-status, and notification import flows. Notification URLs are rejected unless their origin matches `new URL(VITE_HUB).origin`.
-- `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true` explicitly enables Hub-backed local developer discovery in the Notifications drawer. The SDK does not infer this from `localhost`, and `VITE_HUB` must be configured when this gate is enabled.
-- `VITE_REOWN_APP_DOMAIN` must match the verified public Reown/Web3Inbox app domain used for the in-app Notifications drawer.
-- `VITE_REOWN_PROJECT_ID` is preferred for Web3Inbox notifications. If it is unset, the notifications client falls back to `VITE_WALLETCONNECT_PROJECT_ID` so the existing RainbowKit/wagmi setup keeps working.
-- `VITE_RELAY` and `VITE_LOCAL` remain legacy-only compatibility knobs and are no longer part of the active Notifications drawer path.
-- On localhost, when `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true` and Reown is not configured, the Notifications drawer shows local developer entries from `GET /notify/local/discovery?owner=<caip10-account>`. Those entries stay visible after read/import and are labeled as local-dev only; they are not proof of Reown delivery.
+- `VITE_HUB` is required for active Hub upload, download, delivery-status, available-ownables discovery, and Hub import flows. Hub download URLs are rejected unless their origin matches `new URL(VITE_HUB).origin`.
+- `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true` explicitly enables Hub-backed available-ownables discovery for the main list. The SDK does not infer this from `localhost`, and `VITE_HUB` must be configured when this gate is enabled.
+- `VITE_RELAY` and `VITE_LOCAL` remain legacy-only compatibility knobs and are no longer part of the active Hub receive path.
+- On localhost, when `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true`, the SDK looks for available ownables at `GET /ownables/available?owner=<caip10-account>` and renders them directly in the main list with import and dismiss actions.
+- The accepted manual localhost wallet-A-to-wallet-B smoke for this receive path is documented in `DEVELOPMENT.md`.
 - If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EventChain } from "eqty-core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
-import { useChainId } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import LocalStorageService from "@/services/LocalStorage.service";
@@ -19,24 +19,50 @@ export interface OwnableEntry {
   isTransferred?: boolean;
 }
 
+export interface AvailableOwnableEntry {
+  id: string;
+  cid: string;
+  title: string;
+  description?: string;
+  issuer?: string;
+  downloadUrl: string;
+  availableAt: string;
+  thumbnailUrl?: string | null;
+}
+
+export type MainListEntry =
+  | ({ kind: "imported" } & OwnableEntry)
+  | ({ kind: "available" } & AvailableOwnableEntry);
+
 interface UseOwnablesOptions {
   onSelect: (chainId: string) => void;
 }
 
 export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [ownables, setOwnables] = useState<OwnableEntry[]>([]);
+  const [availableOwnables, setAvailableOwnables] = useState<AvailableOwnableEntry[]>([]);
+  const [availableOwnablesAccount, setAvailableOwnablesAccount] = useState<string | null>(null);
+  const [dismissedAvailableOwnableIds, setDismissedAvailableOwnableIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [availableLoaded, setAvailableLoaded] = useState(false);
+  const [availableLoadedAccount, setAvailableLoadedAccount] = useState<string | null>(null);
 
   const ownableService = useService("ownables");
   const packageService = useService("packages");
   const relayService = useService("relay");
   const idb = useService("idb");
+  const hub = useService("hub");
+  const localStorage = useService("localStorage");
   const progress = useProgress();
   const { showError, showConfirm, showAlert } = useDialogs();
   const chainId = useChainId();
+  const { address, isConnected } = useAccount();
+  const account = address ? `eip155:${chainId}:${address}` : null;
+  const dismissedStorageKey = account ? `hub-available:dismissed:${account}` : null;
 
   useEffect(() => {
     if (!ownableService) return;
+    setLoaded(false);
     ownableService.loadAll().then(async (loaded) => {
       setOwnables(loaded);
       await Promise.allSettled(
@@ -47,6 +73,98 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService]);
+
+  useEffect(() => {
+    if (!dismissedStorageKey || !localStorage) {
+      setDismissedAvailableOwnableIds([]);
+      return;
+    }
+
+    const stored = localStorage.get(dismissedStorageKey);
+    setDismissedAvailableOwnableIds(Array.isArray(stored) ? stored : []);
+  }, [dismissedStorageKey, localStorage]);
+
+  useEffect(() => {
+    if (!hub?.recipientDiscoveryEnabled || !hub.isConfigured || !account || !isConnected) {
+      setAvailableOwnables([]);
+      setAvailableOwnablesAccount(account);
+      setAvailableLoaded(true);
+      setAvailableLoadedAccount(account);
+      return;
+    }
+
+    let alive = true;
+    setAvailableLoaded(false);
+    setAvailableLoadedAccount(null);
+    setAvailableOwnables([]);
+    setAvailableOwnablesAccount(account);
+
+    void hub
+      .listAvailableOwnables(account)
+      .then((response) => {
+        if (!alive) return;
+
+        const entries = [...response.entries].sort(
+          (left, right) =>
+            new Date(right.availableAt).getTime() - new Date(left.availableAt).getTime()
+        );
+        setAvailableOwnables(entries);
+        setAvailableOwnablesAccount(account);
+        setAvailableLoaded(true);
+        setAvailableLoadedAccount(account);
+      })
+      .catch((error) => {
+        if (!alive) return;
+        console.warn("Unable to load Hub available ownables", error);
+        setAvailableOwnables([]);
+        setAvailableOwnablesAccount(account);
+        setAvailableLoaded(true);
+        setAvailableLoadedAccount(account);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [account, hub, isConnected]);
+
+  const visibleAvailableOwnables = useMemo(() => {
+    if (availableOwnablesAccount !== account) {
+      return [];
+    }
+
+    const importedCids = new Set(ownables.map((entry) => entry.package));
+    const dismissedIds = new Set(dismissedAvailableOwnableIds);
+
+    return availableOwnables.filter(
+      (entry) => !dismissedIds.has(entry.id) && !importedCids.has(entry.cid)
+    );
+  }, [account, availableOwnables, availableOwnablesAccount, dismissedAvailableOwnableIds, ownables]);
+
+  const hiddenAvailableOwnablesCount = useMemo(() => {
+    if (availableOwnablesAccount !== account) {
+      return 0;
+    }
+
+    const importedCids = new Set(ownables.map((entry) => entry.package));
+    const dismissedIds = new Set(dismissedAvailableOwnableIds);
+
+    return availableOwnables.filter(
+      (entry) => dismissedIds.has(entry.id) && !importedCids.has(entry.cid)
+    ).length;
+  }, [account, availableOwnables, availableOwnablesAccount, dismissedAvailableOwnableIds, ownables]);
+
+  const mainListEntries = useMemo<MainListEntry[]>(
+    () => [
+      ...ownables.map((entry) => ({ kind: "imported" as const, ...entry })),
+      ...visibleAvailableOwnables.map((entry) => ({ kind: "available" as const, ...entry })),
+    ],
+    [ownables, visibleAvailableOwnables]
+  );
+  const discoveryEnabled =
+    !!hub?.recipientDiscoveryEnabled && hub.isConfigured && !!account && isConnected;
+  const mainListLoaded =
+    loaded &&
+    (!discoveryEnabled || (availableLoaded && availableLoadedAccount === account));
 
   const getExplorerUrl = (txHash: string, chainId: number) => {
     switch (chainId) {
@@ -117,7 +235,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
   const addImportedOwnable = useCallback(async (pkg: TypedPackage) => {
     if (!pkg.chain) {
-      throw new Error("Imported notification package is missing chain state");
+      throw new Error("Imported Hub package is missing chain state");
     }
 
     if (!ownableService) {
@@ -138,6 +256,57 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       return next;
     });
   }, [onSelect, ownableService]);
+
+  const dismissAvailableOwnable = useCallback(
+    (entryId: string) => {
+      if (!dismissedStorageKey || !localStorage) return;
+
+      setDismissedAvailableOwnableIds((prev) => {
+        if (prev.includes(entryId)) return prev;
+        const next = [...prev, entryId];
+        localStorage.set(dismissedStorageKey, next);
+        return next;
+      });
+    },
+    [dismissedStorageKey, localStorage]
+  );
+
+  const resetDismissedAvailableOwnables = useCallback(() => {
+    setDismissedAvailableOwnableIds([]);
+    if (dismissedStorageKey && localStorage) {
+      localStorage.remove(dismissedStorageKey);
+    }
+  }, [dismissedStorageKey, localStorage]);
+
+  const importAvailableOwnable = useCallback(
+    async (entryId: string) => {
+      const entry = availableOwnables.find((candidate) => candidate.id === entryId);
+      if (!entry) {
+        showError("Hub item unavailable", "This available Hub item is no longer present.");
+        return;
+      }
+
+      if (!hub || !packageService) {
+        showError("Hub import unavailable", "Hub import services are not ready yet.");
+        return;
+      }
+
+      try {
+        const file = await hub.importFromHubUrl(entry.downloadUrl);
+        const pkg = await packageService.importFromHub(file);
+
+        if (!pkg) {
+          throw new Error("Hub package is already imported or no longer current");
+        }
+
+        await addImportedOwnable(pkg);
+        enqueueSnackbar(`${pkg.title} imported from Hub`, { variant: "success" });
+      } catch (error) {
+        showError("Failed to import from Hub", ownableErrorMessage(error));
+      }
+    },
+    [addImportedOwnable, availableOwnables, hub, packageService, showError]
+  );
 
   const removeOwnable = useCallback((id: string) => {
     setOwnables((prev) => prev.filter((o) => o.chain.id !== id));
@@ -198,12 +367,20 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
   return {
     ownables,
+    availableOwnables: visibleAvailableOwnables,
+    dismissedAvailableOwnableIds,
+    hiddenAvailableOwnablesCount,
+    mainListEntries,
+    mainListLoaded,
     setOwnables,
     loaded,
     setLoaded,
     forge,
     relayImport,
     addImportedOwnable,
+    importAvailableOwnable,
+    dismissAvailableOwnable,
+    resetDismissedAvailableOwnables,
     removeOwnable,
     deleteOwnable,
     reset,

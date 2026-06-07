@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { isE2E } from "@/utils/isE2E";
 import { Box } from "@/components/ui";
 import LoginDialog from "@/components/LoginDialog";
-import NotificationsDrawer from "@/components/NotificationsDrawer";
 import AppToolbar from "@/components/AppToolbar";
 import { SnackbarProvider } from "notistack";
 import { useAccount, useChainId, useConnect } from "wagmi";
@@ -22,9 +21,7 @@ const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDD
 
 export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const [showNotificationsDrawer, setShowNotificationsDrawer] = useState(false);
   const [showCreateOwnable, setShowCreateOwnable] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -40,15 +37,28 @@ export default function App() {
     setShowDetail(true);
   };
 
-  const { ownables, setOwnables, loaded, forge, addImportedOwnable, removeOwnable, deleteOwnable, reset, factoryReset } =
-    useOwnables({ onSelect: (id) => { setSelectedChainId(id); setShowDetail(true); } });
+  const {
+    ownables,
+    mainListEntries,
+    mainListLoaded,
+    hiddenAvailableOwnablesCount,
+    setOwnables,
+    loaded,
+    forge,
+    importAvailableOwnable,
+    dismissAvailableOwnable,
+    removeOwnable,
+    deleteOwnable,
+    reset,
+    factoryReset,
+    resetDismissedAvailableOwnables,
+  } = useOwnables({ onSelect: (id) => { setSelectedChainId(id); setShowDetail(true); } });
 
   const { consuming, consumeEligibility, startConsuming, cancelConsuming, consume } =
     useConsuming({ ownables, onConsumed: (id) => setOwnables((prev) => prev.map((o) => o.chain.id === id ? { ...o, isConsumed: true } : o)) });
 
   useEffect(() => {
     setShowSidebar(false);
-    setShowNotificationsDrawer(false);
     cancelConsuming();
     if (!isConnected) setOwnables([]);
   }, [address, isConnected, chainId]);
@@ -72,27 +82,31 @@ export default function App() {
       {!EMBEDDED && (
         <AppToolbar
           onMenuClick={() => setShowSidebar(true)}
-          onNotificationClick={() => setShowNotificationsDrawer(true)}
-          messagesCount={notificationCount}
           chainId={chainId}
           isConnected={isConnected}
         />
       )}
 
-      {ownables.length === 0 && !showDetail && !EMBEDDED && <GetStarted onExamples={selectIssuePanel} />}
+      {mainListLoaded && mainListEntries.length === 0 && !showDetail && !EMBEDDED && (
+        <GetStarted onExamples={selectIssuePanel} />
+      )}
 
       <Box className="mx-auto lg:mt-4 flex max-w-330 gap-4 lg:pb-6 lg:px-4">
         <OwnableList
           className="mt-4"
-          ownables={ownables}
+          entries={mainListEntries}
           selectedChainId={selectedChainId}
           issueSelected={selectedChainId === ISSUE_OWNABLE_ID}
           hiddenOnMobile={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
+          hiddenAvailableOwnablesCount={hiddenAvailableOwnablesCount}
           onSelect={(id) => { setSelectedChainId(id); setShowDetail(true); }}
           onConsume={consume}
           onIssue={selectIssuePanel}
+          onImportAvailable={importAvailableOwnable}
+          onDismissAvailable={dismissAvailableOwnable}
+          onResetHiddenAvailable={resetDismissedAvailableOwnables}
         />
 
         <MainSection
@@ -123,13 +137,6 @@ export default function App() {
             onClose={() => setShowSidebar(false)}
             onReset={() => { setShowSidebar(false); reset(); }}
             onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
-          />
-
-          <NotificationsDrawer
-            open={showNotificationsDrawer}
-            onClose={() => setShowNotificationsDrawer(false)}
-            onImported={addImportedOwnable}
-            onUnreadCountChange={setNotificationCount}
           />
 
           {!isConnected && !isE2E && <LoginDialog open={true} />}

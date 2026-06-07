@@ -24,30 +24,28 @@ export interface HubDeliveryStatus {
   detail?: string;
 }
 
-export interface HubLocalDeveloperNotificationEntry {
+export interface HubAvailableOwnableEntry {
   id: string;
-  scope: "local-dev";
-  type: string;
+  cid: string;
   title: string;
-  body: string;
-  url: string;
-  sentAt: string;
-  cid?: string;
-  ownerStateVersion?: number;
-  triggerKind?: string;
+  description?: string;
+  issuer?: string;
+  downloadUrl: string;
+  availableAt: string;
+  thumbnailUrl?: string | null;
 }
 
-export interface HubLocalDeveloperNotificationDiscoveryResponse {
+export interface HubAvailableOwnablesResponse {
   owner: string;
-  entries: HubLocalDeveloperNotificationEntry[];
+  entries: HubAvailableOwnableEntry[];
 }
 
-export const LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE =
-  "Local developer notifications are enabled, but the Hub local discovery endpoint is unavailable.";
+export const AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE =
+  "Hub available-ownables discovery is enabled, but the Hub discovery endpoint is unavailable.";
 
 export default class HubService {
   public static readonly URL = (import.meta.env.VITE_HUB || "").trim();
-  public static readonly LOCAL_DEVELOPER_NOTIFICATIONS_ENABLED =
+  public static readonly RECIPIENT_DISCOVERY_ENABLED =
     (import.meta.env.VITE_LOCAL_DEVELOPER_NOTIFICATIONS || "").trim().toLowerCase() ===
     "true";
 
@@ -57,8 +55,8 @@ export default class HubService {
     return this.url.trim().length > 0;
   }
 
-  get localDeveloperNotificationsEnabled(): boolean {
-    return HubService.LOCAL_DEVELOPER_NOTIFICATIONS_ENABLED;
+  get recipientDiscoveryEnabled(): boolean {
+    return HubService.RECIPIENT_DISCOVERY_ENABLED;
   }
 
   get origin(): string {
@@ -77,17 +75,17 @@ export default class HubService {
     return `${this.url.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
   }
 
-  parseNotificationUrl(url: string): URL {
+  parseHubDownloadUrl(url: string): URL {
     let parsed: URL;
 
     try {
       parsed = new URL(url);
     } catch {
-      throw new Error("Notification URL is malformed");
+      throw new Error("Hub download URL is malformed");
     }
 
     if (parsed.origin !== this.origin) {
-      throw new Error("Notification URL must use the configured Hub origin");
+      throw new Error("Hub download URL must use the configured Hub origin");
     }
 
     return parsed;
@@ -146,13 +144,13 @@ export default class HubService {
     });
   }
 
-  async importFromNotificationUrl(url: string): Promise<File> {
-    const parsed = this.parseNotificationUrl(url);
+  async importFromHubUrl(url: string): Promise<File> {
+    const parsed = this.parseHubDownloadUrl(url);
     const response = await fetch(parsed.toString());
 
     if (!response.ok) {
       const message = await readError(response);
-      throw new Error(`Hub notification import failed: ${message}`);
+      throw new Error(`Hub import failed: ${message}`);
     }
 
     return new File([await response.blob()], fileNameFromUrl(parsed), {
@@ -180,41 +178,44 @@ export default class HubService {
     return (await response.json()) as HubDeliveryStatus;
   }
 
-  async getLocalDeveloperNotifications(
+  async listAvailableOwnables(
     ownerAccount: string
-  ): Promise<HubLocalDeveloperNotificationDiscoveryResponse> {
+  ): Promise<HubAvailableOwnablesResponse> {
     const query = new URLSearchParams({
       owner: ownerAccount,
     });
 
     try {
       const response = await fetch(
-        this.endpoint(`/notify/local/discovery?${query.toString()}`)
+        this.endpoint(`/ownables/available?${query.toString()}`)
       );
 
       if (response.status === 404 || response.status === 501) {
-        throw new Error(LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE);
+        throw new Error(AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE);
       }
 
       if (!response.ok) {
         const message = await readError(response);
-        throw new Error(`Hub local discovery failed: ${message}`);
+        throw new Error(`Hub available-ownables lookup failed: ${message}`);
       }
 
-      return (await response.json()) as HubLocalDeveloperNotificationDiscoveryResponse;
+      return (await response.json()) as HubAvailableOwnablesResponse;
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith("Hub local discovery failed:")) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith("Hub available-ownables lookup failed:")
+      ) {
         throw error;
       }
 
       if (
         error instanceof Error &&
-        error.message === LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE
+        error.message === AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE
       ) {
         throw error;
       }
 
-      throw new Error(LOCAL_DEVELOPER_DISCOVERY_UNAVAILABLE_MESSAGE);
+      throw new Error(AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE);
     }
   }
 }

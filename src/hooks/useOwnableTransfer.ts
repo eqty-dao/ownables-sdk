@@ -53,8 +53,8 @@ export function useOwnableTransfer(
             const message =
               delivery.status === "not_configured" ||
               delivery.status === "not_subscribed"
-                ? `Transfer succeeded, but Web3Inbox delivery is ${delivery.status.replaceAll("_", " ")}. If VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true, use the Notifications drawer local dev discovery path on localhost.`
-                : `Transfer succeeded, but notification delivery is ${delivery.status.replaceAll("_", " ")}.`;
+                ? `Transfer succeeded, but Hub recipient discovery is ${delivery.status.replaceAll("_", " ")}. If VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true, switch to the recipient wallet and check the main list for available Hub items on localhost.`
+                : `Transfer succeeded, but Hub recipient discovery is ${delivery.status.replaceAll("_", " ")}.`;
             enqueueSnackbar(
               message,
               { variant: "warning" }

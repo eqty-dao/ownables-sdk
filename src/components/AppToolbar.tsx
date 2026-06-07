@@ -1,14 +1,12 @@
 import { Alert, IconButton, Tag } from "@/components/ui";
 import logo from "@/assets/logo.svg";
-import { Menu as MenuIcon, TriangleAlert as WarningIcon, Bell } from "lucide-react";
+import { Menu as MenuIcon, TriangleAlert as WarningIcon } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core"
 
 interface AppToolbarProps {
   onMenuClick: () => void;
-  onNotificationClick: () => void;
-  messagesCount: number;
   chainId?: number;
   isConnected: boolean;
 }
@@ -28,14 +26,9 @@ const warningStrip = cva(
 );
 
 const toolbarIconButton = cva("relative text-white hover:bg-white/20");
-const notificationBadge = cva(
-  "absolute -right-0.5 -top-0.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white"
-);
 
 export default function AppToolbar({
   onMenuClick,
-  onNotificationClick,
-  messagesCount,
   chainId,
   isConnected,
 }: AppToolbarProps) {
@@ -62,19 +55,6 @@ export default function AppToolbar({
           <div className="flex items-center gap-2">
             {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
             {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
-
-            <IconButton
-              aria-label="notifications"
-              className={cn(toolbarIconButton())}
-              onClick={onNotificationClick}
-            >
-              <Bell />
-              {messagesCount > 0 ? (
-                <span className={cn(notificationBadge())}>
-                  {messagesCount}
-                </span>
-              ) : null}
-            </IconButton>
 
             <IconButton
               aria-label="menu"
