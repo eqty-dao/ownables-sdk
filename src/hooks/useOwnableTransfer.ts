@@ -30,7 +30,6 @@ export function useOwnableTransfer(
     const steps = [
       { id: "signEvent", label: "Sign the event" },
       { id: "hubUpload", label: "Upload to Hub" },
-      { id: "hubReplay", label: "Update Hub owner state" },
     ];
     if (ownables.anchoring) steps.push({ id: "anchor", label: "Anchor the event" });
 
@@ -43,7 +42,6 @@ export function useOwnableTransfer(
       const content = await zip.generateAsync({ type: "uint8array" });
 
       const upload = await hub.uploadOwnable(content, `${chain.id}.zip`, onProgress as any);
-      await hub.downloadOwnable(upload.cid, onProgress as any);
       await ownables.submitAnchors(onProgress as any);
 
       enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });

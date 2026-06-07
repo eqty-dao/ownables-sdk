@@ -16,6 +16,8 @@ const { serviceMap, accountState, enqueueSnackbar } = vi.hoisted(() => ({
   enqueueSnackbar: vi.fn(),
 }));
 
+const progressOpen = vi.hoisted(() => vi.fn(() => [{ close: vi.fn() }, vi.fn()]));
+
 vi.mock("notistack", () => ({
   enqueueSnackbar,
   SnackbarProvider: ({ children }: { children: ReactNode }) => children,
@@ -32,7 +34,7 @@ vi.mock("wagmi", () => ({
 
 vi.mock("@/contexts/Progress.context", () => ({
   useProgress: () => ({
-    open: vi.fn(() => [{ close: vi.fn() }, vi.fn()]),
+    open: progressOpen,
   }),
 }));
 
@@ -163,6 +165,8 @@ describe("web3inbox receive verifier", () => {
     Object.keys(serviceMap).forEach((key) => delete serviceMap[key]);
     accountState.address = "0xabc";
     accountState.isConnected = true;
+    progressOpen.mockReset();
+    progressOpen.mockImplementation(() => [{ close: vi.fn() }, vi.fn()]);
   });
 
   it("keeps the drawer Web3Inbox-only when local developer notifications are disabled", async () => {
@@ -470,9 +474,6 @@ describe("web3inbox receive verifier", () => {
           cid: "bafy",
           ownerAccount: "eip155:84532:0xdef",
         }),
-        downloadOwnable: vi.fn().mockResolvedValue(
-          new File(["zip"], "bafy.zip", { type: "application/zip" })
-        ),
         getDeliveryStatus: vi.fn().mockResolvedValue({
           cid: "bafy",
           owner: "eip155:84532:0xdef",
@@ -503,6 +504,15 @@ describe("web3inbox receive verifier", () => {
           "bafy",
           "eip155:84532:0xdef"
         )
+      );
+      expect(serviceMap.hub.downloadOwnable).toBeUndefined();
+      expect(progressOpen).toHaveBeenCalledWith(
+        expect.objectContaining({
+          steps: [
+            { id: "signEvent", label: "Sign the event" },
+            { id: "hubUpload", label: "Upload to Hub" },
+          ],
+        })
       );
       expect(enqueueSnackbar).toHaveBeenCalledWith(
         `Transfer succeeded, but Web3Inbox delivery is ${status.replaceAll("_", " ")}. If VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true, use the Notifications drawer local dev discovery path on localhost.`,

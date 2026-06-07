@@ -3,8 +3,15 @@ import { readFileSync } from "node:fs";
 const checks = [
   {
     file: "src/hooks/useOwnableTransfer.ts",
-    includes: ["useService(\"hub\")", "hub.isAvailable()", "hub.uploadOwnable(", "hub.downloadOwnable(upload.cid"],
-    excludes: ["relay.isAvailable()", "relay.sendOwnable(", "Relay server is down"],
+    includes: ["useService(\"hub\")", "hub.isAvailable()", "hub.uploadOwnable(", "ownerAccount"],
+    excludes: [
+      "relay.isAvailable()",
+      "relay.sendOwnable(",
+      "Relay server is down",
+      "hub.downloadOwnable(upload.cid",
+      "hubReplay",
+      "Update Hub owner state",
+    ],
   },
   {
     file: "src/services/ServiceContainer.ts",
