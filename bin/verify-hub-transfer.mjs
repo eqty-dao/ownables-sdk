@@ -2,14 +2,20 @@ import { readFileSync } from "node:fs";
 
 const checks = [
   {
+    file: "src/hooks/useOwnableState.ts",
+    includes: ['onError("The Ownable returned an error"', "throw e;"],
+    excludes: [],
+  },
+  {
     file: "src/hooks/useOwnableTransfer.ts",
-    includes: ["useService(\"hub\")", "hub.isAvailable()", "hub.uploadOwnable(", "ownerAccount"],
+    includes: ["useService(\"hub\")", "hub.isAvailable()", "hub.uploadOwnable(", "Ownable transferred through Hub"],
     excludes: [
       "relay.isAvailable()",
       "relay.sendOwnable(",
       "Relay server is down",
       "hub.downloadOwnable(upload.cid",
       "Update Hub owner state",
+      "getDeliveryStatus(",
     ],
   },
   {

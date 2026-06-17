@@ -37,11 +37,11 @@ The approved manual smoke for this repo is wallet A sending an ownable to wallet
 3. Confirm the transfer progress stops after Hub upload plus any anchoring work. The SDK must not show an `Update Hub owner state` step.
 4. Switch the connected wallet to wallet B.
 5. Confirm the SDK requests `GET /ownables/available?owner=<wallet-b-caip10-account>`.
-6. Confirm the transferred ownable appears under `Available from Hub` in the main list with `Download & import` and `Dismiss` actions.
-7. Click `Dismiss` and confirm the row disappears immediately.
-8. Reload while still connected as wallet B and confirm the row stays hidden.
-9. Click `Show dismissed Hub items` and confirm the row returns.
-10. Click `Download & import` and confirm the row leaves the available section and reappears as an imported ownable in the main wallet inventory.
+6. Confirm the transferred ownable appears in the main list with the normal ownable-card layout and a trailing `Import` icon.
+7. Open the ownable detail and click `Archive`, then confirm the row disappears immediately from the main list.
+8. Reload while still connected as wallet B and confirm the row stays archived.
+9. Expand the collapsed `Archived` section and confirm the row returns there.
+10. Click `Import` and confirm the row leaves the available state and reappears as an imported ownable in the main wallet inventory.
 
 ### Evidence To Capture
 
@@ -49,7 +49,7 @@ The approved manual smoke for this repo is wallet A sending an ownable to wallet
 - Wallet B CAIP-10 account queried by the SDK.
 - The `GET /ownables/available` response entry that rendered the available row.
 - A screenshot or note showing the available row before import.
-- A screenshot or note showing the imported ownable after `Download & import`.
+- A screenshot or note showing the imported ownable after `Import`.
 
 ### Failure Notes
 
