@@ -13,6 +13,7 @@ interface OwnableProps {
   packageCid: string;
   selected: boolean;
   uniqueMessageHash?: string;
+  isHubAvailable?: boolean;
   onBack: () => void;
   onDelete: () => void;
   onConsume: (info: TypedOwnableInfo) => void;
@@ -65,6 +66,7 @@ export default function Ownable(props: OwnableProps) {
       isLockable={pkg.isLockable}
       isLocked={isLocked}
       isTransferred={isTransferred}
+      isHubAvailable={props.isHubAvailable}
       iframeRef={iframeRef}
       onBack={props.onBack}
       onLoad={() => onLoad()}

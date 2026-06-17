@@ -88,9 +88,10 @@ export default class ServiceContainer {
 
     this.register("packages", async (c) => {
       // Packages are stored globally and not per account
-      const idb = await IDBService.main();
+      const idb = await IDBService.packages();
+      const legacyIdb = await IDBService.main();
       const storage = new LocalStorageService();
-      return new PackageService(idb, await c.get("relay"), storage);
+      return new PackageService(idb, await c.get("relay"), storage, legacyIdb);
     });
 
     this.register(

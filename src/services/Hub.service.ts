@@ -10,29 +10,16 @@ export interface HubUploadResult {
   NftId?: string;
 }
 
-export interface HubDeliveryStatus {
-  cid: string;
-  owner: string;
-  status:
-    | "delivered"
-    | "pending"
-    | "failed_transient"
-    | "failed_permanent"
-    | "not_configured"
-    | "not_subscribed";
-  lastAttemptAt?: string;
-  detail?: string;
-}
-
 export interface HubAvailableOwnableEntry {
   id: string;
-  cid: string;
   title: string;
   description?: string;
   issuer?: string;
-  downloadUrl: string;
   availableAt: string;
-  thumbnailUrl?: string | null;
+  package: {
+    cid: string;
+    thumbnailUrl?: string | null;
+  };
 }
 
 export interface HubAvailableOwnablesResponse {
@@ -91,11 +78,19 @@ export default class HubService {
     return parsed;
   }
 
+  getPackageDownloadUrl(cid: string): string {
+    return this.endpoint(`/packages/${encodeURIComponent(cid)}/download`);
+  }
+
+  getOwnableChainUrl(id: string): string {
+    return this.endpoint(`/ownables/${encodeURIComponent(id)}/chain`);
+  }
+
   async isAvailable(): Promise<boolean> {
     if (!this.isConfigured) return false;
 
     try {
-      const response = await fetch(this.endpoint("/info"), { method: "GET" });
+      const response = await fetch(this.endpoint("/health"), { method: "GET" });
       return response.ok;
     } catch {
       return false;
@@ -133,7 +128,7 @@ export default class HubService {
     const step = withProgress(onProgress);
 
     return await step("hubDownload", async () => {
-      const response = await fetch(this.endpoint(`/ownables/${encodeURIComponent(cid)}/download`));
+      const response = await fetch(this.endpoint(`/packages/${encodeURIComponent(cid)}/download`));
 
       if (!response.ok) {
         const message = await readError(response);
@@ -144,38 +139,33 @@ export default class HubService {
     });
   }
 
-  async importFromHubUrl(url: string): Promise<File> {
-    const parsed = this.parseHubDownloadUrl(url);
-    const response = await fetch(parsed.toString());
+  async importFromHub(packageCid: string, ownableId: string): Promise<{
+    packageFile: File;
+    chainJson: unknown;
+  }> {
+    const packageUrl = this.parseHubDownloadUrl(this.getPackageDownloadUrl(packageCid));
+    const chainUrl = this.parseHubDownloadUrl(this.getOwnableChainUrl(ownableId));
+    const [packageResponse, chainResponse] = await Promise.all([
+      fetch(packageUrl.toString()),
+      fetch(chainUrl.toString()),
+    ]);
 
-    if (!response.ok) {
-      const message = await readError(response);
+    if (!packageResponse.ok) {
+      const message = await readError(packageResponse);
       throw new Error(`Hub import failed: ${message}`);
     }
 
-    return new File([await response.blob()], fileNameFromUrl(parsed), {
-      type: response.headers.get("content-type") || "application/zip",
-    });
-  }
-
-  async getDeliveryStatus(
-    cid: string,
-    ownerAccount: string
-  ): Promise<HubDeliveryStatus> {
-    const query = new URLSearchParams({
-      cid,
-      owner: ownerAccount,
-    });
-    const response = await fetch(
-      this.endpoint(`/notify/delivery-status?${query.toString()}`)
-    );
-
-    if (!response.ok) {
-      const message = await readError(response);
-      throw new Error(`Hub delivery-status lookup failed: ${message}`);
+    if (!chainResponse.ok) {
+      const message = await readError(chainResponse);
+      throw new Error(`Hub event chain download failed: ${message}`);
     }
 
-    return (await response.json()) as HubDeliveryStatus;
+    return {
+      packageFile: new File([await packageResponse.blob()], fileNameFromUrl(packageUrl), {
+        type: packageResponse.headers.get("content-type") || "application/zip",
+      }),
+      chainJson: await chainResponse.json(),
+    };
   }
 
   async listAvailableOwnables(

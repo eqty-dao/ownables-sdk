@@ -9,6 +9,7 @@ interface AppToolbarProps {
   onMenuClick: () => void;
   chainId?: number;
   isConnected: boolean;
+  isHubAvailable?: boolean | null;
 }
 
 const warningStrip = cva(
@@ -31,6 +32,7 @@ export default function AppToolbar({
   onMenuClick,
   chainId,
   isConnected,
+  isHubAvailable,
 }: AppToolbarProps) {
   const showNetworkWarning = isConnected && chainId !== BASE_SEPOLIA_CHAIN_ID;
 
@@ -55,6 +57,14 @@ export default function AppToolbar({
           <div className="flex items-center gap-2">
             {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
             {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
+            {isHubAvailable === false && (
+              <Tag
+                color="danger"
+                icon={<WarningIcon className="h-3.5 w-3.5" />}
+                value="Hub unavailable"
+                className="hidden px-3 py-1.5 font-semibold lg:inline-flex"
+              />
+            )}
 
             <IconButton
               aria-label="menu"

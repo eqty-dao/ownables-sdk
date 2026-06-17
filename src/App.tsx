@@ -4,17 +4,19 @@ import { Box } from "@/components/ui";
 import LoginDialog from "@/components/LoginDialog";
 import AppToolbar from "@/components/AppToolbar";
 import { SnackbarProvider } from "notistack";
-import { useAccount, useChainId, useConnect } from "wagmi";
+import { useChainId, useConnect } from "wagmi";
 import CreateOwnableDialog from "@/components/CreateOwnableDialog";
 import Sidebar from "@/components/Sidebar";
 import GetStarted from "@/components/GetStarted";
 import OwnableList from "@/components/OwnableList";
 import MainSection from "@/components/MainSection";
 import ConsumingDrawer from "@/components/ConsumingDrawer";
+import useEffectiveWallet from "@/hooks/useEffectiveWallet";
 import { useOwnables } from "@/hooks/useOwnables";
 import { useConsuming } from "@/hooks/useConsuming";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useService } from "@/hooks/useService";
+import useInterval from "@/hooks/useInterval";
 import { LoaderCircle } from "lucide-react"
 const ISSUE_OWNABLE_ID = "issue";
 const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDDED?.toLowerCase() ?? '');
@@ -22,37 +24,41 @@ const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDD
 export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showCreateOwnable, setShowCreateOwnable] = useState(false);
-  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   const packageService = useService("packages");
+  const hub = useService("hub");
   const { showError } = useDialogs();
 
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, isConnected, isConnecting } = useEffectiveWallet();
   const chainId = useChainId();
   const { error: connectError } = useConnect();
+  const [isHubAvailable, setIsHubAvailable] = useState<boolean | null>(null);
 
   const selectIssuePanel = () => {
-    setSelectedChainId(ISSUE_OWNABLE_ID);
+    setSelectedEntryId(ISSUE_OWNABLE_ID);
     setShowDetail(true);
   };
 
   const {
     ownables,
+    availableOwnables,
+    archivedAvailableOwnables,
     mainListEntries,
     mainListLoaded,
+    importingAvailableOwnableId,
     hiddenAvailableOwnablesCount,
     setOwnables,
-    loaded,
     forge,
     importAvailableOwnable,
     dismissAvailableOwnable,
+    restoreDismissedAvailableOwnable,
     removeOwnable,
     deleteOwnable,
     reset,
     factoryReset,
-    resetDismissedAvailableOwnables,
-  } = useOwnables({ onSelect: (id) => { setSelectedChainId(id); setShowDetail(true); } });
+  } = useOwnables({ onSelect: (id) => { setSelectedEntryId(id); setShowDetail(true); } });
 
   const { consuming, consumeEligibility, startConsuming, cancelConsuming, consume } =
     useConsuming({ ownables, onConsumed: (id) => setOwnables((prev) => prev.map((o) => o.chain.id === id ? { ...o, isConsumed: true } : o)) });
@@ -69,6 +75,35 @@ export default function App() {
     }
   }, [connectError]);
 
+  useEffect(() => {
+    let alive = true;
+
+    const checkHub = async () => {
+      if (!hub?.isConfigured) {
+        if (alive) setIsHubAvailable(null);
+        return;
+      }
+
+      const available = await hub.isAvailable();
+      if (alive) setIsHubAvailable(available);
+    };
+
+    void checkHub();
+
+    return () => {
+      alive = false;
+    };
+  }, [hub]);
+
+  useInterval(() => {
+    if (!hub?.isConfigured) {
+      setIsHubAvailable(null);
+      return;
+    }
+
+    void hub.isAvailable().then(setIsHubAvailable);
+  }, 5000);
+
   if (isConnecting) {
     return (
       <Box className="flex min-h-screen items-center justify-center">
@@ -84,6 +119,7 @@ export default function App() {
           onMenuClick={() => setShowSidebar(true)}
           chainId={chainId}
           isConnected={isConnected}
+          isHubAvailable={isHubAvailable}
         />
       )}
 
@@ -95,35 +131,46 @@ export default function App() {
         <OwnableList
           className="mt-4"
           entries={mainListEntries}
-          selectedChainId={selectedChainId}
-          issueSelected={selectedChainId === ISSUE_OWNABLE_ID}
+          selectedChainId={selectedEntryId}
+          issueSelected={selectedEntryId === ISSUE_OWNABLE_ID}
           hiddenOnMobile={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
+          archivedAvailableOwnables={archivedAvailableOwnables}
           hiddenAvailableOwnablesCount={hiddenAvailableOwnablesCount}
-          onSelect={(id) => { setSelectedChainId(id); setShowDetail(true); }}
+          onSelect={(id) => { setSelectedEntryId(id); setShowDetail(true); }}
           onConsume={consume}
           onIssue={selectIssuePanel}
           onImportAvailable={importAvailableOwnable}
-          onDismissAvailable={dismissAvailableOwnable}
-          onResetHiddenAvailable={resetDismissedAvailableOwnables}
+          onRestoreAvailable={restoreDismissedAvailableOwnable}
         />
 
         <MainSection
           ownables={ownables}
-          selectedChainId={selectedChainId}
-          showIssuePanel={selectedChainId === ISSUE_OWNABLE_ID}
+          availableOwnables={availableOwnables}
+          selectedEntryId={selectedEntryId}
+          showIssuePanel={selectedEntryId === ISSUE_OWNABLE_ID}
           showDetail={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
-          onBack={() => { setSelectedChainId(null); setShowDetail(false); }}
+          isHubAvailable={isHubAvailable}
+          importingAvailableOwnableId={importingAvailableOwnableId}
+          onBack={() => { setSelectedEntryId(null); setShowDetail(false); }}
           onConsume={(info) => {
-            const o = ownables.find((o) => o.chain.id === selectedChainId);
+            const o = ownables.find((ownable) => ownable.chain.id === selectedEntryId);
             if (o) { startConsuming(o.chain, o.package, info); setShowDetail(false); }
           }}
           onConsumeComplete={consume}
           onDelete={deleteOwnable}
           onRemove={removeOwnable}
+          onImportAvailable={importAvailableOwnable}
+          onArchiveAvailable={(entryId) => {
+            dismissAvailableOwnable(entryId);
+            if (selectedEntryId === entryId) {
+              setSelectedEntryId(null);
+              setShowDetail(false);
+            }
+          }}
           onError={showError}
           onForge={forge}
           onCreate={() => setShowCreateOwnable(true)}

@@ -23,6 +23,7 @@ interface OwnableDetailProps {
   isLockable: boolean;
   isLocked: boolean;
   isTransferred: boolean;
+  isHubAvailable?: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
   onBack: () => void;
   onLoad: () => void;
@@ -54,6 +55,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     isLockable,
     isLocked,
     isTransferred,
+    isHubAvailable = true,
     iframeRef,
     onBack,
     onLoad,
@@ -99,6 +101,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             title={pkg.title}
             isConsumable={isConsumable && !isTransferred && !isConsumed}
             isTransferable={pkg.isTransferable && !isTransferred}
+            isHubAvailable={isHubAvailable}
             isLockable={isLockable}
             isLocked={isLocked}
             onDelete={onDelete}

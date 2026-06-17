@@ -3,8 +3,10 @@ import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
+import AvailableOwnableDetail from "./AvailableOwnableDetail";
 import Ownable from "./Ownable";
 import IssueOwnablePanel from "./IssueOwnablePanel";
+import type { AvailableOwnableEntry } from "@/hooks/useOwnables";
 
 const main = cva("min-w-0 flex-1", {
   variants: {
@@ -30,16 +32,21 @@ interface ConsumingState {
 
 interface MainSectionProps {
   ownables: OwnableEntry[];
-  selectedChainId: string | null;
+  availableOwnables: AvailableOwnableEntry[];
+  selectedEntryId: string | null;
   showIssuePanel: boolean;
   showDetail: boolean;
   consuming: ConsumingState | null;
   consumeEligibility: Record<string, boolean>;
+  isHubAvailable?: boolean | null;
+  importingAvailableOwnableId?: string | null;
   onBack: () => void;
   onConsume: (info: TypedOwnableInfo) => void;
   onConsumeComplete: (consumer: EventChain, consumable: EventChain) => void;
   onDelete: (id: string, packageCid: string) => void;
   onRemove: (id: string) => void;
+  onImportAvailable: (entryId: string) => void | Promise<void>;
+  onArchiveAvailable: (entryId: string) => void;
   onError: (title: string, message: string) => void;
   onForge: (pkg: TypedPackage) => void;
   onCreate: () => void;
@@ -47,19 +54,25 @@ interface MainSectionProps {
 
 export default function MainSection({
   ownables,
-  selectedChainId,
+  availableOwnables,
+  selectedEntryId,
   showIssuePanel,
   showDetail,
   consuming,
+  isHubAvailable,
+  importingAvailableOwnableId,
   onBack,
   onConsume,
   onDelete,
   onRemove,
+  onImportAvailable,
+  onArchiveAvailable,
   onError,
   onForge,
   onCreate,
 }: MainSectionProps) {
-  const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedChainId);
+  const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedEntryId);
+  const selectedAvailableOwnable = availableOwnables.find(({ id }) => id === selectedEntryId);
 
   return (
     <main
@@ -83,11 +96,22 @@ export default function MainSection({
           packageCid={selectedOwnable.package}
           uniqueMessageHash={selectedOwnable.uniqueMessageHash}
           selected={consuming?.chain.id === selectedOwnable.chain.id}
+          isHubAvailable={isHubAvailable ?? true}
           onDelete={() => onDelete(selectedOwnable.chain.id, selectedOwnable.package)}
           onRemove={() => onRemove(selectedOwnable.chain.id)}
           onConsume={onConsume}
           onError={onError}
           onBack={onBack}
+        />
+      )}
+
+      {!showIssuePanel && !selectedOwnable && selectedAvailableOwnable && (
+        <AvailableOwnableDetail
+          ownable={selectedAvailableOwnable}
+          isImporting={importingAvailableOwnableId === selectedAvailableOwnable.id}
+          onBack={onBack}
+          onImport={() => onImportAvailable(selectedAvailableOwnable.id)}
+          onArchive={() => onArchiveAvailable(selectedAvailableOwnable.id)}
         />
       )}
     </main>

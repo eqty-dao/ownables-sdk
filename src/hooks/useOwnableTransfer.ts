@@ -41,29 +41,10 @@ export function useOwnableTransfer(
       const zip = await ownables.zip(chain);
       const content = await zip.generateAsync({ type: "uint8array" });
 
-      const upload = await hub.uploadOwnable(content, `${chain.id}.zip`, onProgress as any);
+      await hub.uploadOwnable(content, `${chain.id}.zip`, onProgress as any);
       await ownables.submitAnchors(onProgress as any);
 
       enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
-
-      if (upload.ownerAccount) {
-        try {
-          const delivery = await hub.getDeliveryStatus(upload.cid, upload.ownerAccount);
-          if (delivery.status !== "delivered") {
-            const message =
-              delivery.status === "not_configured" ||
-              delivery.status === "not_subscribed"
-                ? `Transfer succeeded, but Hub recipient discovery is ${delivery.status.replaceAll("_", " ")}. If VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true, switch to the recipient wallet and check the main list for available Hub items on localhost.`
-                : `Transfer succeeded, but Hub recipient discovery is ${delivery.status.replaceAll("_", " ")}.`;
-            enqueueSnackbar(
-              message,
-              { variant: "warning" }
-            );
-          }
-        } catch (error) {
-          console.warn("Unable to confirm Hub delivery status", error);
-        }
-      }
 
       ctrl.close();
 
