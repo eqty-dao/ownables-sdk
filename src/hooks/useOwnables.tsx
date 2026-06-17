@@ -35,6 +35,10 @@ export interface AvailableOwnableEntry {
   };
 }
 
+export type ArchivedListEntry =
+  | ({ kind: "imported" } & OwnableEntry)
+  | ({ kind: "available" } & AvailableOwnableEntry);
+
 export type MainListEntry =
   | ({ kind: "imported" } & OwnableEntry)
   | ({ kind: "available" } & AvailableOwnableEntry);
@@ -48,7 +52,8 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [availableOwnables, setAvailableOwnables] = useState<AvailableOwnableEntry[]>([]);
   const [importingAvailableOwnableId, setImportingAvailableOwnableId] = useState<string | null>(null);
   const [availableOwnablesAccount, setAvailableOwnablesAccount] = useState<string | null>(null);
-  const [dismissedAvailableOwnableIds, setDismissedAvailableOwnableIds] = useState<string[]>([]);
+  const [archivedOwnableIds, setArchivedOwnableIds] = useState<string[]>([]);
+  const [deletedAvailableOwnableIds, setDeletedAvailableOwnableIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [availableLoaded, setAvailableLoaded] = useState(false);
   const [availableLoadedAccount, setAvailableLoadedAccount] = useState<string | null>(null);
@@ -64,33 +69,76 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const chainId = useChainId();
   const { address, isConnected } = useEffectiveWallet();
   const account = address ? `eip155:${chainId}:${address}` : null;
-  const dismissedStorageKey = account ? `hub-available:dismissed:${account}` : null;
+  const archivedStorageKey = account ? `ownables:archived:${account}` : null;
+  const legacyArchivedStorageKey = account ? `hub-available:dismissed:${account}` : null;
+  const deletedAvailableStorageKey = account ? `hub-available:deleted:${account}` : null;
   const discoveryEnabled =
     !!hub?.recipientDiscoveryEnabled && hub.isConfigured && !!account && isConnected;
+
+  const persistStoredIds = useCallback(
+    (storageKey: string | null, ids: string[]) => {
+      if (!storageKey || !localStorage) {
+        return;
+      }
+
+      if (ids.length === 0) {
+        localStorage.remove(storageKey);
+      } else {
+        localStorage.set(storageKey, ids);
+      }
+    },
+    [localStorage]
+  );
 
   useEffect(() => {
     if (!ownableService) return;
     setLoaded(false);
-    ownableService.loadAll().then(async (loaded) => {
-      setOwnables(loaded);
+    ownableService.loadAll().then(async (loadedOwnables) => {
+      setOwnables(loadedOwnables);
       await Promise.allSettled(
-        loaded.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
+        loadedOwnables.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
       );
-      if (loaded.length > 0) onSelect(loaded[0].chain.id);
+      if (loadedOwnables.length > 0) onSelect(loadedOwnables[0].chain.id);
       setLoaded(true);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService]);
 
   useEffect(() => {
-    if (!dismissedStorageKey || !localStorage) {
-      setDismissedAvailableOwnableIds([]);
+    if (!archivedStorageKey || !localStorage) {
+      setArchivedOwnableIds([]);
       return;
     }
 
-    const stored = localStorage.get(dismissedStorageKey);
-    setDismissedAvailableOwnableIds(Array.isArray(stored) ? stored : []);
-  }, [dismissedStorageKey, localStorage]);
+    const stored = localStorage.get(archivedStorageKey);
+    if (Array.isArray(stored)) {
+      setArchivedOwnableIds(stored);
+      return;
+    }
+
+    const legacyStored =
+      legacyArchivedStorageKey && localStorage
+        ? localStorage.get(legacyArchivedStorageKey)
+        : undefined;
+    const migratedIds = Array.isArray(legacyStored) ? legacyStored : [];
+    setArchivedOwnableIds(migratedIds);
+    if (migratedIds.length > 0) {
+      localStorage.set(archivedStorageKey, migratedIds);
+      if (legacyArchivedStorageKey) {
+        localStorage.remove(legacyArchivedStorageKey);
+      }
+    }
+  }, [archivedStorageKey, legacyArchivedStorageKey, localStorage]);
+
+  useEffect(() => {
+    if (!deletedAvailableStorageKey || !localStorage) {
+      setDeletedAvailableOwnableIds([]);
+      return;
+    }
+
+    const stored = localStorage.get(deletedAvailableStorageKey);
+    setDeletedAvailableOwnableIds(Array.isArray(stored) ? stored : []);
+  }, [deletedAvailableStorageKey, localStorage]);
 
   const refreshAvailableOwnables = useCallback(async () => {
     if (!discoveryEnabled || !hub || !account) {
@@ -156,31 +204,39 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     };
   }, [discoveryEnabled, refreshAvailableOwnables]);
 
+  const visibleImportedOwnables = useMemo(() => {
+    const archivedIds = new Set(archivedOwnableIds);
+    return ownables.filter((entry) => !archivedIds.has(entry.chain.id));
+  }, [archivedOwnableIds, ownables]);
+
   const visibleAvailableOwnables = useMemo(() => {
     if (availableOwnablesAccount !== account) {
       return [];
     }
 
     const importedOwnableIds = new Set(ownables.map((entry) => entry.chain.id));
-    const dismissedIds = new Set(dismissedAvailableOwnableIds);
+    const archivedIds = new Set(archivedOwnableIds);
+    const deletedIds = new Set(deletedAvailableOwnableIds);
 
     return availableOwnables.filter(
-      (entry) => !dismissedIds.has(entry.id) && !importedOwnableIds.has(entry.id)
+      (entry) =>
+        !archivedIds.has(entry.id) &&
+        !deletedIds.has(entry.id) &&
+        !importedOwnableIds.has(entry.id)
     );
-  }, [account, availableOwnables, availableOwnablesAccount, dismissedAvailableOwnableIds, ownables]);
+  }, [
+    account,
+    archivedOwnableIds,
+    availableOwnables,
+    availableOwnablesAccount,
+    deletedAvailableOwnableIds,
+    ownables,
+  ]);
 
-  const hiddenAvailableOwnablesCount = useMemo(() => {
-    if (availableOwnablesAccount !== account) {
-      return 0;
-    }
-
-    const importedOwnableIds = new Set(ownables.map((entry) => entry.chain.id));
-    const dismissedIds = new Set(dismissedAvailableOwnableIds);
-
-    return availableOwnables.filter(
-      (entry) => dismissedIds.has(entry.id) && !importedOwnableIds.has(entry.id)
-    ).length;
-  }, [account, availableOwnables, availableOwnablesAccount, dismissedAvailableOwnableIds, ownables]);
+  const archivedImportedOwnables = useMemo(
+    () => ownables.filter((entry) => archivedOwnableIds.includes(entry.chain.id)),
+    [archivedOwnableIds, ownables]
+  );
 
   const archivedAvailableOwnables = useMemo(() => {
     if (availableOwnablesAccount !== account) {
@@ -188,29 +244,54 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     }
 
     const importedOwnableIds = new Set(ownables.map((entry) => entry.chain.id));
-    const dismissedIds = new Set(dismissedAvailableOwnableIds);
+    const archivedIds = new Set(archivedOwnableIds);
+    const deletedIds = new Set(deletedAvailableOwnableIds);
 
     return availableOwnables.filter(
-      (entry) => dismissedIds.has(entry.id) && !importedOwnableIds.has(entry.id)
+      (entry) =>
+        archivedIds.has(entry.id) &&
+        !deletedIds.has(entry.id) &&
+        !importedOwnableIds.has(entry.id)
     );
-  }, [account, availableOwnables, availableOwnablesAccount, dismissedAvailableOwnableIds, ownables]);
+  }, [
+    account,
+    archivedOwnableIds,
+    availableOwnables,
+    availableOwnablesAccount,
+    deletedAvailableOwnableIds,
+    ownables,
+  ]);
+
+  const archivedEntries = useMemo<ArchivedListEntry[]>(
+    () => [
+      ...archivedImportedOwnables.map((entry) => ({ kind: "imported" as const, ...entry })),
+      ...archivedAvailableOwnables.map((entry) => ({ kind: "available" as const, ...entry })),
+    ],
+    [archivedAvailableOwnables, archivedImportedOwnables]
+  );
+
+  const archivedOwnablesCount = archivedEntries.length;
 
   const mainListEntries = useMemo<MainListEntry[]>(
     () => [
-      ...ownables.map((entry) => ({ kind: "imported" as const, ...entry })),
+      ...visibleImportedOwnables.map((entry) => ({ kind: "imported" as const, ...entry })),
       ...visibleAvailableOwnables.map((entry) => ({ kind: "available" as const, ...entry })),
     ],
-    [ownables, visibleAvailableOwnables]
+    [visibleAvailableOwnables, visibleImportedOwnables]
   );
+
   const mainListLoaded =
     loaded &&
     (!discoveryEnabled || (availableLoaded && availableLoadedAccount === account));
 
-  const getExplorerUrl = (txHash: string, chainId: number) => {
-    switch (chainId) {
-      case 84532: return `https://sepolia.basescan.org/tx/${txHash}`;
-      case 8453:  return `https://basescan.org/tx/${txHash}`;
-      default:    return `https://sepolia.basescan.org/tx/${txHash}`;
+  const getExplorerUrl = (txHash: string, currentChainId: number) => {
+    switch (currentChainId) {
+      case 84532:
+        return `https://sepolia.basescan.org/tx/${txHash}`;
+      case 8453:
+        return `https://basescan.org/tx/${txHash}`;
+      default:
+        return `https://sepolia.basescan.org/tx/${txHash}`;
     }
   };
 
@@ -229,8 +310,11 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         enqueueSnackbar(`${pkg.title} forged and anchored! TX: ${result.txHash.slice(0, 10)}...`, {
           variant: "success",
           action: (
-            <Button className="text-white hover:bg-white/20" size="small"
-              onClick={() => window.open(getExplorerUrl(result.txHash!, chainId), "_blank")}>
+            <Button
+              className="text-white hover:bg-white/20"
+              size="small"
+              onClick={() => window.open(getExplorerUrl(result.txHash!, chainId), "_blank")}
+            >
               View TX
             </Button>
           ),
@@ -271,7 +355,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     } catch (error) {
       showError("Failed to import from relay", ownableErrorMessage(error));
     }
-  }, [onSelect, showError, showAlert]);
+  }, [onSelect, showAlert, showError]);
 
   const addImportedOwnable = useCallback(async (pkg: TypedPackage) => {
     if (!pkg.chain) {
@@ -297,44 +381,32 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     });
   }, [onSelect, ownableService]);
 
-  const dismissAvailableOwnable = useCallback(
-    (entryId: string) => {
-      if (!dismissedStorageKey || !localStorage) return;
+  const archiveOwnable = useCallback((entryId: string) => {
+    setArchivedOwnableIds((prev) => {
+      if (prev.includes(entryId)) return prev;
+      const next = [...prev, entryId];
+      persistStoredIds(archivedStorageKey, next);
+      return next;
+    });
+  }, [archivedStorageKey, persistStoredIds]);
 
-      setDismissedAvailableOwnableIds((prev) => {
-        if (prev.includes(entryId)) return prev;
-        const next = [...prev, entryId];
-        localStorage.set(dismissedStorageKey, next);
-        return next;
-      });
-    },
-    [dismissedStorageKey, localStorage]
-  );
+  const restoreArchivedOwnable = useCallback((entryId: string) => {
+    setArchivedOwnableIds((prev) => {
+      if (!prev.includes(entryId)) return prev;
+      const next = prev.filter((candidate) => candidate !== entryId);
+      persistStoredIds(archivedStorageKey, next);
+      return next;
+    });
+  }, [archivedStorageKey, persistStoredIds]);
 
-  const resetDismissedAvailableOwnables = useCallback(() => {
-    setDismissedAvailableOwnableIds([]);
-    if (dismissedStorageKey && localStorage) {
-      localStorage.remove(dismissedStorageKey);
-    }
-  }, [dismissedStorageKey, localStorage]);
-
-  const restoreDismissedAvailableOwnable = useCallback(
-    (entryId: string) => {
-      if (!dismissedStorageKey || !localStorage) return;
-
-      setDismissedAvailableOwnableIds((prev) => {
-        if (!prev.includes(entryId)) return prev;
-        const next = prev.filter((candidate) => candidate !== entryId);
-        if (next.length === 0) {
-          localStorage.remove(dismissedStorageKey);
-        } else {
-          localStorage.set(dismissedStorageKey, next);
-        }
-        return next;
-      });
-    },
-    [dismissedStorageKey, localStorage]
-  );
+  const markAvailableOwnableDeleted = useCallback((entryId: string) => {
+    setDeletedAvailableOwnableIds((prev) => {
+      if (prev.includes(entryId)) return prev;
+      const next = [...prev, entryId];
+      persistStoredIds(deletedAvailableStorageKey, next);
+      return next;
+    });
+  }, [deletedAvailableStorageKey, persistStoredIds]);
 
   const importAvailableOwnable = useCallback(
     async (entryId: string) => {
@@ -362,6 +434,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         }
 
         await addImportedOwnable(pkg);
+        restoreArchivedOwnable(entryId);
         enqueueSnackbar(`${pkg.title} imported from Hub`, { variant: "success" });
       } catch (error) {
         showError("Failed to import from Hub", ownableErrorMessage(error));
@@ -369,14 +442,16 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         setImportingAvailableOwnableId((current) => (current === entryId ? null : current));
       }
     },
-    [addImportedOwnable, availableOwnables, hub, packageService, showError]
+    [addImportedOwnable, availableOwnables, hub, packageService, restoreArchivedOwnable, showError]
   );
 
-  const removeOwnable = useCallback((id: string) => {
-    setOwnables((prev) => prev.filter((o) => o.chain.id !== id));
+  const updateOwnable = useCallback((entryId: string, patch: Partial<OwnableEntry>) => {
+    setOwnables((prev) =>
+      prev.map((entry) => (entry.chain.id === entryId ? { ...entry, ...patch } : entry))
+    );
   }, []);
 
-  const deleteOwnable = useCallback((id: string, packageCid: string) => {
+  const permanentlyDeleteImportedOwnable = useCallback((id: string, packageCid: string) => {
     if (!packageService) throw new Error("Package service not ready");
     const pkg = packageService.info(packageCid);
     showConfirm({
@@ -386,7 +461,8 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       ok: "Delete",
       onConfirm: async () => {
         if (!ownableService) throw new Error("Ownable service not ready");
-        setOwnables((current) => current.filter((o) => o.chain.id !== id));
+        setOwnables((current) => current.filter((entry) => entry.chain.id !== id));
+        restoreArchivedOwnable(id);
         ownableService.clearRpc(id);
         await ownableService.delete(id);
         const uniqueMessageHash = pkg.uniqueMessageHash;
@@ -397,7 +473,33 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         if (uniqueMessageHash) await relayService?.removeOwnable(uniqueMessageHash);
       },
     });
-  }, [packageService, ownableService, relayService, showConfirm]);
+  }, [ownableService, packageService, relayService, restoreArchivedOwnable, showConfirm]);
+
+  const permanentlyDeleteAvailableOwnable = useCallback((entryId: string, title: string) => {
+    showConfirm({
+      severity: "error",
+      title: "Confirm delete",
+      message: <span>Are you sure you want to permanently delete <em>{title}</em> from this wallet?</span>,
+      ok: "Delete",
+      onConfirm: () => {
+        restoreArchivedOwnable(entryId);
+        markAvailableOwnableDeleted(entryId);
+      },
+    });
+  }, [markAvailableOwnableDeleted, restoreArchivedOwnable, showConfirm]);
+
+  const permanentlyDeleteArchivedOwnable = useCallback((entryId: string) => {
+    const importedOwnable = ownables.find((entry) => entry.chain.id === entryId);
+    if (importedOwnable) {
+      permanentlyDeleteImportedOwnable(importedOwnable.chain.id, importedOwnable.package);
+      return;
+    }
+
+    const availableOwnable = availableOwnables.find((entry) => entry.id === entryId);
+    if (availableOwnable) {
+      permanentlyDeleteAvailableOwnable(availableOwnable.id, availableOwnable.title);
+    }
+  }, [availableOwnables, ownables, permanentlyDeleteAvailableOwnable, permanentlyDeleteImportedOwnable]);
 
   const reset = useCallback(() => {
     if (ownables.length === 0) return;
@@ -433,9 +535,11 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     ownables,
     availableOwnables: visibleAvailableOwnables,
     archivedAvailableOwnables,
-    dismissedAvailableOwnableIds,
+    archivedImportedOwnables,
+    archivedEntries,
+    archivedOwnableIds,
     importingAvailableOwnableId,
-    hiddenAvailableOwnablesCount,
+    archivedOwnablesCount,
     mainListEntries,
     mainListLoaded,
     setOwnables,
@@ -445,11 +549,10 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     relayImport,
     addImportedOwnable,
     importAvailableOwnable,
-    dismissAvailableOwnable,
-    restoreDismissedAvailableOwnable,
-    resetDismissedAvailableOwnables,
-    removeOwnable,
-    deleteOwnable,
+    archiveOwnable,
+    restoreArchivedOwnable,
+    permanentlyDeleteArchivedOwnable,
+    updateOwnable,
     reset,
     factoryReset,
   };

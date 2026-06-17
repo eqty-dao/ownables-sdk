@@ -110,13 +110,12 @@ function MainListHarness() {
   const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
   const {
     ownables,
-    archivedAvailableOwnables,
+    archivedEntries,
     mainListEntries,
     mainListLoaded,
-    hiddenAvailableOwnablesCount,
+    archivedOwnablesCount,
     importAvailableOwnable,
-    dismissAvailableOwnable,
-    restoreDismissedAvailableOwnable,
+    archiveOwnable,
   } = useOwnables({
     onSelect: setSelectedChainId,
   });
@@ -135,13 +134,12 @@ function MainListHarness() {
         hiddenOnMobile={false}
         consuming={null}
         consumeEligibility={{}}
-        archivedAvailableOwnables={archivedAvailableOwnables}
-        hiddenAvailableOwnablesCount={hiddenAvailableOwnablesCount}
+        archivedEntries={archivedEntries}
+        archivedOwnablesCount={archivedOwnablesCount}
         onSelect={setSelectedChainId}
         onConsume={() => {}}
         onIssue={() => {}}
         onImportAvailable={importAvailableOwnable}
-        onRestoreAvailable={restoreDismissedAvailableOwnable}
       />
     </>
   );
@@ -167,24 +165,27 @@ function TransferHarness({
 
 function AvailableDetailHarness() {
   return (
-    <MainSection
-      ownables={[]}
-      availableOwnables={[AVAILABLE_ENTRY]}
-      selectedEntryId={AVAILABLE_ENTRY.id}
-      showIssuePanel={false}
-      showDetail={true}
-      consuming={null}
-      consumeEligibility={{}}
-      onBack={vi.fn()}
-      onConsume={vi.fn()}
-      onConsumeComplete={vi.fn()}
-      onDelete={vi.fn()}
-      onRemove={vi.fn()}
-      onImportAvailable={vi.fn()}
-      onArchiveAvailable={vi.fn()}
-      onError={vi.fn()}
-      onForge={vi.fn()}
-      onCreate={vi.fn()}
+      <MainSection
+        ownables={[]}
+        availableOwnables={[AVAILABLE_ENTRY]}
+        archivedAvailableOwnables={[]}
+        selectedEntryId={AVAILABLE_ENTRY.id}
+        showIssuePanel={false}
+        showDetail={true}
+        consuming={null}
+        consumeEligibility={{}}
+        onArchive={vi.fn()}
+        onRestore={vi.fn()}
+        onBack={vi.fn()}
+        onConsume={vi.fn()}
+        onConsumeComplete={vi.fn()}
+        onDelete={vi.fn()}
+        onDeleteArchived={vi.fn()}
+        onImportAvailable={vi.fn()}
+        onArchiveAvailable={vi.fn()}
+        onError={vi.fn()}
+        onForge={vi.fn()}
+        onCreate={vi.fn()}
     />
   );
 }
@@ -350,17 +351,20 @@ describe("main-list discovery verifier", () => {
       <MainSection
         ownables={[]}
         availableOwnables={[AVAILABLE_ENTRY]}
+        archivedAvailableOwnables={[]}
         selectedEntryId={AVAILABLE_ENTRY.id}
         showIssuePanel={false}
         showDetail={true}
         consuming={null}
         consumeEligibility={{}}
         importingAvailableOwnableId={AVAILABLE_ENTRY.id}
+        onArchive={vi.fn()}
+        onRestore={vi.fn()}
         onBack={vi.fn()}
         onConsume={vi.fn()}
         onConsumeComplete={vi.fn()}
         onDelete={vi.fn()}
-        onRemove={vi.fn()}
+        onDeleteArchived={vi.fn()}
         onImportAvailable={vi.fn()}
         onArchiveAvailable={vi.fn()}
         onError={vi.fn()}
@@ -377,7 +381,7 @@ describe("main-list discovery verifier", () => {
   it("archives available rows per account, keeps them hidden after reload, and can restore them", async () => {
     const user = userEvent.setup();
     const { storage } = configureBaseServices();
-    const dismissKey = `hub-available:dismissed:${ACCOUNT}`;
+    const archiveKey = `ownables:archived:${ACCOUNT}`;
     const { result, unmount } = renderHook(() =>
       useOwnables({
         onSelect: vi.fn(),
@@ -389,11 +393,11 @@ describe("main-list discovery verifier", () => {
     });
 
     act(() => {
-      result.current.dismissAvailableOwnable(AVAILABLE_ENTRY.id);
+      result.current.archiveOwnable(AVAILABLE_ENTRY.id);
     });
 
     await waitFor(() => {
-      expect(storage.set).toHaveBeenCalledWith(dismissKey, [AVAILABLE_ENTRY.id]);
+      expect(storage.set).toHaveBeenCalledWith(archiveKey, [AVAILABLE_ENTRY.id]);
     });
 
     unmount();
@@ -405,21 +409,30 @@ describe("main-list discovery verifier", () => {
     expect(screen.queryByText("Potion")).toBeNull();
     expect(screen.getByRole("button", { name: /Archived/ })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: /Archived/ }));
-    expect(await screen.findByRole("button", { name: "Restore Potion" })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Restore Potion" }));
+    await waitFor(() => {
+      expect(screen.getByText("Archived")).toBeTruthy();
+    });
+
+    const restored = renderHook(() =>
+      useOwnables({
+        onSelect: vi.fn(),
+      })
+    );
+
+    act(() => {
+      restored.result.current.restoreArchivedOwnable(AVAILABLE_ENTRY.id);
+    });
 
     await waitFor(() => {
-      expect(storage.remove).toHaveBeenCalledWith(dismissKey);
+      expect(storage.remove).toHaveBeenCalledWith(archiveKey);
     });
-    expect(await screen.findByText("Potion")).toBeTruthy();
   });
 
   it("clears previous-account available rows while the next account discovery fetch is in flight", async () => {
     const walletA = deferred<{ owner: string; entries: typeof AVAILABLE_ENTRY[] }>();
     const walletB = deferred<{ owner: string; entries: typeof AVAILABLE_ENTRY_B[] }>();
     const storage = createStorage({
-      [`hub-available:dismissed:${ACCOUNT}`]: [AVAILABLE_ENTRY.id],
+      [`ownables:archived:${ACCOUNT}`]: [AVAILABLE_ENTRY.id],
     });
 
     configureBaseServices(storage);

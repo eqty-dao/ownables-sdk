@@ -12,7 +12,8 @@ type ExecuteFn = (msg: TypedDict, onProgress?: LogProgress, submitAnchors?: bool
 export function useOwnableTransfer(
   chain: EventChain,
   pkg: TypedPackage | undefined,
-  execute: ExecuteFn
+  execute: ExecuteFn,
+  onTransferred?: () => void
 ) {
   const ownables = useService("ownables");
   const hub = useService("hub");
@@ -43,14 +44,11 @@ export function useOwnableTransfer(
 
       await hub.uploadOwnable(content, `${chain.id}.zip`, onProgress as any);
       await ownables.submitAnchors(onProgress as any);
+      onTransferred?.();
 
       enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
 
       ctrl.close();
-
-      if (pkg.uniqueMessageHash) {
-        await ownables.delete(chain.id);
-      }
     } catch (error) {
       console.error("Error during transfer:", error);
       enqueueSnackbar(
@@ -58,7 +56,7 @@ export function useOwnableTransfer(
         { variant: "error" }
       );
     }
-  }, [hub, ownables, pkg, chain, execute, progress]);
+  }, [hub, ownables, pkg, chain, execute, onTransferred, progress]);
 
   return { transfer };
 }

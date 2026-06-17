@@ -4,13 +4,17 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import shortId from "@/utils/shortId";
 import type { AvailableOwnableEntry } from "@/hooks/useOwnables";
+import OwnableActions from "./OwnableActions";
 
 interface AvailableOwnableDetailProps {
   ownable: AvailableOwnableEntry;
+  archived?: boolean;
   isImporting?: boolean;
   onBack: () => void;
   onImport: () => void | Promise<void>;
   onArchive: () => void;
+  onRestore: () => void;
+  onDelete: () => void;
 }
 
 const primaryButton = cva(
@@ -25,10 +29,13 @@ const issuerLink = cva("font-mono link-primary hover:underline");
 
 export default function AvailableOwnableDetail({
   ownable,
+  archived = false,
   isImporting = false,
   onBack,
   onImport,
   onArchive,
+  onRestore,
+  onDelete,
 }: AvailableOwnableDetailProps) {
   const shortIssuer = ownable.issuer
     ? shortId(ownable.issuer, 10, "...")
@@ -57,6 +64,20 @@ export default function AvailableOwnableDetail({
               </p>
             ) : null}
           </Box>
+          {archived ? (
+            <OwnableActions
+              className="lg:-mr-3"
+              archived={true}
+              isTransferable={false}
+              isHubAvailable={false}
+              isLockable={false}
+              isLocked={false}
+              onDelete={onDelete}
+              onTransfer={() => {}}
+              onLock={() => {}}
+              onRestore={onRestore}
+            />
+          ) : null}
         </Box>
 
         <Box className="relative mx-4 overflow-hidden rounded-2xl bg-slate-100 dark:bg-[#202020] lg:mx-auto lg:mb-6 lg:max-w-125" style={{ aspectRatio: "3 / 4" }}>
@@ -74,7 +95,8 @@ export default function AvailableOwnableDetail({
           )}
         </Box>
 
-        <Box className="mx-4 mt-4 space-y-3 lg:mx-auto lg:mt-0 lg:max-w-125">
+        {!archived ? (
+          <Box className="mx-4 mt-4 space-y-3 lg:mx-auto lg:mt-0 lg:max-w-125">
           <Button
             aria-label="Import from Hub"
             className={cn(primaryButton())}
@@ -92,7 +114,8 @@ export default function AvailableOwnableDetail({
           >
             Archive
           </Button>
-        </Box>
+          </Box>
+        ) : null}
       </Box>
 
       <Box className="px-4 pb-8 lg:px-2 lg:pb-0">

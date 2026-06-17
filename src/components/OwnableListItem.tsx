@@ -62,6 +62,7 @@ interface AvailableOwnableListItemProps {
   availableAt: string;
   thumbnailUrl?: string | null;
   isSelected?: boolean;
+  showImportAction?: boolean;
   onClick: () => void;
   onImport: () => void;
 }
@@ -145,20 +146,22 @@ export default function OwnableListItem(props: OwnableListItemProps) {
             ) : null}
           </Box>
 
-          <div className="ml-2 flex flex-shrink-0 items-center gap-1">
-            <Tooltip title="Import">
-              <IconButton
-                aria-label={`Import ${props.title}`}
-                variant="ghost"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  props.onImport();
-                }}
-              >
-                <Download className="h-4 w-4" />
-              </IconButton>
-            </Tooltip>
-          </div>
+          {props.showImportAction !== false ? (
+            <div className="ml-2 flex flex-shrink-0 items-center gap-1">
+              <Tooltip title="Import">
+                <IconButton
+                  aria-label={`Import ${props.title}`}
+                  variant="ghost"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    props.onImport();
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                </IconButton>
+              </Tooltip>
+            </div>
+          ) : null}
         </div>
       </Box>
     );

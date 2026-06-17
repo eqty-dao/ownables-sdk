@@ -13,11 +13,14 @@ interface OwnableProps {
   packageCid: string;
   selected: boolean;
   uniqueMessageHash?: string;
+  archived?: boolean;
   isHubAvailable?: boolean;
   onBack: () => void;
+  onArchive: () => void;
+  onRestore: () => void;
   onDelete: () => void;
   onConsume: (info: TypedOwnableInfo) => void;
-  onRemove: () => void;
+  onTransferred: () => void;
   onError: (title: string, message: string) => void;
 }
 
@@ -37,7 +40,7 @@ export default function Ownable(props: OwnableProps) {
   const { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, execute, onLoad } =
     useOwnableState(chain, pkg, props.onError);
 
-  const { transfer } = useOwnableTransfer(chain, pkg, execute);
+  const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
   const { showConfirm } = useDialogs();
 
   const onLock = useCallback(() => {
@@ -66,7 +69,10 @@ export default function Ownable(props: OwnableProps) {
       isLockable={pkg.isLockable}
       isLocked={isLocked}
       isTransferred={isTransferred}
+      archived={props.archived}
       isHubAvailable={props.isHubAvailable}
+      onArchive={props.onArchive}
+      onRestore={props.onRestore}
       iframeRef={iframeRef}
       onBack={props.onBack}
       onLoad={() => onLoad()}

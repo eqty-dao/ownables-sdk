@@ -45,23 +45,31 @@ export default function App() {
     ownables,
     availableOwnables,
     archivedAvailableOwnables,
+    archivedEntries,
+    archivedOwnableIds,
     mainListEntries,
     mainListLoaded,
     importingAvailableOwnableId,
-    hiddenAvailableOwnablesCount,
+    archivedOwnablesCount,
     setOwnables,
     forge,
     importAvailableOwnable,
-    dismissAvailableOwnable,
-    restoreDismissedAvailableOwnable,
-    removeOwnable,
-    deleteOwnable,
+    archiveOwnable,
+    restoreArchivedOwnable,
+    permanentlyDeleteArchivedOwnable,
+    updateOwnable,
     reset,
     factoryReset,
   } = useOwnables({ onSelect: (id) => { setSelectedEntryId(id); setShowDetail(true); } });
 
   const { consuming, consumeEligibility, startConsuming, cancelConsuming, consume } =
-    useConsuming({ ownables, onConsumed: (id) => setOwnables((prev) => prev.map((o) => o.chain.id === id ? { ...o, isConsumed: true } : o)) });
+    useConsuming({
+      ownables,
+      onConsumed: (id) => {
+        updateOwnable(id, { isConsumed: true });
+        archiveOwnable(id);
+      },
+    });
 
   useEffect(() => {
     setShowSidebar(false);
@@ -123,7 +131,7 @@ export default function App() {
         />
       )}
 
-      {mainListLoaded && mainListEntries.length === 0 && !showDetail && !EMBEDDED && (
+      {mainListLoaded && mainListEntries.length === 0 && archivedEntries.length === 0 && !showDetail && !EMBEDDED && (
         <GetStarted onExamples={selectIssuePanel} />
       )}
 
@@ -136,24 +144,25 @@ export default function App() {
           hiddenOnMobile={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
-          archivedAvailableOwnables={archivedAvailableOwnables}
-          hiddenAvailableOwnablesCount={hiddenAvailableOwnablesCount}
+          archivedEntries={archivedEntries}
+          archivedOwnablesCount={archivedOwnablesCount}
           onSelect={(id) => { setSelectedEntryId(id); setShowDetail(true); }}
           onConsume={consume}
           onIssue={selectIssuePanel}
           onImportAvailable={importAvailableOwnable}
-          onRestoreAvailable={restoreDismissedAvailableOwnable}
         />
 
         <MainSection
           ownables={ownables}
           availableOwnables={availableOwnables}
+          archivedAvailableOwnables={archivedAvailableOwnables}
           selectedEntryId={selectedEntryId}
           showIssuePanel={selectedEntryId === ISSUE_OWNABLE_ID}
           showDetail={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
           isHubAvailable={isHubAvailable}
+          isArchivedSelected={selectedEntryId ? archivedOwnableIds.includes(selectedEntryId) : false}
           importingAvailableOwnableId={importingAvailableOwnableId}
           onBack={() => { setSelectedEntryId(null); setShowDetail(false); }}
           onConsume={(info) => {
@@ -161,16 +170,18 @@ export default function App() {
             if (o) { startConsuming(o.chain, o.package, info); setShowDetail(false); }
           }}
           onConsumeComplete={consume}
-          onDelete={deleteOwnable}
-          onRemove={removeOwnable}
-          onImportAvailable={importAvailableOwnable}
-          onArchiveAvailable={(entryId) => {
-            dismissAvailableOwnable(entryId);
+          onArchive={archiveOwnable}
+          onRestore={restoreArchivedOwnable}
+          onDelete={(id, packageCid) => permanentlyDeleteArchivedOwnable(id)}
+          onDeleteArchived={(entryId) => {
+            permanentlyDeleteArchivedOwnable(entryId);
             if (selectedEntryId === entryId) {
               setSelectedEntryId(null);
               setShowDetail(false);
             }
           }}
+          onImportAvailable={importAvailableOwnable}
+          onArchiveAvailable={archiveOwnable}
           onError={showError}
           onForge={forge}
           onCreate={() => setShowCreateOwnable(true)}

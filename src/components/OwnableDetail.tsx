@@ -23,11 +23,14 @@ interface OwnableDetailProps {
   isLockable: boolean;
   isLocked: boolean;
   isTransferred: boolean;
+  archived?: boolean;
   isHubAvailable?: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
   onBack: () => void;
   onLoad: () => void;
   onConsume: () => void;
+  onArchive: () => void;
+  onRestore: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
   onLock: () => void;
@@ -55,11 +58,14 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     isLockable,
     isLocked,
     isTransferred,
+    archived = false,
     isHubAvailable = true,
     iframeRef,
     onBack,
     onLoad,
     onConsume,
+    onArchive,
+    onRestore,
     onDelete,
     onTransfer,
     onLock,
@@ -98,15 +104,14 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           </Box>
           <OwnableActions
             className="lg:-mr-3"
-            title={pkg.title}
-            isConsumable={isConsumable && !isTransferred && !isConsumed}
-            isTransferable={pkg.isTransferable && !isTransferred}
+            archived={archived}
+            isTransferable={!archived && pkg.isTransferable && !isTransferred}
             isHubAvailable={isHubAvailable}
-            isLockable={isLockable}
+            isLockable={!archived && isLockable}
             isLocked={isLocked}
+            onArchive={onArchive}
+            onRestore={onRestore}
             onDelete={onDelete}
-            chain={chain}
-            onConsume={onConsume}
             onTransfer={onTransfer}
             onLock={onLock}
           />
@@ -132,7 +137,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           {isLocked && !isConsumed && !isTransferred && <OverlayBanner icon={<Lock />} title="Locked" />}
         </Box>
 
-        {isConsumable && !isTransferred && !isConsumed && (
+        {!archived && isConsumable && !isTransferred && !isConsumed && (
           <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
             <Button
               aria-label="Use Item"
@@ -143,7 +148,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             </Button>
           </Box>
         )}
-        {isLocked && !isConsumed && !isTransferred && (
+        {!archived && isLocked && !isConsumed && !isTransferred && (
           <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
             <Button
               aria-label="Unlock"
