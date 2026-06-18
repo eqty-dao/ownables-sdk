@@ -25,7 +25,12 @@ const checks = [
   },
   {
     file: "src/services/Hub.service.ts",
-    includes: ["/info", "/ownables/upload", "/ownables/${encodeURIComponent(cid)}/download"],
+    includes: [
+      "/health",
+      "/ownables/upload",
+      "/packages/${encodeURIComponent(cid)}/download",
+      "/ownables/${encodeURIComponent(id)}/chain",
+    ],
     excludes: ["/messages", "hubReplay"],
   },
 ];
