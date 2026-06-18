@@ -41,6 +41,16 @@ The page will reload if you make edits. You will also see any lint errors in the
 
 Runs the Cucumber-based end-to-end tests.
 
+This command is not accepted proof for the Hub receive flow in the
+`feat/hub` workstream because the current suite has no active scenarios.
+
+### `yarn verify:main-list-discovery`
+
+Runs the accepted Vitest/jsdom verifier for Hub-backed main-list discovery,
+strict Hub import origin guards, per-account dismiss persistence, and the
+combined imported-plus-available list behavior, including wallet/account
+switching while the next discovery fetch is in flight.
+
 ### `yarn build`
 
 Builds the app for production to the `build` folder. It correctly bundles React in production mode and optimizes the
@@ -141,8 +151,10 @@ Create a .env file in the project root (or use your existing one) and ensure the
 - VITE_E2E_MNEMONIC
 - VITE_E2E_ACCOUNT_INDEX
 - VITE_E2E_RPC_URL
+- VITE_HUB
 - VITE_RELAY
 - VITE_LOCAL
+- VITE_LOCAL_DEVELOPER_NOTIFICATIONS
 - VITE_OWNABLE_EXAMPLES_URL
 - VITE_BUILDER
 - VITE_BUILDER_SERVER_WALLETS_ENDPOINT (optional, default: `/api/v1/ServerWalletAddresses`)
@@ -160,4 +172,9 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 Notes:
 - This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
+- `VITE_HUB` is required for active Hub upload, download, delivery-status, available-ownables discovery, and Hub import flows. Hub download URLs are rejected unless their origin matches `new URL(VITE_HUB).origin`.
+- `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true` explicitly enables Hub-backed available-ownables discovery for the main list. The SDK does not infer this from `localhost`, and `VITE_HUB` must be configured when this gate is enabled.
+- `VITE_RELAY` and `VITE_LOCAL` remain legacy-only compatibility knobs and are no longer part of the active Hub receive path.
+- On localhost, when `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true`, the SDK looks for available ownables at `GET /ownables/available?owner=<caip10-account>` and renders them directly in the main list with import and dismiss actions.
+- The accepted manual localhost wallet-A-to-wallet-B smoke for this receive path is documented in `DEVELOPMENT.md`.
 - If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.

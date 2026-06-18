@@ -18,4 +18,8 @@ export default defineConfig({
       deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.letsrunit/**']
     }
   },
+  test: {
+    environment: "jsdom",
+    globals: true,
+  },
 });

@@ -120,6 +120,7 @@ export function useOwnableState(
         setStateDump(sd);
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
+        throw e;
       }
     },
     [chain, ownables, onError, refresh, stateDump]

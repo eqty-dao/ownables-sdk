@@ -5,6 +5,7 @@ import { useDisconnect } from 'wagmi';
 import { PropsWithChildren } from "react"
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
+import { isE2E } from "@/utils/isE2E";
 
 const primaryWalletButton = cva("w-full");
 
@@ -25,6 +26,10 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
         const ready = mounted && authenticationStatus !== 'loading';
         const connected =
           ready && account && chain && (!authenticationStatus || authenticationStatus === 'authenticated');
+
+        if (isE2E && !connected) {
+          return null;
+        }
 
         if (!connected) {
           return (
@@ -51,7 +56,7 @@ export default function WalletConnectControls({ children }: PropsWithChildren) {
               {account?.displayName} <InfoOutlineIcon className="inline h-3.5 w-3.5" />
             </p>
             {children}
-            <Button className={cn(primaryWalletButton())} onClick={() => disconnect()} disabled={isDisconnectPending}>
+            <Button className={cn(primaryWalletButton())} onClick={() => disconnect()} disabled={isE2E || isDisconnectPending}>
               {isDisconnectPending ? 'Disconnecting…' : 'Disconnect'}
             </Button>
           </>

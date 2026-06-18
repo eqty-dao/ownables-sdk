@@ -2,57 +2,77 @@ import React, { useEffect, useState } from "react";
 import { isE2E } from "@/utils/isE2E";
 import { Box } from "@/components/ui";
 import LoginDialog from "@/components/LoginDialog";
-import { ViewMessagesBar } from "@/components/ViewMessagesBar";
 import AppToolbar from "@/components/AppToolbar";
 import { SnackbarProvider } from "notistack";
-import { usePackageManager } from "@/hooks/usePackageManager";
-import { useAccount, useChainId, useConnect } from "wagmi";
-import { useMessageCount } from "@/hooks/useMessageCount";
+import { useChainId, useConnect } from "wagmi";
 import CreateOwnableDialog from "@/components/CreateOwnableDialog";
 import Sidebar from "@/components/Sidebar";
 import GetStarted from "@/components/GetStarted";
 import OwnableList from "@/components/OwnableList";
 import MainSection from "@/components/MainSection";
 import ConsumingDrawer from "@/components/ConsumingDrawer";
+import useEffectiveWallet from "@/hooks/useEffectiveWallet";
 import { useOwnables } from "@/hooks/useOwnables";
 import { useConsuming } from "@/hooks/useConsuming";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useService } from "@/hooks/useService";
+import useInterval from "@/hooks/useInterval";
 import { LoaderCircle } from "lucide-react"
 const ISSUE_OWNABLE_ID = "issue";
 const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDDED?.toLowerCase() ?? '');
 
 export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
-  const [showViewMessagesBar, setShowViewMessagesBar] = useState(false);
   const [showCreateOwnable, setShowCreateOwnable] = useState(false);
-  const [message, setMessages] = useState(0);
-  const [selectedChainId, setSelectedChainId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   const packageService = useService("packages");
-  const { isLoading: isPackageManagerLoading } = usePackageManager();
-  const { setMessageCount } = useMessageCount();
+  const hub = useService("hub");
   const { showError } = useDialogs();
 
-  const { address, isConnected, isConnecting } = useAccount();
+  const { address, isConnected, isConnecting } = useEffectiveWallet();
   const chainId = useChainId();
   const { error: connectError } = useConnect();
+  const [isHubAvailable, setIsHubAvailable] = useState<boolean | null>(null);
 
   const selectIssuePanel = () => {
-    setSelectedChainId(ISSUE_OWNABLE_ID);
+    setSelectedEntryId(ISSUE_OWNABLE_ID);
     setShowDetail(true);
   };
 
-  const { ownables, setOwnables, loaded, forge, relayImport, removeOwnable, deleteOwnable, reset, factoryReset } =
-    useOwnables({ onSelect: (id) => { setSelectedChainId(id); setShowDetail(true); } });
+  const {
+    ownables,
+    availableOwnables,
+    archivedAvailableOwnables,
+    archivedEntries,
+    archivedOwnableIds,
+    mainListEntries,
+    mainListLoaded,
+    importingAvailableOwnableId,
+    archivedOwnablesCount,
+    setOwnables,
+    forge,
+    importAvailableOwnable,
+    archiveOwnable,
+    restoreArchivedOwnable,
+    permanentlyDeleteArchivedOwnable,
+    updateOwnable,
+    reset,
+    factoryReset,
+  } = useOwnables({ onSelect: (id) => { setSelectedEntryId(id); setShowDetail(true); } });
 
   const { consuming, consumeEligibility, startConsuming, cancelConsuming, consume } =
-    useConsuming({ ownables, onConsumed: (id) => setOwnables((prev) => prev.map((o) => o.chain.id === id ? { ...o, isConsumed: true } : o)) });
+    useConsuming({
+      ownables,
+      onConsumed: (id) => {
+        updateOwnable(id, { isConsumed: true });
+        archiveOwnable(id);
+      },
+    });
 
   useEffect(() => {
     setShowSidebar(false);
-    setShowViewMessagesBar(false);
     cancelConsuming();
     if (!isConnected) setOwnables([]);
   }, [address, isConnected, chainId]);
@@ -62,6 +82,35 @@ export default function App() {
       showError("Connection Error", connectError.message);
     }
   }, [connectError]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const checkHub = async () => {
+      if (!hub?.isConfigured) {
+        if (alive) setIsHubAvailable(null);
+        return;
+      }
+
+      const available = await hub.isAvailable();
+      if (alive) setIsHubAvailable(available);
+    };
+
+    void checkHub();
+
+    return () => {
+      alive = false;
+    };
+  }, [hub]);
+
+  useInterval(() => {
+    if (!hub?.isConfigured) {
+      setIsHubAvailable(null);
+      return;
+    }
+
+    void hub.isAvailable().then(setIsHubAvailable);
+  }, 5000);
 
   if (isConnecting) {
     return (
@@ -76,52 +125,65 @@ export default function App() {
       {!EMBEDDED && (
         <AppToolbar
           onMenuClick={() => setShowSidebar(true)}
-          onNotificationClick={() => setShowViewMessagesBar(true)}
-          messagesCount={message}
           chainId={chainId}
           isConnected={isConnected}
+          isHubAvailable={isHubAvailable}
         />
       )}
 
-      {ownables.length === 0 && !showDetail && !EMBEDDED && <GetStarted onExamples={selectIssuePanel} />}
+      {mainListLoaded && mainListEntries.length === 0 && archivedEntries.length === 0 && !showDetail && !EMBEDDED && (
+        <GetStarted onExamples={selectIssuePanel} />
+      )}
 
       <Box className="mx-auto lg:mt-4 flex max-w-330 gap-4 lg:pb-6 lg:px-4">
         <OwnableList
           className="mt-4"
-          ownables={ownables}
-          selectedChainId={selectedChainId}
-          issueSelected={selectedChainId === ISSUE_OWNABLE_ID}
+          entries={mainListEntries}
+          selectedChainId={selectedEntryId}
+          issueSelected={selectedEntryId === ISSUE_OWNABLE_ID}
           hiddenOnMobile={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
-          onSelect={(id) => { setSelectedChainId(id); setShowDetail(true); }}
+          archivedEntries={archivedEntries}
+          archivedOwnablesCount={archivedOwnablesCount}
+          onSelect={(id) => { setSelectedEntryId(id); setShowDetail(true); }}
           onConsume={consume}
           onIssue={selectIssuePanel}
+          onImportAvailable={importAvailableOwnable}
         />
 
         <MainSection
           ownables={ownables}
-          selectedChainId={selectedChainId}
-          showIssuePanel={selectedChainId === ISSUE_OWNABLE_ID}
+          availableOwnables={availableOwnables}
+          archivedAvailableOwnables={archivedAvailableOwnables}
+          selectedEntryId={selectedEntryId}
+          showIssuePanel={selectedEntryId === ISSUE_OWNABLE_ID}
           showDetail={showDetail}
           consuming={consuming}
           consumeEligibility={consumeEligibility}
-          message={message}
-          onBack={() => { setSelectedChainId(null); setShowDetail(false); }}
+          isHubAvailable={isHubAvailable}
+          isArchivedSelected={selectedEntryId ? archivedOwnableIds.includes(selectedEntryId) : false}
+          importingAvailableOwnableId={importingAvailableOwnableId}
+          onBack={() => { setSelectedEntryId(null); setShowDetail(false); }}
           onConsume={(info) => {
-            const o = ownables.find((o) => o.chain.id === selectedChainId);
+            const o = ownables.find((ownable) => ownable.chain.id === selectedEntryId);
             if (o) { startConsuming(o.chain, o.package, info); setShowDetail(false); }
           }}
           onConsumeComplete={consume}
-          onDelete={deleteOwnable}
-          onRemove={removeOwnable}
+          onArchive={archiveOwnable}
+          onRestore={restoreArchivedOwnable}
+          onDelete={(id, packageCid) => permanentlyDeleteArchivedOwnable(id)}
+          onDeleteArchived={(entryId) => {
+            permanentlyDeleteArchivedOwnable(entryId);
+            if (selectedEntryId === entryId) {
+              setSelectedEntryId(null);
+              setShowDetail(false);
+            }
+          }}
+          onImportAvailable={importAvailableOwnable}
+          onArchiveAvailable={archiveOwnable}
           onError={showError}
           onForge={forge}
-          onImportFR={async (pkg, refresh) => {
-            await relayImport(pkg, refresh);
-            await setMessageCount(0);
-            setMessages(0);
-          }}
           onCreate={() => setShowCreateOwnable(true)}
         />
       </Box>
@@ -133,13 +195,6 @@ export default function App() {
             onClose={() => setShowSidebar(false)}
             onReset={() => { setShowSidebar(false); reset(); }}
             onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
-          />
-
-          <ViewMessagesBar
-            open={showViewMessagesBar}
-            onClose={() => setShowViewMessagesBar(false)}
-            messagesCount={message}
-            setOwnables={setOwnables}
           />
 
           {!isConnected && !isE2E && <LoginDialog open={true} />}

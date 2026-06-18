@@ -1,52 +1,58 @@
-## A Guide for Devs and Builders: Working with Ownables
+# Local Development
 
-As the Ownables ecosystem grows, the need for robust tooling and clear developer guidelines becomes essential. This guide walks you through how to structure and send Ownables using the SDK and relay infrastructure.
+This repo's required Hub receive flow is the main ownables list. The active path is not a notifications drawer and does not depend on Reown or Web3Inbox.
 
-If you're building Ownables or integrating them into your app, this guide is for you.
+## Required Local Env
 
----
+Set these SDK env vars before starting the app:
 
-### 🔧 Structuring Your Ownable Message
+```bash
+VITE_HUB=http://127.0.0.1:8000
+VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true
+VITE_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
+```
 
-Each Ownable is packaged and sent between wallets using the Relay Server.
+`VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true` is the explicit gate for local Hub recipient discovery in this run. When enabled, the SDK fetches available items from:
 
-To ensure your Ownable can be **previewed before download**, you should include a **`thumbnail.webp`** file inside the Ownable zip package.
+```text
+GET /ownables/available?owner=<caip10-account>
+```
 
-#### 📸 Thumbnail Guidelines:
+Hub download URLs returned from that route must still match `new URL(VITE_HUB).origin` or the SDK will reject the import.
 
-- File name must be: `thumbnail.webp`
-- Maximum file size: **256 KB**
-- Format: `.webp` (required)
-- This preview is used by clients to render a quick snapshot of the Ownable before the user chooses to download it.
+## Accepted Localhost A-to-B Smoke
 
-> **Note**: In the official SDK, thumbnail resizing is handled automatically when you initiate a transfer. However, in custom apps, you may need to handle resizing manually depending on your use case.
+The approved manual smoke for this repo is wallet A sending an ownable to wallet B, then wallet B discovering and importing it from the main list.
 
----
+### Setup
 
-### 🚀 Sending Ownables
+1. Start the paired Hub worktree with recipient discovery enabled and `PUBLIC_BASE_URL` matching the local Hub origin.
+2. Start this SDK worktree with `VITE_HUB` pointing at that Hub and `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true`.
+3. Confirm wallet A and wallet B are both available in the browser wallet you are using for localhost testing.
 
-Ownables can be sent directly between wallets using the Relay Server, which supports:
+### Expected Flow
 
-- End-to-end encrypted delivery
-- File previews (when `thumbnail.webp` is present)
-- Ownable metadata sync
+1. Connect wallet A in the SDK.
+2. Issue or select an ownable and transfer it to wallet B.
+3. Confirm the transfer progress stops after Hub upload plus any anchoring work. The SDK must not show an `Update Hub owner state` step.
+4. Switch the connected wallet to wallet B.
+5. Confirm the SDK requests `GET /ownables/available?owner=<wallet-b-caip10-account>`.
+6. Confirm the transferred ownable appears in the main list with the normal ownable-card layout and a trailing `Import` icon.
+7. Open the ownable detail and click `Archive`, then confirm the row disappears immediately from the main list.
+8. Reload while still connected as wallet B and confirm the row stays archived.
+9. Expand the collapsed `Archived` section and confirm the row returns there.
+10. Click `Import` and confirm the row leaves the available state and reappears as an imported ownable in the main wallet inventory.
 
-Make sure your message includes the structured Ownable zip with any required metadata or signature files as per the Ownables spec.
+### Evidence To Capture
 
----
+- Hub origin used for the run.
+- Wallet B CAIP-10 account queried by the SDK.
+- The `GET /ownables/available` response entry that rendered the available row.
+- A screenshot or note showing the available row before import.
+- A screenshot or note showing the imported ownable after `Import`.
 
-### ✅ Quick Checklist for App Integrators:
+### Failure Notes
 
-- [ ] Package your Ownable as a `.zip` file
-- [ ] Include `thumbnail.webp` (≤ 256 KB)
-- [ ] Use SDK for automatic resizing, or implement your own
-- [ ] Send the package using the relay protocol
-- [ ] Handle preview rendering on the recipient side
-
----
-
-### 📚 More Resources
-
-- [Ownables Docs](https://docs.ltonetwork.com/ownables/what-are-ownables)
-- [Ownables SDK on GitHub](https://github.com/eqty-dao/ownables-sdk)
-- [Examples and Demos](https://demo.ownables.info)
+- If wallet B briefly shows wallet A's available rows during an account switch, treat that as a regression in account-scoped discovery state.
+- If the row imports from any non-Hub origin, treat that as a regression in the Hub import guard.
+- If the receive flow depends on a notifications drawer, Reown, or Web3Inbox, it is outside the approved scope for this run.
