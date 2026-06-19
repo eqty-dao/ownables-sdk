@@ -2,14 +2,24 @@ import TypedDict from "@/interfaces/TypedDict";
 
 // Default base DB name; per-address DBs will suffix this with the address
 const DEFAULT_DB_NAME = "ownables";
+const PACKAGE_DB_NAME = `${DEFAULT_DB_NAME}:packages`;
+const PACKAGE_DB_STORES = ["package-assets"];
 
 export default class IDBService {
   private static mainInstance: IDBService;
+  private static packageInstance: IDBService;
 
   constructor(
     private db: IDBDatabase,
     private readonly dbName: string,
   ) {}
+
+  private static attachLifecycle(db: IDBDatabase): IDBDatabase {
+    db.onversionchange = () => {
+      db.close();
+    };
+    return db;
+  }
 
   static async main(): Promise<IDBService> {
     if (this.mainInstance) return this.mainInstance;
@@ -18,14 +28,61 @@ export default class IDBService {
     return this.mainInstance;
   }
 
+  static async packages(): Promise<IDBService> {
+    if (this.packageInstance) return this.packageInstance;
+
+    this.packageInstance = await this.openWithSchema(PACKAGE_DB_NAME, PACKAGE_DB_STORES);
+    return this.packageInstance;
+  }
+
   static async open(suffix: string): Promise<IDBService> {
     const suffixClean = (suffix || "").trim().toLowerCase();
     const dbName = suffixClean ? `${DEFAULT_DB_NAME}:${suffixClean}` : DEFAULT_DB_NAME;
 
+    return this.openWithSchema(dbName);
+  }
+
+  private static async openWithSchema(
+    dbName: string,
+    requiredStores: string[] = []
+  ): Promise<IDBService> {
+    const existingVersion = await new Promise<number>((resolve, reject) => {
+      const probe = window.indexedDB.open(dbName);
+      probe.onsuccess = () => {
+        const version = probe.result.version;
+        probe.result.close();
+        resolve(version);
+      };
+      probe.onupgradeneeded = () => {
+        const db = probe.result;
+        for (const store of requiredStores) {
+          if (!db.objectStoreNames.contains(store)) {
+            db.createObjectStore(store);
+          }
+        }
+      };
+      probe.onerror = (e) => reject((e.target as IDBTransaction).error);
+      probe.onblocked = () =>
+        reject(new Error(`IndexedDB open blocked for ${dbName}. Close other tabs using the wallet and try again.`));
+    });
+
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = window.indexedDB.open(dbName);
-      request.onsuccess = () => resolve(request.result);
+      const request = window.indexedDB.open(
+        dbName,
+        existingVersion === 0 ? 1 : existingVersion
+      );
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        for (const store of requiredStores) {
+          if (!db.objectStoreNames.contains(store)) {
+            db.createObjectStore(store);
+          }
+        }
+      };
+      request.onsuccess = () => resolve(this.attachLifecycle(request.result));
       request.onerror = (e) => reject((e.target as IDBTransaction).error);
+      request.onblocked = () =>
+        reject(new Error(`IndexedDB open blocked for ${dbName}. Close other tabs using the wallet and try again.`));
     });
 
     return new IDBService(db, dbName);
@@ -92,6 +149,52 @@ export default class IDBService {
     });
   }
 
+  async keysByPrefix(store: string, prefix: string): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(store, "readonly");
+      const request = tx.objectStore(store).openKeyCursor();
+      const keys: string[] = [];
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(keys);
+          return;
+        }
+
+        const key = String(cursor.primaryKey);
+        if (key.startsWith(prefix)) {
+          keys.push(key);
+        }
+        cursor.continue();
+      };
+      request.onerror = (event) => reject(this.error(event));
+    });
+  }
+
+  async getAllByPrefix(store: string, prefix: string): Promise<Array<any>> {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(store, "readonly");
+      const request = tx.objectStore(store).openCursor();
+      const values: Array<any> = [];
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(values);
+          return;
+        }
+
+        const key = String(cursor.primaryKey);
+        if (key.startsWith(prefix)) {
+          values.push(cursor.value);
+        }
+        cursor.continue();
+      };
+      request.onerror = (event) => reject(this.error(event));
+    });
+  }
+
   async set(store: string, key: string, value: any): Promise<void> {
     return new Promise(async (resolve, reject) => {
       const tx = this.db.transaction(store, "readwrite");
@@ -155,8 +258,10 @@ export default class IDBService {
       const request = window.indexedDB.open(this.dbName, version + 1);
 
       request.onupgradeneeded = () => action(request.result);
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => resolve(IDBService.attachLifecycle(request.result));
       request.onerror = (e) => reject(e);
+      request.onblocked = () =>
+        reject(new Error(`IndexedDB upgrade blocked for ${this.dbName}. Close other tabs using the wallet and try again.`));
     });
   }
 

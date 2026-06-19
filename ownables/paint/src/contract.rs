@@ -1,15 +1,18 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID};
+use crate::state::{
+    CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Attribute, Binary, Event, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
-    ExternalEventMsg, InfoResponse, Metadata, OwnableInfo, ensure_owner, get_random_color,
-    package_title_from_name,
+    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
+    ensure_owner, get_random_color, package_title_from_name,
 };
 
+// version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -44,7 +47,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -71,16 +74,34 @@ pub fn execute(
     }
 }
 
-pub fn register_external_event(
-    _info: MessageInfo,
-    _deps: DepsMut,
-    event: ExternalEventMsg,
-    _ownable_id: String,
+pub fn register(
+    info: MessageInfo,
+    deps: DepsMut,
+    event: PublicEvent,
 ) -> Result<Response, ContractError> {
+    let _ = (info, deps);
     Err(ContractError::MatchEventError {
         val: event.event_type,
     })
 }
+
+pub fn ingest(
+    info: MessageInfo,
+    deps: DepsMut,
+    event: OwnableEvent,
+) -> Result<Response, ContractError> {
+    let _ = (info, deps);
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
+}
+
+pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>, ContractError> {
+    Err(ContractError::MatchEventError {
+        val: request.event_type,
+    })
+}
+
 
 pub fn try_consume(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
     let ownership = OWNABLE_INFO.load(deps.storage)?;
@@ -90,13 +111,13 @@ pub fn try_consume(info: MessageInfo, deps: DepsMut) -> Result<Response, Contrac
     })?;
     let mut config = config;
 
-    if config.consumed_by.is_some() {
+    if let Some(_) = config.consumed_by {
         return Err(ContractError::CustomError {
             val: "already consumed".into(),
         });
     }
     config.consumed_by = Some(ownership.clone().owner);
-    CONFIG.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config.clone())?;
 
     let mut event = Event::new("consume".to_string());
     event = event.add_attributes(vec![
@@ -163,6 +184,7 @@ fn query_ownable_widget_state(deps: Deps) -> StdResult<Binary> {
     let widget_config = CONFIG.load(deps.storage)?;
     to_json_binary(&widget_config)
 }
+
 
 fn query_consumed_state(deps: Deps) -> StdResult<Binary> {
     let config = CONFIG.load(deps.storage)?;

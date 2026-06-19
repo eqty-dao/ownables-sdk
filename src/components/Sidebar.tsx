@@ -1,9 +1,11 @@
 import { Box, Switch, Button, Drawer, DrawerHeader, Link } from "@/components/ui";
 import { useEffect, useState } from "react";
-import { useAccount, useChainId, useDisconnect } from "wagmi";
+import { useChainId, useDisconnect } from "wagmi";
 import { useService } from "@/hooks/useService";
 import { useAnchorAddress } from "@/hooks/useAnchorAddress";
 import { useExplorerUrl } from "@/hooks/useExplorerUrl";
+import useEffectiveWallet from "@/hooks/useEffectiveWallet";
+import { isE2E } from "@/utils/isE2E";
 import WalletConnectControls from "./WalletConnectControls";
 import NetworkBadge from "./NetworkBadge";
 import WalletAddress from "./WalletAddress";
@@ -23,8 +25,8 @@ export default function Sidebar(props: SidebarProps) {
   const { open, onClose, onReset, onFactoryReset } = props;
   const eventChains = useService("eventChains");
   const [anchoring, setAnchoring] = useState(false);
-  const { isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { isConnected } = useEffectiveWallet();
+  const { disconnect, isPending: isDisconnectPending } = useDisconnect();
   const chainId = useChainId();
   const anchorAddress = useAnchorAddress();
   const basescanUrl = useExplorerUrl(chainId, anchorAddress ? `address/${anchorAddress}` : "");
@@ -65,8 +67,9 @@ export default function Sidebar(props: SidebarProps) {
             size="large"
             className="mb-8 w-full"
             onClick={() => disconnect()}
+            disabled={isE2E || isDisconnectPending}
           >
-            DISCONNECT
+            {isDisconnectPending ? "DISCONNECTING..." : "DISCONNECT"}
           </Button>
         )}
 

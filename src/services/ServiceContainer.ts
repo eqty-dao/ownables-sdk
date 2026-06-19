@@ -1,21 +1,18 @@
 import { isE2E } from "@/utils/isE2E";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
-import { EQTYService } from "@ownables/adapter-viem";
-import {
-  IDBService,
-  LocalStorageService,
-  PackageService,
-  RelayService,
-} from "@ownables/platform-browser/dist/platform-browser/src/index.js";
+import EQTYService from "./EQTY.service";
+import IDBService from "./IDB.service";
 import {
   EventChainService,
-  OwnableService,
   PollingService,
 } from "@ownables/core";
 import { BuilderService } from "@ownables/builder-client";
-import workerJsSource from "@/assets/worker.js?raw";
-import { PACKAGE_EXAMPLES, PACKAGE_EXAMPLE_URL } from "@/config/examples";
+import OwnableService from "./Ownable.service";
+import HubService from "./Hub.service";
+import LocalStorageService from "./LocalStorage.service";
+import PackageService from "./Package.service";
+import { RelayService } from "./Relay.service";
 
 export interface ServiceMap {
   relay: RelayService;
@@ -27,6 +24,7 @@ export interface ServiceMap {
   ownables: OwnableService;
   polling: PollingService;
   builder: BuilderService;
+  hub: HubService;
 }
 
 export type ServiceKey = keyof ServiceMap;
@@ -73,11 +71,10 @@ export default class ServiceContainer {
 
     this.register(
       "relay",
-      async (c) =>
-        new RelayService(await c.get("eqty"), {
-          relayUrl: import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL,
-        })
+      async (c) => new RelayService(await c.get("eqty"))
     );
+
+    this.register("hub", () => new HubService());
 
     this.register(
       "eventChains",
@@ -91,12 +88,10 @@ export default class ServiceContainer {
 
     this.register("packages", async (c) => {
       // Packages are stored globally and not per account
-      const idb = await IDBService.main();
+      const idb = await IDBService.packages();
+      const legacyIdb = await IDBService.main();
       const storage = new LocalStorageService();
-      return new PackageService(idb, await c.get("relay"), storage, {
-        exampleUrl: PACKAGE_EXAMPLE_URL,
-        examples: PACKAGE_EXAMPLES,
-      });
+      return new PackageService(idb, await c.get("relay"), storage, legacyIdb);
     });
 
     this.register(
@@ -106,10 +101,7 @@ export default class ServiceContainer {
           await c.get("idb"),
           await c.get("eventChains"),
           await c.get("eqty"),
-          await c.get("packages"),
-          {
-            getWorkerSource: () => workerJsSource,
-          }
+          await c.get("packages")
         )
     );
 

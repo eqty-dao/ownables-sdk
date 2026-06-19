@@ -313,7 +313,6 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
 
                   <Box className="mt-1 flex items-center">
                     <Button
-
                       size="small"
                       className={cn(miniButton())}
                       onClick={() => handleImportMessage(msg?.hash)}
@@ -343,7 +342,6 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
               Page {currentPage} of {Math.ceil(totalCount / itemsPerPage)}
             </span>
             <Button
-
               size="small"
               onClick={() =>
                 setCurrentPage((prev) =>

@@ -32,15 +32,13 @@ const packageCard = cva(
 interface IssueOwnablePanelProps {
   onBack: () => void;
   onSelect: (pkg: TypedPackage) => void;
-  onImportFR: (pkg: TypedPackage[], triggerRefresh: boolean) => void;
   onError: (title: string, message: string) => void;
   onCreate: () => void;
-  message: number;
 }
 
 export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
-  const { onBack, onSelect, onImportFR, onError, onCreate, message } = props;
-  const { packages, isLoading, importPackages, importInbox, downloadExample } = usePackageManager();
+  const { onBack, onSelect, onError, onCreate } = props;
+  const { packages, isLoading, importPackages, downloadExample } = usePackageManager();
   const packageService = useService("packages");
   const builderService = useService("builder");
   const hasPackageService = !!packageService;
@@ -70,22 +68,6 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
       enqueueSnackbar("Packages imported successfully", { variant: "success" });
     } catch (error) {
       onError("Failed to import package", (error as Error).message || String(error));
-    }
-  };
-
-  const importPackagesFromRelay = async () => {
-    if (!hasPackageService) return;
-    try {
-      const result = await importInbox();
-      if (result == null) return;
-      const [filteredPkgs, triggerRefresh] = result as [Array<TypedPackage | undefined>, boolean];
-      const validPackages = Array.isArray(filteredPkgs)
-        ? filteredPkgs.filter((p): p is TypedPackage => p !== null && p !== undefined)
-        : [];
-      onImportFR(validPackages, triggerRefresh);
-      enqueueSnackbar("Packages imported from relay", { variant: "success" });
-    } catch (error) {
-      onError("Failed to import ownable", (error as Error).message || String(error));
     }
   };
 
@@ -178,27 +160,15 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
               <FolderUp size={20} className="text-slate-600 dark:text-slate-400" />
               <span>Upload<span className="hidden md:inline"> Package</span></span>
             </Button>
-            {message > 0 ? (
-              <Button
-                type="button"
-                className={cn(actionButton({ disabled: !hasPackageService }))}
-                onClick={importPackagesFromRelay}
-                disabled={!hasPackageService}
-              >
-                <FolderUp size={20} className="text-slate-600 dark:text-slate-400" />
-                From Relay ({message})
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                className={cn(actionButton({ disabled: !hasBuilder }))}
-                onClick={onCreate}
-                disabled={!hasBuilder}
-              >
-                <Sparkles size={20} className="text-slate-600 dark:text-slate-400" />
-                <span><span className="hidden md:inline">Ownable </span>Builder</span>
-              </Button>
-            )}
+            <Button
+              type="button"
+              className={cn(actionButton({ disabled: !hasBuilder }))}
+              onClick={onCreate}
+              disabled={!hasBuilder}
+            >
+              <Sparkles size={20} className="text-slate-600 dark:text-slate-400" />
+              <span><span className="hidden md:inline">Ownable </span>Builder</span>
+            </Button>
           </div>
 
           {/* Section label */}

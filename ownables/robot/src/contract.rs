@@ -1,14 +1,18 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID};
+use crate::state::{
+    CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
-    ExternalEventMsg, InfoResponse, Metadata, OwnableInfo, package_title_from_name, rgb_hex,
+    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
+    package_title_from_name, rgb_hex,
 };
 
+// version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -47,7 +51,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -73,68 +77,98 @@ pub fn execute(
     }
 }
 
-pub fn register_external_event(
+pub fn register(
     info: MessageInfo,
     deps: DepsMut,
-    event: ExternalEventMsg,
-    ownable_id: String,
+    event: PublicEvent,
 ) -> Result<Response, ContractError> {
-    let mut response = Response::new().add_attribute("method", "register_external_event");
-
-    match event.event_type.as_str() {
-        "consume" => {
-            try_register_consume(info, deps, event, ownable_id)?;
-            response = response.add_attribute("event_type", "consume");
-        }
-        _ => {
-            return Err(ContractError::MatchEventError {
-                val: event.event_type,
-            });
-        }
-    };
-
-    Ok(response)
+    let _ = (info, deps);
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
 }
 
-fn try_register_consume(
+pub fn ingest(
+    info: MessageInfo,
+    deps: DepsMut,
+    event: OwnableEvent,
+) -> Result<Response, ContractError> {
+    match event.event_type.as_str() {
+        "consume" => try_ingest_consume(info, deps, event),
+        _ => Err(ContractError::MatchEventError {
+            val: event.event_type,
+        }),
+    }
+}
+
+pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>, ContractError> {
+    Err(ContractError::MatchEventError {
+        val: request.event_type,
+    })
+}
+
+fn try_ingest_consume(
     _info: MessageInfo,
     deps: DepsMut,
-    event: ExternalEventMsg,
-    ownable_id: String,
+    event: OwnableEvent,
 ) -> Result<Response, ContractError> {
-    let owner = event.attributes.get("owner").cloned().unwrap_or_default();
+    let owner = event.source.owner.clone();
+    let issuer = event.source.issuer.clone();
+    let ownable_id = event.source.id.clone();
     let consumed_by = event
         .attributes
         .get("consumed_by")
-        .cloned()
-        .unwrap_or_default();
-    let issuer = event.attributes.get("issuer").cloned().unwrap_or_default();
-    let color = event.attributes.get("color").cloned().unwrap_or_default();
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let color = event
+        .attributes
+        .get("color")
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
     let consumable_type = event
         .attributes
         .get("consumable_type")
-        .cloned()
-        .unwrap_or_default();
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string();
 
-    if consumable_type == "paint" && color.is_empty() {
-        return Err(ContractError::InvalidExternalEventArgs {});
+    if consumable_type == "paint" {
+        if color.is_empty() {
+            return Err(ContractError::InvalidExternalEventArgs {});
+        }
     }
-    if consumable_type.is_empty() || issuer.is_empty() || consumed_by.is_empty() || owner.is_empty()
+    if ownable_id.is_empty()
+        || consumable_type.is_empty()
+        || issuer.is_empty()
+        || consumed_by.is_empty()
+        || owner.is_empty()
     {
         return Err(ContractError::InvalidExternalEventArgs {});
     }
 
     let ownership = OWNABLE_INFO.load(deps.storage)?;
+
+    // validate issuer of collection matches
     if ownership.issuer.to_string() != issuer {
         return Err(ContractError::InvalidExternalEventArgs {});
     }
 
     let mut config = CONFIG.load(deps.storage)?;
     match consumable_type.as_str() {
-        "antenna" => config.has_antenna = true,
-        "armor" => config.has_armor = true,
-        "paint" => config.color = color,
-        "speakers" => config.has_speaker = true,
+        "antenna" => {
+            config.has_antenna = true;
+        }
+        "armor" => {
+            config.has_armor = true;
+        }
+        "paint" => {
+            config.color = color;
+        }
+        "speakers" => {
+            config.has_speaker = true;
+        }
         _ => {}
     }
     config
@@ -143,9 +177,10 @@ fn try_register_consume(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new()
-        .add_attribute("method", "try_register_consume")
+        .add_attribute("method", "try_ingest_consume")
         .add_attribute("status", "success"))
 }
+
 
 pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {
     let ownership =
@@ -185,7 +220,10 @@ fn query_is_consumer_of(deps: Deps, issuer: Addr, consumable_type: String) -> St
     let ownable_info = OWNABLE_INFO.load(deps.storage)?;
 
     let can_consume = match consumable_type.as_str() {
-        "antenna" | "armor" | "paint" | "speakers" => true,
+        "antenna" => true,
+        "armor" => true,
+        "paint" => true,
+        "speakers" => true,
         _ => false,
     };
     let same_issuer = ownable_info.issuer == issuer;
@@ -196,6 +234,7 @@ fn query_ownable_widget_state(deps: Deps) -> StdResult<Binary> {
     let widget_config = CONFIG.load(deps.storage)?;
     to_json_binary(&widget_config)
 }
+
 
 fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
     let nft = NFT_ITEM.may_load(deps.storage)?;
@@ -211,4 +250,123 @@ fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
 fn query_ownable_metadata(deps: Deps) -> StdResult<Binary> {
     let meta = METADATA.load(deps.storage)?;
     to_json_binary(&meta)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ingest, instantiate, register};
+    use crate::msg::InstantiateMsg;
+    use crate::state::CONFIG;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use cosmwasm_std::{Addr, MessageInfo, Uint128};
+    use ownable_std::{OwnableEvent, OwnableEventSource, PublicEvent};
+    use serde_json::json;
+
+    fn test_info(sender: &str) -> MessageInfo {
+        MessageInfo {
+            sender: Addr::unchecked(sender),
+            funds: vec![],
+        }
+    }
+
+    #[test]
+    fn register_rejects_all_event_types() {
+        let mut deps = mock_dependencies();
+        let event = PublicEvent {
+            source: "0xsource".to_string(),
+            event_type: "lock".to_string(),
+            data: vec![0x01, 0x02].into(),
+            block_number: 1,
+            transaction_hash: vec![0xaa].into(),
+            transaction_index: 0,
+            log_index: 0,
+        };
+
+        let err = register(test_info("owner"), deps.as_mut(), event).unwrap_err();
+        assert_eq!(err.to_string(), "Unknown event type: \"lock\"");
+    }
+
+    #[test]
+    fn ingest_consume_updates_robot_config() {
+        let mut deps = mock_dependencies();
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            test_info("issuer"),
+            InstantiateMsg {
+                ownable_id: "robot-id".to_string(),
+                package: "pkg".to_string(),
+                network_id: 1,
+                ownable_type: None,
+                nft: Some(ownable_std::NFT {
+                    id: Uint128::one(),
+                    network: "eip155:1".to_string(),
+                    address: "nft-contract".to_string(),
+                    lock_service: None,
+                }),
+            },
+        )
+        .unwrap();
+
+        let event = OwnableEvent {
+            source: OwnableEventSource {
+                id: "paint-ownable".to_string(),
+                owner: "issuer".to_string(),
+                issuer: "issuer".to_string(),
+            },
+            event_type: "consume".to_string(),
+            attributes: json!({
+                "consumed_by": "robot-owner",
+                "consumable_type": "paint",
+                "color": "#ff00ff"
+            }),
+        };
+
+        ingest(test_info("wallet"), deps.as_mut(), event).unwrap();
+
+        let config = CONFIG.load(&deps.storage).unwrap();
+        assert_eq!(config.color, "#ff00ff");
+        assert_eq!(config.consumed_ownable_ids.len(), 1);
+        assert_eq!(
+            config.consumed_ownable_ids[0],
+            Addr::unchecked("paint-ownable")
+        );
+        assert!(!config.has_antenna);
+        assert!(!config.has_armor);
+        assert!(!config.has_speaker);
+    }
+
+    #[test]
+    fn ingest_consume_requires_source_id() {
+        let mut deps = mock_dependencies();
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            test_info("issuer"),
+            InstantiateMsg {
+                ownable_id: "robot-id".to_string(),
+                package: "pkg".to_string(),
+                network_id: 1,
+                ownable_type: None,
+                nft: None,
+            },
+        )
+        .unwrap();
+
+        let event = OwnableEvent {
+            source: OwnableEventSource {
+                id: "".to_string(),
+                owner: "issuer".to_string(),
+                issuer: "issuer".to_string(),
+            },
+            event_type: "consume".to_string(),
+            attributes: json!({
+                "consumed_by": "robot-owner",
+                "consumable_type": "antenna"
+            }),
+        };
+
+        let err = ingest(test_info("wallet"), deps.as_mut(), event).unwrap_err();
+        assert_eq!(err.to_string(), "Invalid external event args");
+    }
 }

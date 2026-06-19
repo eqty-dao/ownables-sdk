@@ -1,25 +1,36 @@
 import { IconButton, Menu, MenuItem } from "@/components/ui";
-import { EllipsisVertical as MoreVert, Trash2 as Delete, Wrench as PrecisionManufacturing, ArrowLeftRight as SwapHoriz, Lock } from "lucide-react";
+import { EllipsisVertical as MoreVert } from "lucide-react";
 import { useState, MouseEvent } from "react";
 import PromptDialog from "./PromptDialog";
 import { useAccount } from "wagmi";
 
 interface OwnableActionsProps {
   className?: string;
-  title: string;
-  isConsumable: boolean;
+  archived?: boolean;
   isTransferable: boolean;
+  isHubAvailable?: boolean;
   isLockable: boolean;
   isLocked: boolean;
-  chain: any;
+  onArchive?: () => void;
+  onRestore?: () => void;
   onDelete: () => void;
-  onConsume: () => void;
   onTransfer: (address: string) => void;
   onLock: () => void;
 }
 
 export default function OwnableActions(props: OwnableActionsProps) {
-  const { onDelete, onTransfer, isTransferable, isLockable, isLocked, onLock } =
+  const {
+    archived = false,
+    onArchive,
+    onRestore,
+    onDelete,
+    onTransfer,
+    isTransferable,
+    isHubAvailable = true,
+    isLockable,
+    isLocked,
+    onLock,
+  } =
     props;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -44,23 +55,40 @@ export default function OwnableActions(props: OwnableActionsProps) {
         onClick={close}
         className="min-w-40"
       >
-        <MenuItem
-          disabled={!isTransferable}
-          onClick={() => { close(); setShowTransferDialog(true); }}
-        >
-          Transfer
-        </MenuItem>
-        {isLockable && !isLocked && (
-          <MenuItem onClick={() => { close(); onLock(); }}>
-            Lock
-          </MenuItem>
+        {!archived ? (
+          <>
+            <MenuItem
+              disabled={!isTransferable || !isHubAvailable}
+              onClick={() => { close(); setShowTransferDialog(true); }}
+            >
+              Transfer
+            </MenuItem>
+            {isLockable && !isLocked && (
+              <MenuItem onClick={() => { close(); onLock(); }}>
+                Lock
+              </MenuItem>
+            )}
+            {onArchive ? (
+              <MenuItem onClick={() => { close(); onArchive(); }}>
+                Archive
+              </MenuItem>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {onRestore ? (
+              <MenuItem onClick={() => { close(); onRestore(); }}>
+                Restore
+              </MenuItem>
+            ) : null}
+            <MenuItem
+              variant="danger"
+              onClick={() => { close(); onDelete(); }}
+            >
+              Delete
+            </MenuItem>
+          </>
         )}
-        <MenuItem
-          variant="danger"
-          onClick={() => { close(); onDelete(); }}
-        >
-          Delete
-        </MenuItem>
       </Menu>
 
       <PromptDialog

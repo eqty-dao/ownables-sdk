@@ -1,16 +1,18 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
-use crate::state::{Config, NFT_ITEM, CONFIG, METADATA, PACKAGE_CID, OWNABLE_INFO, NETWORK_ID};
-use ownable_std::{package_title_from_name, ExternalEventMsg, InfoResponse, Metadata, OwnableInfo};
+use ownable_std::{
+    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
+    package_title_from_name,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 
 pub fn instantiate(
     deps: DepsMut,
@@ -35,7 +37,7 @@ pub fn instantiate(
         name: Some(package_title.clone()),
         background_color: None,
         animation_url: None,
-        youtube_url: None
+        youtube_url: None,
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
@@ -83,20 +85,36 @@ pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Respon
     })?;
     Ok(Response::new()
         .add_attribute("method", "try_transfer")
-        .add_attribute("new_owner", to.to_string())
-    )
+        .add_attribute("new_owner", to.to_string()))
 }
 
-pub fn register_external_event(
+pub fn register(
     info: MessageInfo,
     deps: DepsMut,
-    event: ExternalEventMsg,
-    _ownable_id: String,
+    event: PublicEvent,
 ) -> Result<Response, ContractError> {
     let _ = (info, deps);
-    Err(ContractError::MatchEventError { val: event.event_type })
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
 }
 
+pub fn ingest(
+    info: MessageInfo,
+    deps: DepsMut,
+    event: OwnableEvent,
+) -> Result<Response, ContractError> {
+    let _ = (info, deps);
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
+}
+
+pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>, ContractError> {
+    Err(ContractError::MatchEventError {
+        val: request.event_type,
+    })
+}
 
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {

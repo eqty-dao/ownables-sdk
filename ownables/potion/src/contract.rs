@@ -1,15 +1,18 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID};
+use crate::state::{
+    CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
-    ExternalEventMsg, InfoResponse, Metadata, OwnableInfo, ensure_owner, get_random_color,
-    package_title_from_name,
+    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
+    ensure_owner, get_random_color, package_title_from_name,
 };
 
+// version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -46,7 +49,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config.clone())?;
     if let Some(nft) = msg.nft {
         NFT_ITEM.save(deps.storage, &nft)?;
     }
@@ -74,16 +77,34 @@ pub fn execute(
     }
 }
 
-pub fn register_external_event(
-    _info: MessageInfo,
-    _deps: DepsMut,
-    event: ExternalEventMsg,
-    _ownable_id: String,
+pub fn register(
+    info: MessageInfo,
+    deps: DepsMut,
+    event: PublicEvent,
 ) -> Result<Response, ContractError> {
+    let _ = (info, deps);
     Err(ContractError::MatchEventError {
         val: event.event_type,
     })
 }
+
+pub fn ingest(
+    info: MessageInfo,
+    deps: DepsMut,
+    event: OwnableEvent,
+) -> Result<Response, ContractError> {
+    let _ = (info, deps);
+    Err(ContractError::MatchEventError {
+        val: event.event_type,
+    })
+}
+
+pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>, ContractError> {
+    Err(ContractError::MatchEventError {
+        val: request.event_type,
+    })
+}
+
 
 pub fn try_drink(
     info: MessageInfo,
@@ -103,7 +124,7 @@ pub fn try_drink(
         });
     }
     c.current_amount -= consumption_amount;
-    CONFIG.save(deps.storage, &c)?;
+    CONFIG.save(deps.storage, &c.clone())?;
 
     Ok(Response::new()
         .add_attribute("method", "try_drink")
@@ -144,6 +165,7 @@ fn query_ownable_widget_state(deps: Deps) -> StdResult<Binary> {
     let widget_config = CONFIG.load(deps.storage)?;
     to_json_binary(&widget_config)
 }
+
 
 fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
     let nft = NFT_ITEM.may_load(deps.storage)?;
