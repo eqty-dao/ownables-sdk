@@ -6,6 +6,7 @@ import { useService } from "@/hooks/useService";
 import { useOwnableState } from "@/hooks/useOwnableState";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 import { useDialogs } from "@/contexts/Dialogs.context";
+import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import OwnableDetail from "./OwnableDetail";
 
 interface OwnableProps {
@@ -30,8 +31,7 @@ export default function Ownable(props: OwnableProps) {
   const relay = useService("relay");
 
   const pkg: TypedPackage | undefined = useMemo(() => {
-    if (!packages) return undefined;
-    return packages.info(packageCid, uniqueMessageHash);
+    return maybePackageInfo(packages, packageCid, uniqueMessageHash);
   }, [packages, packageCid, uniqueMessageHash]);
 
   const { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, execute, onLoad } =

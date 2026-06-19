@@ -21,4 +21,3 @@ fn main() {
     export_schema(&schema_for!(Metadata), &out_dir);
     export_schema(&schema_for!(Config), &out_dir);
 }
-

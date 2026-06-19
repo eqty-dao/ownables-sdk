@@ -7,6 +7,7 @@ import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
+import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import { LocalStorageService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 import { Button } from "@/components/ui";
 
@@ -38,15 +39,38 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   useEffect(() => {
     if (!ownableService) return;
     ownableService.loadAll().then(async (loaded) => {
-      setOwnables(loaded);
+      const staleOwnables = packageService
+        ? loaded.filter(
+            ({ package: cid, uniqueMessageHash }) =>
+              !maybePackageInfo(packageService, cid, uniqueMessageHash)
+          )
+        : [];
+      const validOwnables = packageService
+        ? loaded.filter(
+            ({ package: cid, uniqueMessageHash }) =>
+              !!maybePackageInfo(packageService, cid, uniqueMessageHash)
+          )
+        : loaded;
+
+      if (staleOwnables.length > 0) {
+        console.warn(
+          "Removing ownables with missing packages",
+          staleOwnables.map(({ chain, package: cid }) => ({ chainId: chain.id, packageCid: cid }))
+        );
+        await Promise.allSettled(
+          staleOwnables.map(({ chain }) => ownableService.delete(chain.id))
+        );
+      }
+
+      setOwnables(validOwnables);
       await Promise.allSettled(
-        loaded.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
+        validOwnables.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
       );
-      if (loaded.length > 0) onSelect(loaded[0].chain.id);
+      if (validOwnables.length > 0) onSelect(validOwnables[0].chain.id);
       setLoaded(true);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownableService]);
+  }, [ownableService, packageService]);
 
   const getExplorerUrl = (txHash: string, chainId: number) => {
     switch (chainId) {
@@ -121,19 +145,20 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
   const deleteOwnable = useCallback((id: string, packageCid: string) => {
     if (!packageService) throw new Error("Package service not ready");
-    const pkg = packageService.info(packageCid);
+    const pkg = maybePackageInfo(packageService, packageCid);
+    const packageTitle = pkg?.title ?? "unknown";
     showConfirm({
       severity: "error",
       title: "Confirm delete",
-      message: <span>Are you sure you want to delete this <em>{pkg.title}</em> Ownable?</span>,
+      message: <span>Are you sure you want to delete this <em>{packageTitle}</em> Ownable?</span>,
       ok: "Delete",
       onConfirm: async () => {
         if (!ownableService) throw new Error("Ownable service not ready");
         setOwnables((current) => current.filter((o) => o.chain.id !== id));
         ownableService.clearRpc(id);
         await ownableService.delete(id);
-        const uniqueMessageHash = pkg.uniqueMessageHash;
-        if (pkg.isNotLocal) {
+        const uniqueMessageHash = pkg?.uniqueMessageHash;
+        if (pkg?.isNotLocal) {
           const globalStorage = new LocalStorageService();
           globalStorage.removeByField("packages", "uniqueMessageHash", uniqueMessageHash);
         }

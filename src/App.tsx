@@ -5,6 +5,7 @@ import LoginDialog from "@/components/LoginDialog";
 import { ViewMessagesBar } from "@/components/ViewMessagesBar";
 import AppToolbar from "@/components/AppToolbar";
 import { SnackbarProvider } from "notistack";
+import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import { usePackageManager } from "@/hooks/usePackageManager";
 import { useAccount, useChainId, useConnect } from "wagmi";
 import { useMessageCount } from "@/hooks/useMessageCount";
@@ -154,7 +155,7 @@ export default function App() {
 
       <ConsumingDrawer
         open={consuming !== null}
-        packageTitle={consuming && packageService ? packageService.info(consuming.package).title : ""}
+        packageTitle={consuming && packageService ? maybePackageInfo(packageService, consuming.package)?.title ?? "" : ""}
         onCancel={() => { cancelConsuming(); setShowDetail(true); }}
       />
 

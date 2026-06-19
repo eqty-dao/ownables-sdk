@@ -100,17 +100,21 @@ export default class PackageService {
     return Array.from(set).sort((a, b) => (a.title >= b.title ? 1 : -1));
   }
 
-  info(nameOrCid: string, uniqueMessageHash?: string): TypedPackage {
+  maybeInfo(nameOrCid: string, uniqueMessageHash?: string): TypedPackage | undefined {
     const packages = (this.localStorage.get("packages") ||
       []) as TypedPackage[];
 
-    const found = packages.find(
+    return packages.find(
       (pkg) =>
         (pkg.name === nameOrCid ||
           pkg.versions.some((v) => v.cid === nameOrCid)) &&
         (!uniqueMessageHash ||
           pkg.versions.some((v) => v.uniqueMessageHash === uniqueMessageHash))
     );
+  }
+
+  info(nameOrCid: string, uniqueMessageHash?: string): TypedPackage {
+    const found = this.maybeInfo(nameOrCid, uniqueMessageHash);
 
     if (!found) throw new Error(`Package not found: ${nameOrCid}`);
     return found;

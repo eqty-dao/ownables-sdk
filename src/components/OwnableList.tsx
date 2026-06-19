@@ -4,6 +4,7 @@ import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { useService } from "@/hooks/useService";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
+import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import OwnableListItem from "./OwnableListItem";
 import IssueOwnableButton from "./IssueOwnableButton";
 
@@ -67,7 +68,8 @@ export default function OwnableList({
     <Box aria-label="Ownable list" role="navigation" className={cn(listPane({ hiddenOnMobile, elevated: consuming !== null }), className)}>
       <Box className="space-y-2">
         {ownables.map(({ chain, package: packageCid, uniqueMessageHash, isConsumed, isLocked, isTransferred }) => {
-          const pkg = packageService?.info(packageCid, uniqueMessageHash);
+          const pkg = maybePackageInfo(packageService, packageCid, uniqueMessageHash);
+          if (!pkg) return null;
           return (
             <OwnableListItem
               key={chain.id}
