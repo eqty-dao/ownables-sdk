@@ -28,6 +28,17 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function hasValidWasmHeader(path) {
+  const header = readFileSync(path).subarray(0, 4);
+  return (
+    header.length === 4 &&
+    header[0] === 0x00 &&
+    header[1] === 0x61 &&
+    header[2] === 0x73 &&
+    header[3] === 0x6d
+  );
+}
+
 function ensureWorkspaceMember(name) {
   const workspacePath = './ownables/Cargo.toml';
   const dir = `./ownables/${name}`;
@@ -117,7 +128,15 @@ function buildPackage(name) {
       cwd: './ownables',
     });
 
+    if (!hasValidWasmHeader(wasmPath)) {
+      fail(`Built wasm is invalid: ${wasmPath}`);
+    }
+
     cpSync(wasmPath, join(dir, 'pkg', 'ownable_bg.wasm'));
+
+    if (!hasValidWasmHeader(join(dir, 'pkg', 'ownable_bg.wasm'))) {
+      fail(`Packaged wasm is invalid: ${join(dir, 'pkg', 'ownable_bg.wasm')}`);
+    }
 
     const packageJson = {
       name: packageName,

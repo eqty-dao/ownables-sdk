@@ -45,6 +45,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   const builderService = useService("builder");
   const hasPackageService = !!packageService;
   const hasBuilder = !!builderService;
+  const examplePackageNames = new Set(PACKAGE_EXAMPLES.map((pkg) => pkg.name));
 
   const filteredPackages = (() => {
     const issuablePackages = packages.filter((pkg) => !pkg.isNotLocal);
@@ -88,6 +89,30 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
     }
   };
 
+  const hasValidWasmHeader = async (pkg: TypedPackage): Promise<boolean> => {
+    if (!packageService || !pkg.isDynamic) return true;
+
+    try {
+      const asset = await packageService.getAsset(
+        pkg.cid,
+        "ownable_bg.wasm",
+        (fr, contents) => fr.readAsArrayBuffer(contents)
+      );
+
+      if (!(asset instanceof ArrayBuffer) || asset.byteLength < 4) return false;
+
+      const header = new Uint8Array(asset.slice(0, 4));
+      return (
+        header[0] === 0x00 &&
+        header[1] === 0x61 &&
+        header[2] === 0x73 &&
+        header[3] === 0x6d
+      );
+    } catch {
+      return false;
+    }
+  };
+
   const selectPackage = async (pkg: TypedPackage | TypedPackageStub) => {
     if (!hasPackageService) return;
     if ("stub" in pkg) {
@@ -100,6 +125,27 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
         return;
       }
     } else {
+      const isValid = await hasValidWasmHeader(pkg);
+
+      if (!isValid) {
+        if (examplePackageNames.has(pkg.name)) {
+          try {
+            const refreshedPkg = await downloadExample(pkg.name);
+            onSelect(refreshedPkg);
+            enqueueSnackbar("Example package refreshed", { variant: "success" });
+          } catch (error) {
+            onError("Failed to refresh package", (error as Error).message || String(error));
+          }
+          return;
+        }
+
+        onError(
+          "Invalid package assets",
+          `Package "${pkg.title}" has corrupted or missing WebAssembly assets. Re-import the package and try again.`
+        );
+        return;
+      }
+
       onSelect(pkg);
     }
   };
