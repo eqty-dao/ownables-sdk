@@ -9,7 +9,6 @@ interface ImportMetaEnv {
   readonly VITE_RELAY?: string;
   readonly VITE_LOCAL?: string;
   readonly VITE_HUB?: string;
-  readonly VITE_LOCAL_DEVELOPER_NOTIFICATIONS?: string;
   readonly VITE_BUILDER?: string;
   readonly VITE_BUILDER_SERVER_WALLETS_ENDPOINT?: string;
   readonly VITE_BUILDER_NETWORK_PARAM?: string;

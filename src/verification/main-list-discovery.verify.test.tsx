@@ -261,7 +261,6 @@ function configureBaseServices(storage = createStorage()) {
   };
   serviceMap.hub = {
     isConfigured: true,
-    recipientDiscoveryEnabled: true,
     listAvailableOwnables: vi.fn().mockResolvedValue({
       owner: ACCOUNT,
       entries: [AVAILABLE_ENTRY],

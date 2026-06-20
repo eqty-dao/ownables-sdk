@@ -32,18 +32,11 @@ export const AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE =
 
 export default class HubService {
   public static readonly URL = (import.meta.env.VITE_HUB || "").trim();
-  public static readonly RECIPIENT_DISCOVERY_ENABLED =
-    (import.meta.env.VITE_LOCAL_DEVELOPER_NOTIFICATIONS || "").trim().toLowerCase() ===
-    "true";
 
   constructor(private readonly url: string = HubService.URL) {}
 
   get isConfigured(): boolean {
     return this.url.trim().length > 0;
-  }
-
-  get recipientDiscoveryEnabled(): boolean {
-    return HubService.RECIPIENT_DISCOVERY_ENABLED;
   }
 
   get origin(): string {

@@ -8,11 +8,10 @@ Set these SDK env vars before starting the app:
 
 ```bash
 VITE_HUB=http://127.0.0.1:8000
-VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true
 VITE_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
 ```
 
-`VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true` is the explicit gate for local Hub recipient discovery in this run. When enabled, the SDK fetches available items from:
+When `VITE_HUB` is configured, the SDK fetches available items from:
 
 ```text
 GET /ownables/available?owner=<caip10-account>
@@ -27,7 +26,7 @@ The approved manual smoke for this repo is wallet A sending an ownable to wallet
 ### Setup
 
 1. Start the paired Hub worktree with recipient discovery enabled and `PUBLIC_BASE_URL` matching the local Hub origin.
-2. Start this SDK worktree with `VITE_HUB` pointing at that Hub and `VITE_LOCAL_DEVELOPER_NOTIFICATIONS=true`.
+2. Start this SDK worktree with `VITE_HUB` pointing at that Hub.
 3. Confirm wallet A and wallet B are both available in the browser wallet you are using for localhost testing.
 
 ### Expected Flow

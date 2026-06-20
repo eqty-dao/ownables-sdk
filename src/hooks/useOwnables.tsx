@@ -73,8 +73,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const archivedStorageKey = account ? `ownables:archived:${account}` : null;
   const legacyArchivedStorageKey = account ? `hub-available:dismissed:${account}` : null;
   const deletedAvailableStorageKey = account ? `hub-available:deleted:${account}` : null;
-  const discoveryEnabled =
-    !!hub?.recipientDiscoveryEnabled && hub.isConfigured && !!account && isConnected;
+  const discoveryEnabled = !!hub?.isConfigured && !!account && isConnected;
 
   const persistStoredIds = useCallback(
     (storageKey: string | null, ids: string[]) => {
