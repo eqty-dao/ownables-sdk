@@ -38,7 +38,7 @@ export default function Ownable(props: OwnableProps) {
   }, [packages, packageCid, uniqueMessageHash]);
 
   const { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, execute, onLoad } =
-    useOwnableState(chain, pkg, props.onError);
+    useOwnableState(chain, pkg, props.onError, !!props.archived);
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
   const { showConfirm } = useDialogs();
