@@ -9,7 +9,7 @@ use cosmwasm_std::{Attribute, Binary, Event, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
     EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
-    package_title_from_name,
+    ensure_owner, package_title_from_name,
 };
 
 // version info for migration info

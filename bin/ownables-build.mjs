@@ -39,6 +39,27 @@ function hasValidWasmHeader(path) {
   );
 }
 
+function getOwnableExports(path) {
+  const wasm = readFileSync(path);
+  const module = new WebAssembly.Module(wasm);
+  return WebAssembly.Module.exports(module)
+    .map((entry) => entry.name)
+    .filter((name) => name.startsWith('ownable_'));
+}
+
+function hasExpectedAbiExports(path) {
+  const exports = getOwnableExports(path);
+  return (
+    exports.includes('ownable_alloc') &&
+    exports.includes('ownable_free') &&
+    exports.includes('ownable_instantiate') &&
+    exports.includes('ownable_execute') &&
+    exports.includes('ownable_query') &&
+    exports.includes('ownable_register') &&
+    exports.includes('ownable_ingest')
+  );
+}
+
 function ensureWorkspaceMember(name) {
   const workspacePath = './ownables/Cargo.toml';
   const dir = `./ownables/${name}`;
@@ -123,6 +144,7 @@ function buildPackage(name) {
 
     rmSync(join(dir, 'pkg'), { recursive: true, force: true });
     mkdirSync(join(dir, 'pkg'), { recursive: true });
+    rmSync(wasmPath, { force: true });
 
     run('cargo', ['build', '-p', packageName, '--target', 'wasm32-unknown-unknown', '--release'], {
       cwd: './ownables',
@@ -131,11 +153,17 @@ function buildPackage(name) {
     if (!hasValidWasmHeader(wasmPath)) {
       fail(`Built wasm is invalid: ${wasmPath}`);
     }
+    if (!hasExpectedAbiExports(wasmPath)) {
+      fail(`Built wasm uses an unsupported ABI: ${wasmPath}`);
+    }
 
     cpSync(wasmPath, join(dir, 'pkg', 'ownable_bg.wasm'));
 
     if (!hasValidWasmHeader(join(dir, 'pkg', 'ownable_bg.wasm'))) {
       fail(`Packaged wasm is invalid: ${join(dir, 'pkg', 'ownable_bg.wasm')}`);
+    }
+    if (!hasExpectedAbiExports(join(dir, 'pkg', 'ownable_bg.wasm'))) {
+      fail(`Packaged wasm uses an unsupported ABI: ${join(dir, 'pkg', 'ownable_bg.wasm')}`);
     }
 
     const packageJson = {

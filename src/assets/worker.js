@@ -22,13 +22,23 @@ function unpackPtrLen(packed) {
   return { ptr, len };
 }
 
+function resolveExport(name) {
+  const exportFn = exportsRef?.[name];
+  if (typeof exportFn === "function") {
+    return exportFn;
+  }
+  throw new Error(`missing wasm export: ${name}`);
+}
+
 function invoke(type, inputBytes) {
   if (!exportsRef || !memory) {
     throw new Error("WASM not initialized");
   }
 
   const len = inputBytes.length >>> 0;
-  const inPtr = exportsRef.ownable_alloc(len);
+  const alloc = resolveExport("ownable_alloc");
+  const free = resolveExport("ownable_free");
+  const inPtr = alloc(len);
 
   if (len > 0) {
     new Uint8Array(memory.buffer, inPtr, len).set(inputBytes);
@@ -47,10 +57,10 @@ function invoke(type, inputBytes) {
         packed = exportsRef.ownable_query(inPtr, len);
         break;
       case "register":
-        packed = exportsRef.ownable_register(inPtr, len);
+        packed = resolveExport("ownable_register")(inPtr, len);
         break;
       case "ingest":
-        packed = exportsRef.ownable_ingest(inPtr, len);
+        packed = resolveExport("ownable_ingest")(inPtr, len);
         break;
       case "encode_public_event":
         packed = exportsRef.ownable_encode_public_event(inPtr, len);
@@ -59,7 +69,7 @@ function invoke(type, inputBytes) {
         throw new Error(`unknown message type ${type}`);
     }
   } finally {
-    exportsRef.ownable_free(inPtr, len);
+    free(inPtr, len);
   }
 
   const { ptr: outPtr, len: outLen } = unpackPtrLen(packed);
@@ -68,7 +78,7 @@ function invoke(type, inputBytes) {
     : new Uint8Array();
 
   if (outLen > 0) {
-    exportsRef.ownable_free(outPtr, outLen);
+    free(outPtr, outLen);
   }
 
   return output;
