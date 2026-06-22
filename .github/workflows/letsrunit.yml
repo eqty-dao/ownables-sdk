@@ -1,0 +1,48 @@
+name: Features
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  features:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+      LETSRUNIT_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Install wait-on
+        run: npm i -g wait-on
+      - name: Build app
+        run: yarn build
+      # TODO: add DB setup steps if your tests need one.
+      - name: Prefer IPv4 localhost
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          hosts = Path("/etc/hosts")
+          lines = hosts.read_text().splitlines()
+          filtered = [line for line in lines if not line.startswith("::1") or "localhost" not in line]
+          if not any(line.startswith("127.0.0.1") and "localhost" in line for line in filtered):
+              filtered.insert(0, "127.0.0.1 localhost")
+          hosts.write_text("\n".join(filtered) + "\n")
+          PY
+      - name: Run and test
+        run: |
+          yarn start &
+          wait-on --timeout 30000 http-get://localhost:3000/
+          npx cucumber-js
+
