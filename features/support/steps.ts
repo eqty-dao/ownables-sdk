@@ -1,5 +1,6 @@
 import { Given, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
+import path from 'node:path';
 import { clearBrowserWalletState } from './utils/browser-state.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 
@@ -130,3 +131,21 @@ Given('there are example Ownables', async function () {
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
 });
+
+When('I fill in {string} with {string}', async function (label: string, value: string) {
+  const field = this.page.locator(
+    `label:has-text("${label}") input, label:has-text("${label}") textarea`
+  ).first();
+  await field.fill(value);
+});
+
+When(
+  'I upload the file {string} into the {string} file input',
+  async function (filePath: string, placeholder: string) {
+    const absolutePath = path.resolve(process.cwd(), filePath);
+    const input = this.page.locator(
+      `label:has-text("${placeholder}") input[type="file"]`
+    );
+    await input.setInputFiles(absolutePath);
+  }
+);

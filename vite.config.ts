@@ -7,6 +7,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: "@ownables/builder",
+        replacement: path.resolve(__dirname, "../ownables-js/packages/builder/src/index.ts"),
+      },
+      {
         find: /^@\//,
         replacement: `${path.resolve(__dirname, "src")}/`,
       },
@@ -15,6 +19,10 @@ export default defineConfig({
   server: {
     port: 3000,
     fs: {
+      allow: [
+        path.resolve(__dirname),
+        path.resolve(__dirname, "../ownables-js"),
+      ],
       deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.letsrunit/**']
     }
   },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Box,
   List,
@@ -15,7 +15,6 @@ import { enqueueSnackbar } from "notistack";
 import placeholderImage from "@/assets/cube.png";
 import { useMessageCount } from "@/hooks/useMessageCount";
 import { useService } from "@/hooks/useService";
-import { useChainId } from "wagmi";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
@@ -67,7 +66,6 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
 }) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [builderAddress, setBuilderAddress] = useState<string | null>(null);
   const [importedHashes, setImportedHashes] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -76,7 +74,6 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
 
   const relayService = useService('relay');
   const packageService = useService('packages');
-  const builderService = useService('builder');
 
   const fetchMessages = useCallback(async () => {
     if (!relayService || !await relayService.isAvailable()) return;
@@ -145,34 +142,6 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
     }
   };
 
-  const chainId = useChainId();
-  const hasFetchedRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!builderService) {
-      hasFetchedRef.current = null;
-      return;
-    }
-
-    // Only fetch once per chainId, not on every builderService reference change
-    if (hasFetchedRef.current === chainId.toString()) {
-      return;
-    }
-
-    hasFetchedRef.current = chainId.toString();
-    let cancelled = false;
-
-    builderService.getAddress().then((serverAddress) => {
-      if (!cancelled) {
-        setBuilderAddress(serverAddress);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [builderService, chainId]); // Re-fetch only when chainId changes
-
   useEffect(() => {
     if (open) {
       fetchMessages().then();
@@ -222,10 +191,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                     <ListItemText
                       primary={
                         <span className="text-[0.6rem] font-bold">
-                          Sender:{" "}
-                          {msg?.sender === builderAddress
-                            ? "Builder"
-                            : msg?.sender || "Unknown"}
+                          Sender: {msg?.sender || "Unknown"}
                         </span>
                       }
                       secondary={
@@ -295,10 +261,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
                           : "Unknown"}
                       </span>
                       <span className="block text-[0.6rem] font-bold">
-                        Sender:{" "}
-                        {msg?.sender === builderAddress
-                          ? "Builder"
-                          : msg?.sender || "Unknown"}
+                        Sender: {msg?.sender || "Unknown"}
                       </span>
                       <span className="block text-[0.6rem] text-slate-500 dark:text-slate-400">
                         Size: {(msg?.size / 1024 / 1024 || 0).toFixed(2)} MB

@@ -7,7 +7,7 @@ import {
   EventChainService,
   PollingService,
 } from "@ownables/core";
-import { BuilderService } from "@ownables/builder-client";
+import BuilderService from "./Builder.service";
 import OwnableService from "./Ownable.service";
 import HubService from "./Hub.service";
 import LocalStorageService from "./LocalStorage.service";
@@ -113,14 +113,7 @@ export default class ServiceContainer {
 
     this.register(
       "builder",
-      async (c) =>
-        new BuilderService(c.chainId!, {
-          url: import.meta.env.VITE_BUILDER ?? "",
-          apiKey: import.meta.env.VITE_BUILDER_API_KEY,
-          serverWalletsEndpoint:
-            import.meta.env.VITE_BUILDER_SERVER_WALLETS_ENDPOINT,
-          uploadNetworkQueryKey: import.meta.env.VITE_BUILDER_NETWORK_PARAM,
-        })
+      async (c) => new BuilderService(await c.get("packages"))
     );
   }
 

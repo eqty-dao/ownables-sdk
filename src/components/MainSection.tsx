@@ -54,6 +54,7 @@ interface MainSectionProps {
   onError: (title: string, message: string) => void;
   onForge: (pkg: TypedPackage) => void;
   onCreate: () => void;
+  packageRefreshToken?: number;
 }
 
 export default function MainSection({
@@ -78,6 +79,7 @@ export default function MainSection({
   onError,
   onForge,
   onCreate,
+  packageRefreshToken = 0,
 }: MainSectionProps) {
   const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedEntryId);
   const selectedAvailableOwnable =
@@ -95,6 +97,7 @@ export default function MainSection({
           onSelect={onForge}
           onError={onError}
           onCreate={onCreate}
+          packageRefreshToken={packageRefreshToken}
           onBack={onBack}
         />
       )}

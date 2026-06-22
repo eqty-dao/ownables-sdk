@@ -15,6 +15,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@ownables/builder": ["../ownables-js/packages/builder/src/index.ts"],
       "@ownables/platform-browser": [
         "node_modules/@ownables/platform-browser/dist/platform-browser/src/index.d.ts"
       ],
