@@ -13,6 +13,8 @@ jobs:
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
       LETSRUNIT_BASE_URL: http://localhost:3000
+      VITE_E2E: "1"
+      VITE_OWNABLE_EXAMPLES_URL: /ownables
     steps:
       - uses: actions/checkout@v4
       - name: Enable Corepack
@@ -27,6 +29,8 @@ jobs:
         run: npm i -g wait-on
       - name: Build app
         run: yarn build
+      - name: Deploy bundled ownables
+        run: yarn ownables:deploy
       # TODO: add DB setup steps if your tests need one.
       - name: Prefer IPv4 localhost
         run: |
@@ -45,4 +49,3 @@ jobs:
           yarn start &
           wait-on --timeout 30000 http-get://localhost:3000/
           npx cucumber-js
-
