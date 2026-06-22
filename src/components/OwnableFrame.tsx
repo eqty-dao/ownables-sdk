@@ -1,7 +1,12 @@
-import allInline from 'all-inline';
+import allInlineModule from 'all-inline';
 import React, { RefObject, useLayoutEffect, useRef } from 'react';
 import { useService } from '@/hooks/useService';
 import type PackageService from '@/services/Package.service';
+
+const allInline =
+  typeof allInlineModule === 'function'
+    ? allInlineModule
+    : allInlineModule.default;
 
 async function generateWidgetHTML(
   packageService: PackageService,
@@ -60,6 +65,7 @@ function OwnableFrameInner(props: OwnableFrameProps) {
     <iframe
       id={props.id}
       title={`Ownable ${props.id}`}
+      aria-label="Ownable widget"
       ref={props.iframeRef}
       sandbox="allow-scripts"
       onLoad={props.onLoad}

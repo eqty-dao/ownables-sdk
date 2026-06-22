@@ -10,51 +10,7 @@ permissions:
 
 jobs:
   ownables:
-    strategy:
-      matrix:
-        package:
-          - antenna
-          - armor
-          - car
-          - paint
-          - potion
-          - robot
-          - speakers
-    concurrency: ci-${{ github.ref }}-${{ matrix.package }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Cache Ownable build files
-        id: cache-ownables
-        uses: actions/cache@v5
-        with:
-          key: ownables-cargo-${{matrix.package}}
-          path: |
-            ownables/${{matrix.package}}/Cargo.lock
-            ownables/${{matrix.package}}/target
-      - name: Setup NodeJS
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.10.3 --activate
-      - name: Setup wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
-      - name: Install wasm32 target
-        run: rustup target add wasm32-unknown-unknown        
-      - name: Install dependencies
-        run: yarn install --immutable
-      - name: Build
-        env:
-          CC: clang
-        run: yarn ownables:build ${{ matrix.package }}
-      - uses: actions/upload-artifact@v7
-        with:
-          name: "${{matrix.package}}"
-          path: "ownables/${{matrix.package}}.zip"
+    uses: ./.github/workflows/build-ownables.yml
 
   wallet:
     concurrency: ci-${{ github.ref }}
@@ -68,19 +24,19 @@ jobs:
         with:
           node-version: 24
       - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.10.3 --activate
+        run: corepack enable
       - name: Yarn Install
         run: yarn install --immutable
       - name: Download Ownables packages
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v5
         with:
-          path: ownables
+          path: ownables-artifacts
+          pattern: ownable-*
+          merge-multiple: true
       - name: Copy Ownables packages
         run: |
           mkdir public/ownables
-          cp ownables/**/*.zip public/ownables
+          cp ownables-artifacts/*.zip public/ownables
       - name: Build
         env:
           VITE_OWNABLE_EXAMPLES_URL: /ownables
