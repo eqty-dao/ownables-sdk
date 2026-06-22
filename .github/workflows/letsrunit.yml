@@ -22,7 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Enable Corepack
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare yarn@4.10.3 --activate
       - uses: actions/setup-node@v4
         with:
           node-version: 24
