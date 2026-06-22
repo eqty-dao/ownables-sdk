@@ -21,9 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.10.3 --activate
+        run: corepack enable
       - name: Setup NodeJS
         uses: actions/setup-node@v6
         with:
