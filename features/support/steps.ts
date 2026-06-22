@@ -1,6 +1,7 @@
-import { Given } from '@letsrunit/bdd';
-import { Then } from '@cucumber/cucumber';
+import { Given, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
+import { clearBrowserWalletState } from './utils/browser-state.ts';
+import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 
 const E2E_ADDRESS = '0x0000000000000000000000000000000000000001';
 const E2E_CHAIN_ID = 84532; // Base Sepolia
@@ -67,40 +68,46 @@ function makeOwnableSeeds() {
   });
 }
 
+Given('my wallet is empty', async function () {
+  await clearBrowserWalletState(this.page);
+});
+
 Given('there are example Ownables', async function () {
   const seeds = makeOwnableSeeds();
 
   await this.page.goto('/');
 
   await this.page.evaluate(async ({ idbName, packages, seeds }) => {
-    // 1. Seed global localStorage with package registry
     localStorage.setItem('packages', JSON.stringify(packages));
 
-    // 2. Open per-user IDB — get current version first
-    const currentVersion = await new Promise((resolve) => {
+    const currentVersion = await new Promise<number>((resolve) => {
       const req = indexedDB.open(idbName);
-      req.onsuccess = () => { const v = req.result.version; req.result.close(); resolve(v); };
+      req.onsuccess = () => {
+        const v = req.result.version;
+        req.result.close();
+        resolve(v);
+      };
       req.onerror = () => resolve(1);
     });
 
-    // 3. Upgrade DB version to create ownable stores
-    const db = await new Promise((resolve, reject) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(idbName, currentVersion + 1);
       req.onupgradeneeded = (e) => {
-        const db = e.target.result;
+        const database = (e.target as IDBOpenDBRequest).result;
         for (const seed of seeds) {
           const name = `ownable:${seed.chainId}`;
-          if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
+          if (!database.objectStoreNames.contains(name)) {
+            database.createObjectStore(name);
+          }
         }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
 
-    // 4. Write chain data into each ownable store
     for (const seed of seeds) {
       const storeName = `ownable:${seed.chainId}`;
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(storeName, 'readwrite');
         const store = tx.objectStore(storeName);
         store.put(seed.chainJson, 'chain');
@@ -109,7 +116,7 @@ Given('there are example Ownables', async function () {
         store.put([], 'keywords');
         store.put(seed.state, 'state');
         store.put(seed.latestHash, 'latestHash');
-        tx.oncomplete = resolve;
+        tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
       });
     }
@@ -117,12 +124,9 @@ Given('there are example Ownables', async function () {
     db.close();
   }, { idbName: IDB_NAME, packages: PACKAGES, seeds });
 
-  // Reload so the app picks up the seeded data
   await this.page.reload({ waitUntil: 'networkidle' });
 });
 
-Then('The page does not contain button {string}', async function (name) {
-  const matches = this.page.getByRole('button', { name });
-  const count = await matches.count();
-  if (count > 0) throw new Error(`Expected no button named "${name}", found ${count}`);
+When('the ownable widget is ready', async function () {
+  await expectOwnableWidgetReady(this.page);
 });

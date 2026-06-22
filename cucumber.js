@@ -1,27 +1,33 @@
-import { resolveDebugWorldParameters } from '@letsrunit/cucumber/config';
+import { isAgentEnvironment, loadLetsrunitEnv, resolveDebugWorldParameters } from '@letsrunit/cucumber/config';
+
+loadLetsrunitEnv();
 
 const { failFast, worldParameters } = resolveDebugWorldParameters({
   argv: process.argv,
   baseWorldParameters: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.LETSRUNIT_BASE_URL ?? '${baseUrl}',
   },
 });
 
-const format = process.env['CODEX_CI'] ? '@letsrunit/cucumber/agent' : '@letsrunit/cucumber/progress';
+const format = [
+  isAgentEnvironment(process.env)
+    ? '@letsrunit/cucumber/agent'
+    : '@letsrunit/cucumber/progress',
+];
 
 export default {
-  require: ['features/support/**/*.js'],
-  format: ['@letsrunit/cucumber/progress'],
+  import: ['features/support/*.ts'],
+  format,
   failFast,
   plugin: ['@letsrunit/cucumber/store'],
   pluginOptions: {
     letsrunitStore: {
       directory: '.letsrunit',
+      enabled: process.env.CI !== 'true',
     },
   },
   worldParameters,
   letsrunit: {
-    ignore: ['features/support/world.js'],
+    ignore: ['features/support/world.ts'],
   },
 };
-
