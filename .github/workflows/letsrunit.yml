@@ -5,7 +5,11 @@ on:
   pull_request:
     branches: [main]
 jobs:
+  ownables:
+    uses: ./.github/workflows/build-ownables.yml
+
   features:
+    needs: ownables
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.58.2-noble
@@ -27,10 +31,18 @@ jobs:
         run: yarn install --immutable
       - name: Install wait-on
         run: npm i -g wait-on
+      - name: Download Ownables packages
+        uses: actions/download-artifact@v5
+        with:
+          path: ownables-artifacts
+          pattern: ownable-*
+          merge-multiple: true
+      - name: Copy Ownables packages
+        run: |
+          mkdir -p public/ownables
+          cp ownables-artifacts/*.zip public/ownables
       - name: Build app
         run: yarn build
-      - name: Deploy bundled ownables
-        run: yarn ownables:deploy
       # TODO: add DB setup steps if your tests need one.
       - name: Prefer IPv4 localhost
         run: |

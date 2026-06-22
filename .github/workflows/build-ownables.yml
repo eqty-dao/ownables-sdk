@@ -1,0 +1,50 @@
+name: Build Ownables
+
+on:
+  workflow_call:
+
+jobs:
+  ownables:
+    strategy:
+      matrix:
+        package:
+          - antenna
+          - armor
+          - car
+          - paint
+          - potion
+          - robot
+          - speakers
+    concurrency: ci-${{ github.workflow }}-${{ github.ref }}-${{ matrix.package }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.10.3 --activate
+      - name: Setup wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+      - name: Install wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Cache Rust build files
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ownables -> ownables/target
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Build
+        env:
+          CC: clang
+        run: yarn ownables:build ${{ matrix.package }}
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ownable-${{ matrix.package }}
+          path: ownables/${{ matrix.package }}.zip
