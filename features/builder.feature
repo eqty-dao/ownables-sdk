@@ -4,8 +4,8 @@ Feature: Browser Builder
     Given I'm on the homepage
     When I click button "Issue an Ownable"
     And I click button "Builder"
-    And I fill in "Name *" with "Builder Badge"
-    And I fill in "Description" with "Built locally in the browser"
+    And I set field "Name *" to "Builder Badge"
+    And I set field "Description" to "Built locally in the browser"
     And I upload the file "src/assets/cube.png" into the "Choose thumbnail…" file input
     And I click button "Create Ownable"
     Then the page contains text "Built locally in the browser"
