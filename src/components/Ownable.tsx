@@ -2,21 +2,15 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogHeader,
-  TextField,
-} from "@/components/ui";
 import { useService } from "@/hooks/useService";
 import { useOwnableState } from "@/hooks/useOwnableState";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import calculateFileCid from "@/utils/calculateFileCid";
+import OwnableSelectedFilesDialog, {
+  PendingAttachment,
+} from "./OwnableSelectedFilesDialog";
 import OwnableDetail from "./OwnableDetail";
 
 interface OwnableProps {
@@ -38,9 +32,7 @@ interface OwnableProps {
 export default function Ownable(props: OwnableProps) {
   const { chain, packageCid, uniqueMessageHash } = props;
   const [isSubmittingAttachments, setIsSubmittingAttachments] = useState(false);
-  const [pendingAttachments, setPendingAttachments] = useState<
-    Array<{ cid: string; displayName: string; originalName: string; file: File }>
-  >([]);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
   const packages = useService("packages");
@@ -272,48 +264,15 @@ export default function Ownable(props: OwnableProps) {
         onUnlock={onUnlock}
       />
 
-      <Dialog open={pendingAttachments.length > 0} onClose={closeAttachmentDialog}>
-        <DialogHeader title="Selected files" />
-        <DialogContent>
-          <Box className="flex flex-col gap-4 pt-2">
-            {pendingAttachments.map((attachment) => (
-              <Box
-                key={attachment.cid}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40"
-              >
-                <p className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {attachment.originalName}
-                </p>
-                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-                  {attachment.cid}
-                </p>
-                <TextField
-                  label="File name"
-                  name={`attachment-name-${attachment.cid}`}
-                  aria-label={`attachment-name-${attachment.cid}`}
-                  value={attachment.displayName}
-                  onChange={(event: any) =>
-                    updateAttachmentName(attachment.cid, event.target.value)
-                  }
-                />
-              </Box>
-            ))}
-            {attachmentError ? (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {attachmentError}
-              </p>
-            ) : null}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="ghost" onClick={closeAttachmentDialog} disabled={isSubmittingAttachments}>
-            Cancel
-          </Button>
-          <Button onClick={submitAttachments} disabled={isSubmittingAttachments}>
-            {isSubmittingAttachments ? "Submitting…" : "Submit"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <OwnableSelectedFilesDialog
+        open={pendingAttachments.length > 0}
+        pendingAttachments={pendingAttachments}
+        attachmentError={attachmentError}
+        isSubmittingAttachments={isSubmittingAttachments}
+        onClose={closeAttachmentDialog}
+        onSubmit={submitAttachments}
+        onUpdateAttachmentName={updateAttachmentName}
+      />
     </>
   );
 }
