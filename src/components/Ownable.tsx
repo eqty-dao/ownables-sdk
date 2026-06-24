@@ -1,12 +1,22 @@
-import { useCallback, useMemo } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogHeader,
+  TextField,
+} from "@/components/ui";
 import { useService } from "@/hooks/useService";
 import { useOwnableState } from "@/hooks/useOwnableState";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { maybePackageInfo } from "@/utils/maybePackageInfo";
+import calculateFileCid from "@/utils/calculateFileCid";
 import OwnableDetail from "./OwnableDetail";
 
 interface OwnableProps {
@@ -27,6 +37,11 @@ interface OwnableProps {
 
 export default function Ownable(props: OwnableProps) {
   const { chain, packageCid, uniqueMessageHash } = props;
+  const [isSubmittingAttachments, setIsSubmittingAttachments] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<
+    Array<{ cid: string; displayName: string; originalName: string; file: File }>
+  >([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
   const packages = useService("packages");
   const idb = useService("idb");
@@ -37,11 +52,22 @@ export default function Ownable(props: OwnableProps) {
     return maybePackageInfo(packages, packageCid, uniqueMessageHash);
   }, [packages, packageCid, uniqueMessageHash]);
 
-  const { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, execute, onLoad } =
-    useOwnableState(chain, pkg, props.onError);
+  const {
+    iframeRef,
+    info,
+    metadata,
+    attachments,
+    isConsumed,
+    isClosed,
+    isLocked,
+    isTransferred,
+    execute,
+    onLoad,
+  } = useOwnableState(chain, pkg, props.onError);
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
   const { showConfirm } = useDialogs();
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const onLock = useCallback(() => {
     showConfirm({
@@ -56,31 +82,224 @@ export default function Ownable(props: OwnableProps) {
     execute({ unlock: {} });
   }, [execute]);
 
+  const onCloseOwnable = useCallback(() => {
+    showConfirm({
+      title: "Close ownable",
+      message: <span>No more files can be added after closing <em>{pkg?.title}</em>.</span>,
+      ok: "Confirm close",
+      onConfirm: () => execute({ close: {} }),
+    });
+  }, [pkg, execute, showConfirm]);
+
+  const onAddFiles = useCallback(() => {
+    attachmentInputRef.current?.click();
+  }, []);
+
+  const onFilesSelected = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []);
+      event.target.value = "";
+
+      if (files.length === 0) {
+        return;
+      }
+
+      try {
+        setAttachmentError(null);
+        const next = await Promise.all(
+          files.map(async (file) => ({
+            cid: await calculateFileCid(file),
+            displayName: file.name,
+            originalName: file.name,
+            file,
+          }))
+        );
+        setPendingAttachments(next);
+      } catch (error) {
+        props.onError(
+          "Failed to prepare attachments",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    },
+    [props]
+  );
+
+  const closeAttachmentDialog = useCallback(() => {
+    if (isSubmittingAttachments) return;
+    setPendingAttachments([]);
+    setAttachmentError(null);
+  }, [isSubmittingAttachments]);
+
+  const updateAttachmentName = useCallback((cid: string, value: string) => {
+    setPendingAttachments((current) =>
+      current.map((attachment) =>
+        attachment.cid === cid ? { ...attachment, displayName: value } : attachment
+      )
+    );
+  }, []);
+
+  const submitAttachments = useCallback(async () => {
+    if (!packages || pendingAttachments.length === 0) return;
+
+    const invalid = pendingAttachments.find(
+      (attachment) => attachment.displayName.trim() === ""
+    );
+    if (invalid) {
+      setAttachmentError("Each selected file needs a name before submission.");
+      return;
+    }
+
+    try {
+      setIsSubmittingAttachments(true);
+      setAttachmentError(null);
+
+      const eventAttachments = await Promise.all(
+        pendingAttachments.map(async ({ cid, file }) => ({
+          name: cid,
+          file: new File([await file.arrayBuffer()], cid, {
+            type: file.type || "application/octet-stream",
+          }),
+        }))
+      );
+
+      await execute(
+        {
+          attach: {
+            attachments: pendingAttachments.map(({ cid, displayName }) => ({
+              cid,
+              name: displayName.trim(),
+            })),
+          },
+        },
+        undefined,
+        true,
+        eventAttachments
+      );
+
+      await Promise.all(
+        eventAttachments.map(({ name, file }) => packages.storeAttachment(name, file))
+      );
+
+      closeAttachmentDialog();
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsSubmittingAttachments(false);
+    }
+  }, [closeAttachmentDialog, execute, packages, pendingAttachments]);
+
+  const onDownloadAttachment = useCallback(
+    async (name: string, cid: string) => {
+      if (!packages) return;
+
+      try {
+        const file = await packages.getAttachment(cid);
+        const url = URL.createObjectURL(file);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        props.onError(
+          "Attachment unavailable",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+    },
+    [packages, props]
+  );
+
+  useEffect(() => {
+    if (!pkg || !pkg.isDynamic || pkg.hasWidgetState) return;
+    void onLoad();
+  }, [pkg, onLoad]);
+
   if (!ownables || !packages || !idb || !eventChains || !pkg) return <></>;
 
   return (
-    <OwnableDetail
-      chain={chain}
-      pkg={pkg}
-      metadata={metadata}
-      issuer={info?.issuer}
-      isConsumable={pkg.isConsumable}
-      isConsumed={isConsumed}
-      isLockable={pkg.isLockable}
-      isLocked={isLocked}
-      isTransferred={isTransferred}
-      archived={props.archived}
-      isHubAvailable={props.isHubAvailable}
-      onArchive={props.onArchive}
-      onRestore={props.onRestore}
-      iframeRef={iframeRef}
-      onBack={props.onBack}
-      onLoad={() => onLoad()}
-      onConsume={() => !!info && props.onConsume(info)}
-      onDelete={props.onDelete}
-      onTransfer={(address) => transfer(address)}
-      onLock={onLock}
-      onUnlock={onUnlock}
-    />
+    <>
+      <input
+        ref={attachmentInputRef}
+        className="hidden"
+        name="add-files-input"
+        type="file"
+        multiple
+        onChange={onFilesSelected}
+      />
+
+      <OwnableDetail
+        chain={chain}
+        pkg={pkg}
+        metadata={metadata}
+        issuer={info?.issuer}
+        attachments={attachments}
+        isConsumable={pkg.isConsumable}
+        isConsumed={isConsumed}
+        isClosed={isClosed}
+        isLockable={pkg.isLockable}
+        isLocked={isLocked}
+        isTransferred={isTransferred}
+        archived={props.archived}
+        isHubAvailable={props.isHubAvailable}
+        onArchive={props.onArchive}
+        onRestore={props.onRestore}
+        iframeRef={iframeRef}
+        onBack={props.onBack}
+        onLoad={() => onLoad()}
+        onAddFiles={onAddFiles}
+        onConsume={() => !!info && props.onConsume(info)}
+        onDownloadAttachment={onDownloadAttachment}
+        onCloseOwnable={onCloseOwnable}
+        onDelete={props.onDelete}
+        onTransfer={(address) => transfer(address)}
+        onLock={onLock}
+        onUnlock={onUnlock}
+      />
+
+      <Dialog open={pendingAttachments.length > 0} onClose={closeAttachmentDialog}>
+        <DialogHeader title="Selected files" />
+        <DialogContent>
+          <Box className="flex flex-col gap-4 pt-2">
+            {pendingAttachments.map((attachment) => (
+              <Box
+                key={attachment.cid}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40"
+              >
+                <p className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {attachment.originalName}
+                </p>
+                <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                  {attachment.cid}
+                </p>
+                <TextField
+                  label="File name"
+                  name={`attachment-name-${attachment.cid}`}
+                  aria-label={`attachment-name-${attachment.cid}`}
+                  value={attachment.displayName}
+                  onChange={(event: any) =>
+                    updateAttachmentName(attachment.cid, event.target.value)
+                  }
+                />
+              </Box>
+            ))}
+            {attachmentError ? (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {attachmentError}
+              </p>
+            ) : null}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="ghost" onClick={closeAttachmentDialog} disabled={isSubmittingAttachments}>
+            Cancel
+          </Button>
+          <Button onClick={submitAttachments} disabled={isSubmittingAttachments}>
+            {isSubmittingAttachments ? "Submitting…" : "Submit"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

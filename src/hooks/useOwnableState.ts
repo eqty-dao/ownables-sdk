@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
 import type { StateDump } from "@ownables/core";
+import type { TypedAttachment } from "@/interfaces/TypedAttachment";
 import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import TypedDict from "@/interfaces/TypedDict";
@@ -32,7 +33,9 @@ export function useOwnableState(
     name: pkg?.title ?? "",
     description: pkg?.description,
   });
+  const [attachments, setAttachments] = useState<TypedAttachment[]>([]);
   const [isConsumed, setIsConsumed] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -73,9 +76,23 @@ export function useOwnableState(
         ? await ownables.rpc(chain.id).query({ is_locked: {} }, effective).catch(() => false) as boolean
         : false;
 
+      const closed = pkg.isClosable
+        ? await ownables.rpc(chain.id).query({ is_closed: {} }, effective).catch(() => false) as boolean
+        : false;
+
+      const attachmentRows = pkg.hasAttachments
+        ? await ownables
+            .rpc(chain.id)
+            .query({ get_attachments: {} }, effective)
+            .then((result) => (result as { attachments?: TypedAttachment[] }).attachments ?? [])
+            .catch(() => [])
+        : [];
+
       setInfo(infoResp);
       setMetadata(metadataResp);
+      setAttachments(attachmentRows);
       setIsConsumed(consumed);
+      setIsClosed(closed);
       setIsLocked(locked);
     },
     [chain.id, metadata, ownables, pkg, stateDump]
@@ -109,10 +126,21 @@ export function useOwnableState(
   );
 
   const execute = useCallback(
-    async (msg: TypedDict, onProgress?: LogProgress, submitAnchors = true): Promise<void> => {
+    async (
+      msg: TypedDict,
+      onProgress?: LogProgress,
+      submitAnchors = true,
+      eventAttachments: Array<{ name: string; file: File }> = []
+    ): Promise<void> => {
       if (!ownables) return;
       try {
-        const sd = await ownables.execute(chain, msg, stateDump, onProgress as any);
+        const sd = await ownables.execute(
+          chain,
+          msg,
+          stateDump,
+          onProgress as any,
+          eventAttachments
+        );
         if (submitAnchors) await ownables.submitAnchors(onProgress as any);
 
         await refresh(sd);
@@ -127,7 +155,7 @@ export function useOwnableState(
   );
 
   const onLoad = useCallback(async (): Promise<void> => {
-    if (!ownables || !pkg) return;
+    if (!ownables || !pkg || !eventChains) return;
 
     if (!pkg.isDynamic) {
       await ownables.initStore(chain, pkg.cid, pkg.uniqueMessageHash);
@@ -137,11 +165,17 @@ export function useOwnableState(
     try {
       await ownables.init(chain, pkg.cid, pkg.uniqueMessageHash);
       ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
+      const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
+      if (nextStateDump) {
+        setStateDump(nextStateDump);
+        setApplied(chain.latestHash);
+        await refresh(nextStateDump);
+      }
       setInitialized(true);
     } catch (e) {
       onError("Failed to forge Ownable", ownableErrorMessage(e));
     }
-  }, [chain, ownables, pkg, onError]);
+  }, [chain, eventChains, ownables, pkg, onError, refresh]);
 
   // Window message handler for widget-triggered execute calls
   const windowMessageHandler = useCallback(
@@ -194,5 +228,17 @@ export function useOwnableState(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apply, applied, chainLatestHex, error, initialized, isApplying, refresh]);
 
-  return { iframeRef, info, metadata, isConsumed, isLocked, isTransferred, isApplying, execute, onLoad };
+  return {
+    iframeRef,
+    info,
+    metadata,
+    attachments,
+    isConsumed,
+    isClosed,
+    isLocked,
+    isTransferred,
+    isApplying,
+    execute,
+    onLoad,
+  };
 }

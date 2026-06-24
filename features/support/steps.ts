@@ -19,6 +19,8 @@ const PACKAGES = [
     isDynamic: true,
     hasMetadata: true,
     hasWidgetState: true,
+    hasAttachments: false,
+    isClosable: false,
     isConsumable: true,
     isConsumer: false,
     isTransferable: true,
@@ -34,6 +36,8 @@ const PACKAGES = [
     isDynamic: false,
     hasMetadata: false,
     hasWidgetState: false,
+    hasAttachments: false,
+    isClosable: false,
     isConsumable: false,
     isConsumer: false,
     isTransferable: false,
@@ -49,6 +53,8 @@ const PACKAGES = [
     isDynamic: true,
     hasMetadata: true,
     hasWidgetState: true,
+    hasAttachments: false,
+    isClosable: false,
     isConsumable: false,
     isConsumer: true,
     isTransferable: true,
@@ -128,6 +134,17 @@ Given('there are example Ownables', async function () {
   await this.page.reload({ waitUntil: 'networkidle' });
 });
 
+Given('I have a Dossier', async function () {
+  await clearBrowserWalletState(this.page);
+  await this.page.goto('/');
+  await this.page.getByRole('button', { name: 'Issue an Ownable' }).click();
+  await this.page.getByRole('button', { name: 'Ownable Builder' }).click();
+  await this.page.getByLabel('Name *').fill('Dossier');
+  await this.page.getByLabel('Description').fill('A living file dossier');
+  await this.page.getByRole('button', { name: 'Create Ownable' }).click();
+  await this.page.getByRole('button', { name: 'Dossier' }).first().click();
+});
+
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
 });
@@ -136,8 +153,12 @@ When(
   'I upload the file {string} into the {string} file input',
   async function (filePath: string, placeholder: string) {
     const absolutePath = path.resolve(process.cwd(), filePath);
+    const inputName = `${placeholder
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')}-input`;
     const input = this.page.locator(
-      `label:has-text("${placeholder}") input[type="file"]`
+      `input[type="file"][name="${inputName}"]`
     );
     await input.setInputFiles(absolutePath);
   }

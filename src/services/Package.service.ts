@@ -67,11 +67,14 @@ const examples: TypedPackageStub[] = exampleUrl
   : [];
 export const HAS_EXAMPLES = exampleUrl !== "";
 const PACKAGE_ASSET_STORE = "package-assets";
+const ATTACHMENT_PREFIX = "attachment:";
 
 const capabilitiesStaticOwnable = {
   isDynamic: false,
   hasMetadata: false,
   hasWidgetState: false,
+  hasAttachments: false,
+  isClosable: false,
   isConsumable: false,
   isConsumer: false,
   isLockable: false,
@@ -258,6 +261,10 @@ export default class PackageService {
     return `${this.assetPrefix(cid)}${filename}`;
   }
 
+  private attachmentKey(cid: string): string {
+    return `${ATTACHMENT_PREFIX}${cid}`;
+  }
+
   private async hasPackageAssets(cid: string): Promise<boolean> {
     if (await this.idb.hasStore(PACKAGE_ASSET_STORE)) {
       const keys = await this.idb.keysByPrefix(PACKAGE_ASSET_STORE, this.assetPrefix(cid));
@@ -373,6 +380,10 @@ export default class PackageService {
       isDynamic: true,
       hasMetadata: hasMethod(query, "get_metadata"),
       hasWidgetState: hasMethod(query, "get_widget_state"),
+      hasAttachments:
+        hasMethod(query, "get_attachments") && hasMethod(execute, "attach"),
+      isClosable:
+        hasMethod(query, "is_closed") && hasMethod(execute, "close"),
       isConsumable: hasMethod(execute, "consume"),
       isConsumer: hasMethod(query, "is_consumer_of"),
       isLockable: hasMethod(execute, "lock"),
@@ -718,6 +729,22 @@ export default class PackageService {
     const read = (fr: FileReader, mediaFile: Blob | File) =>
       fr.readAsDataURL(mediaFile);
     return this.getAsset(cid, name, read) as Promise<string>;
+  }
+
+  async storeAttachment(cid: string, file: File): Promise<void> {
+    if (!(await this.idb.hasStore(PACKAGE_ASSET_STORE))) {
+      await this.idb.createStore(PACKAGE_ASSET_STORE);
+    }
+
+    await this.idb.set(PACKAGE_ASSET_STORE, this.attachmentKey(cid), file);
+  }
+
+  async getAttachment(cid: string): Promise<File> {
+    const file = await this.idb.get(PACKAGE_ASSET_STORE, this.attachmentKey(cid));
+    if (!file) {
+      throw new Error(`Attachment ${cid} is not stored locally`);
+    }
+    return file as File;
   }
 
   async zip(cid: string): Promise<JSZip> {

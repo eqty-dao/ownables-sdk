@@ -103,6 +103,11 @@ interface OwnableEvent {
   attributes: TypedDict<string>;
 }
 
+interface EventAttachmentInput {
+  name: string;
+  file: File;
+}
+
 export default class OwnableService {
   private readonly SNAPSHOT_INTERVAL = 50;
   private readonly PUBLIC_EVENT_REPLAY_STORE_SUFFIX = ".public-event-replays";
@@ -186,6 +191,8 @@ export default class OwnableService {
         package: pkg.cid,
         network_id: networkId,
         keywords: pkg.keywords ?? [],
+        ...(pkg.title ? { name: pkg.title } : {}),
+        ...(pkg.description ? { description: pkg.description } : {}),
       };
 
       await withProgress(onProgress)("signEvent", () =>
@@ -446,7 +453,8 @@ export default class OwnableService {
     chain: EventChain,
     msg: TypedDict,
     stateDump: StateDump,
-    onProgress?: LogProgress
+    onProgress?: LogProgress,
+    attachments: EventAttachmentInput[] = []
   ): Promise<StateDump> {
     const info = { sender: this.eqty.address, funds: [] } as MessageInfo;
     const { state: newStateDump } = await this.rpc(chain.id).execute(
@@ -457,11 +465,16 @@ export default class OwnableService {
 
     delete msg["@context"]; // Shouldn't be set
 
-    await withProgress(onProgress)("signEvent", () =>
-      this.eqty.sign(
-        new Event({ "@context": "execute_msg.json", ...msg }).addTo(chain)
-      )
-    );
+    const event = new Event({ "@context": "execute_msg.json", ...msg }).addTo(chain);
+    for (const attachment of attachments) {
+      event.addAttachment(
+        attachment.name,
+        new Uint8Array(await attachment.file.arrayBuffer()),
+        attachment.file.type || "application/octet-stream"
+      );
+    }
+
+    await withProgress(onProgress)("signEvent", () => this.eqty.sign(event));
 
     // Store without submitting anchors yet; submission is controlled by caller
     await this.store(chain, newStateDump);

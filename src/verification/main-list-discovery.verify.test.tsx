@@ -245,6 +245,8 @@ function configureBaseServices(storage = createStorage()) {
     info: vi.fn(() => ({
       title: "Potion",
       description: "Transferred to this wallet from Hub.",
+      hasAttachments: false,
+      isClosable: false,
       isConsumable: false,
       isLockable: false,
     })),

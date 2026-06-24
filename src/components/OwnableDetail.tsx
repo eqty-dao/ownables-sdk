@@ -1,7 +1,17 @@
-import { RefObject } from "react";
+import { RefObject, useMemo } from "react";
 import { Box, Button, IconButton, Link } from "@/components/ui";
-import { ArrowLeft, ArrowRightLeft, ExternalLink, ExternalLink as OpenInNew, Info, Lock, LockOpen, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRightLeft,
+  ExternalLink,
+  ExternalLink as OpenInNew,
+  Info,
+  Lock,
+  LockOpen,
+  Zap,
+} from "lucide-react";
 import { EventChain } from "eqty-core";
+import type { TypedAttachment } from "@/interfaces/TypedAttachment";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
@@ -18,8 +28,10 @@ interface OwnableDetailProps {
   pkg: TypedPackage;
   metadata: TypedMetadata;
   issuer?: string;
+  attachments: TypedAttachment[];
   isConsumable: boolean;
   isConsumed: boolean;
+  isClosed: boolean;
   isLockable: boolean;
   isLocked: boolean;
   isTransferred: boolean;
@@ -28,8 +40,11 @@ interface OwnableDetailProps {
   iframeRef: RefObject<HTMLIFrameElement | null>;
   onBack: () => void;
   onLoad: () => void;
+  onAddFiles: () => void;
   onConsume: () => void;
+  onDownloadAttachment: (name: string, cid: string) => void;
   onArchive: () => void;
+  onCloseOwnable: () => void;
   onRestore: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
@@ -53,8 +68,10 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     pkg,
     metadata,
     issuer,
+    attachments,
     isConsumable,
     isConsumed,
+    isClosed,
     isLockable,
     isLocked,
     isTransferred,
@@ -63,8 +80,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     iframeRef,
     onBack,
     onLoad,
+    onAddFiles,
     onConsume,
+    onDownloadAttachment,
     onArchive,
+    onCloseOwnable,
     onRestore,
     onDelete,
     onTransfer,
@@ -75,19 +95,35 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     issuer && issuer.length > 10
       ? `${issuer.slice(0, 6)}...${issuer.slice(-4)}`
       : issuer;
-  const ownableBackgroundColor = normalizeMetadataBackgroundColor(metadata.background_color);
+  const ownableBackgroundColor = normalizeMetadataBackgroundColor(
+    metadata.background_color
+  );
+  const groupedAttachments = useMemo(() => {
+    const groups = new Map<string, TypedAttachment[]>();
+    for (const attachment of attachments) {
+      const existing = groups.get(attachment.name) ?? [];
+      existing.push(attachment);
+      groups.set(attachment.name, existing);
+    }
+    return Array.from(groups.entries()).map(([name, versions]) => ({
+      name,
+      versions,
+    }));
+  }, [attachments]);
+  const showManageActions =
+    !archived && !isTransferred && (pkg.hasAttachments || pkg.isClosable);
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-5">
       <Box className="lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
-
-        {/* Header */}
         <Box className="flex items-center gap-3 border-b border-slate-200 p-4 dark:border-[#2a2a2a] lg:mx-auto lg:mb-6 lg:max-w-125 lg:items-start lg:gap-4 lg:border-b-0 lg:p-0">
           <IconButton aria-label="Back" onClick={onBack} className="shrink-0 lg:hidden">
             <ArrowLeft className="h-5 w-5" />
           </IconButton>
           <Box className="min-w-0 flex-1">
-            <h2 className="text-section-title mb-0.5 text-lg lg:mb-1 lg:text-xl">{metadata.name}</h2>
+            <h2 className="text-section-title mb-0.5 text-lg lg:mb-1 lg:text-xl">
+              {metadata.name}
+            </h2>
             {issuer && (
               <p className="text-meta">
                 <Link
@@ -97,7 +133,11 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   className={cn(issuerLink())}
                 >
                   {shortIssuer}
-                  <ExternalLink size={16} className="inline ml-1.5" style={{ verticalAlign: "-2px" }} />
+                  <ExternalLink
+                    size={16}
+                    className="inline ml-1.5"
+                    style={{ verticalAlign: "-2px" }}
+                  />
                 </Link>
               </p>
             )}
@@ -117,25 +157,40 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           />
         </Box>
 
-        {/* Widget — single iframe, responsive sizing */}
-        <Box
-          className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125"
-          style={{
-            aspectRatio: "3 / 4",
-            ...(ownableBackgroundColor ? { backgroundColor: ownableBackgroundColor } : {}),
-          }}
-        >
-          <OwnableFrame
-            id={chain.id}
-            packageCid={pkg.cid}
-            isDynamic={pkg.isDynamic}
-            iframeRef={iframeRef}
-            onLoad={onLoad}
-          />
-          {isConsumed && <OverlayBanner icon={<Zap />} title="Consumed" />}
-          {isTransferred && !isConsumed && <OverlayBanner icon={<ArrowRightLeft />} title="Transferred" />}
-          {isLocked && !isConsumed && !isTransferred && <OverlayBanner icon={<Lock />} title="Locked" />}
-        </Box>
+        {pkg.hasWidgetState ? (
+          <Box
+            className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125"
+            style={{
+              aspectRatio: "3 / 4",
+              ...(ownableBackgroundColor
+                ? { backgroundColor: ownableBackgroundColor }
+                : {}),
+            }}
+          >
+            <OwnableFrame
+              id={chain.id}
+              packageCid={pkg.cid}
+              isDynamic={pkg.isDynamic}
+              iframeRef={iframeRef}
+              onLoad={onLoad}
+            />
+            {isConsumed && <OverlayBanner icon={<Zap />} title="Consumed" />}
+            {isTransferred && !isConsumed && (
+              <OverlayBanner
+                icon={<ArrowRightLeft />}
+                title="Transferred"
+              />
+            )}
+            {isLocked && !isConsumed && !isTransferred && (
+              <OverlayBanner icon={<Lock />} title="Locked" />
+            )}
+          </Box>
+        ) : (
+          <Box className="mx-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300 lg:mx-auto lg:mb-6 lg:max-w-125">
+            This ownable has no widget. Use the details below to manage its files
+            and state.
+          </Box>
+        )}
 
         {!archived && isConsumable && !isTransferred && !isConsumed && (
           <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
@@ -167,7 +222,17 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         {metadata.description && (
           <p className="text-body mb-3">{metadata.description}</p>
         )}
-        <OwnableTags className="mb-2" display="ghost" isLockable={isLockable} isLocked={isLocked} isConsumable={isConsumable} isConsumed={isConsumed} isTransferred={isTransferred} />
+        <OwnableTags
+          className="mb-2"
+          display="ghost"
+          isClosable={pkg.isClosable}
+          isClosed={isClosed}
+          isLockable={isLockable}
+          isLocked={isLocked}
+          isConsumable={isConsumable}
+          isConsumed={isConsumed}
+          isTransferred={isTransferred}
+        />
 
         {metadata.external_url && (
           <Link
@@ -184,6 +249,71 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <Info className="h-4 w-4" />
           <span>More information</span>
         </OwnableInfo>
+
+        {showManageActions ? (
+          <section aria-label="Ownable actions" className="mt-6 flex flex-wrap gap-3">
+            {pkg.hasAttachments && !isClosed ? (
+              <Button onClick={onAddFiles}>Add files</Button>
+            ) : null}
+            {pkg.isClosable && !isClosed ? (
+              <Button variant="ghost" onClick={onCloseOwnable}>
+                Close
+              </Button>
+            ) : null}
+          </section>
+        ) : null}
+
+        {pkg.hasAttachments ? (
+          <section aria-label="Attached files" className="mt-6">
+            <h3 className="text-caption mb-2 uppercase tracking-wide">
+              Attached files
+            </h3>
+            {groupedAttachments.length === 0 ? (
+              <p className="text-body text-slate-500 dark:text-slate-400">
+                No attachments yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {groupedAttachments.map(({ name, versions }) => (
+                  <div
+                    key={name}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-[#2a2a2a] dark:bg-[#1a1a1a]"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {name}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {versions.length === 1 ? "1 version" : `${versions.length} versions`}
+                        </p>
+                      </div>
+                    </div>
+                    <ul className="mt-3 space-y-2">
+                      {versions.map((version, index) => (
+                        <li
+                          key={`${version.cid}-${index}`}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900/60"
+                        >
+                          <code className="text-xs text-slate-600 dark:text-slate-300">
+                            {version.cid}
+                          </code>
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            onClick={() => onDownloadAttachment(name, version.cid)}
+                          >
+                            Download
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
       </Box>
     </Box>
   );

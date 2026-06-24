@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -7,7 +7,6 @@ import {
   DialogActions,
   DialogContent,
   DialogHeader,
-  FileInput,
   TextField,
 } from "@/components/ui";
 import { enqueueSnackbar } from "notistack";
@@ -21,14 +20,6 @@ interface CreateOwnableDialogProps {
   onSuccess?: (pkg: TypedPackage) => void | Promise<void>;
 }
 
-const VALID_IMAGE_TYPES = [
-  "image/gif",
-  "image/webp",
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-];
-
 export default function CreateOwnableDialog({
   open,
   onClose,
@@ -36,25 +27,15 @@ export default function CreateOwnableDialog({
 }: CreateOwnableDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [widgetHtml, setWidgetHtml] = useState("");
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const builderService = useService("builder");
 
   const resetState = () => {
     setName("");
     setDescription("");
-    setWidgetHtml("");
-    setThumbnailFile(null);
-    setThumbnailPreview(null);
     setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
   useEffect(() => {
@@ -62,25 +43,6 @@ export default function CreateOwnableDialog({
       resetState();
     }
   }, [open, isCreating]);
-
-  const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    if (!VALID_IMAGE_TYPES.includes(file.type)) {
-      setError("Invalid file type. Please upload a GIF, WebP, PNG, or JPEG image.");
-      return;
-    }
-
-    setThumbnailFile(file);
-    setError(null);
-
-    const reader = new FileReader();
-    reader.onloadend = () => setThumbnailPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
 
   const handleCreate = async () => {
     if (!builderService) {
@@ -95,21 +57,15 @@ export default function CreateOwnableDialog({
       setError("Description is required");
       return;
     }
-    if (!thumbnailFile) {
-      setError("Thumbnail image is required");
-      return;
-    }
 
     try {
       setIsCreating(true);
       setError(null);
-      enqueueSnackbar("Building local ownable package...", { variant: "info" });
+      enqueueSnackbar("Building dossier package...", { variant: "info" });
 
       const pkg = await builderService.createOwnable({
         name,
         description,
-        thumbnail: thumbnailFile,
-        widgetHtml,
       });
 
       enqueueSnackbar(`${pkg.title} is ready to issue`, { variant: "success" });
@@ -140,7 +96,7 @@ export default function CreateOwnableDialog({
 
   return (
     <Dialog open={open} onClose={handleClose}>
-      <DialogHeader title="Browser Builder" />
+      <DialogHeader title="Ownable Builder" />
       <DialogContent>
         <Box className="flex flex-col gap-4 pt-2">
           {error ? (
@@ -168,43 +124,6 @@ export default function CreateOwnableDialog({
             required
             disabled={isCreating}
           />
-
-          <TextField
-            label="Widget HTML"
-            value={widgetHtml}
-            onChange={(event: any) => setWidgetHtml(event.target.value)}
-            className="w-full"
-            multiline
-            rows={8}
-            helperText="Leave blank to use the default widget."
-            disabled={isCreating}
-          />
-
-          <Box>
-            <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
-              Thumbnail *{" "}
-              <span className="font-normal text-slate-400">
-                (GIF, WebP, PNG, JPEG)
-              </span>
-            </p>
-            <FileInput
-              ref={fileInputRef}
-              accept="image/gif,image/webp,image/png,image/jpeg,image/jpg"
-              onChange={handleThumbnailChange}
-              disabled={isCreating}
-              fileName={thumbnailFile?.name}
-              placeholder="Choose thumbnail…"
-            />
-            {thumbnailPreview ? (
-              <Box className="mt-3 flex justify-center">
-                <img
-                  src={thumbnailPreview}
-                  alt="Preview"
-                  className="max-h-48 max-w-full rounded-lg object-contain"
-                />
-              </Box>
-            ) : null}
-          </Box>
         </Box>
       </DialogContent>
       <DialogActions>
