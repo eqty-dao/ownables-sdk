@@ -40,7 +40,6 @@ export function DialogHeader({ title, closeAriaLabel = "Close" }: DialogHeaderPr
   return (
     <div className="flex items-center justify-between px-6 pb-2 pt-6">
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
-      <DialogClose aria-label={closeAriaLabel} />
     </div>
   );
 }

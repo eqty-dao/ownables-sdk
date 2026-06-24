@@ -41,22 +41,14 @@ export default function OwnableSelectedFilesDialog(
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogHeader title="Selected files" />
+      <DialogHeader title={pendingAttachments.length === 1 ? 'Attach file' : 'Attach files'} />
       <DialogContent>
-        <Box className="flex flex-col gap-4 pt-2">
+        <Box className="flex flex-col gap-5">
           {pendingAttachments.map((attachment) => (
-            <Box
+            <div
               key={attachment.cid}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40"
             >
-              <p className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">
-                {attachment.originalName}
-              </p>
-              <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-                {attachment.cid}
-              </p>
               <TextField
-                label="File name"
                 name={`attachment-name-${attachment.cid}`}
                 aria-label={`attachment-name-${attachment.cid}`}
                 value={attachment.displayName}
@@ -64,7 +56,10 @@ export default function OwnableSelectedFilesDialog(
                   onUpdateAttachmentName(attachment.cid, event.target.value)
                 }
               />
-            </Box>
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                {attachment.cid}
+              </p>
+            </div>
           ))}
           {attachmentError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{attachmentError}</p>
@@ -76,7 +71,7 @@ export default function OwnableSelectedFilesDialog(
           Cancel
         </Button>
         <Button onClick={onSubmit} disabled={isSubmittingAttachments}>
-          {isSubmittingAttachments ? "Submitting…" : "Submit"}
+          {isSubmittingAttachments ? "Adding…" : "Add"}
         </Button>
       </DialogActions>
     </Dialog>

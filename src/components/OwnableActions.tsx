@@ -133,7 +133,6 @@ export default function OwnableActions(props: OwnableActionsProps) {
         }}
         TextFieldProps={{
           label: "Recipient address",
-          className: "w-[380px] max-w-full",
         }}
         actionType="transfer"
       />
