@@ -151,11 +151,14 @@ export default function Ownable(props: OwnableProps) {
     }
 
     try {
-      setIsSubmittingAttachments(true);
       setAttachmentError(null);
+      const attachmentsToSubmit = pendingAttachments.map((attachment) => ({
+        ...attachment,
+        displayName: attachment.displayName.trim(),
+      }));
 
       const eventAttachments = await Promise.all(
-        pendingAttachments.map(async ({ cid, file }) => ({
+        attachmentsToSubmit.map(async ({ cid, file }) => ({
           name: cid,
           file: new File([await file.arrayBuffer()], cid, {
             type: file.type || "application/octet-stream",
@@ -163,12 +166,17 @@ export default function Ownable(props: OwnableProps) {
         }))
       );
 
+      // Close the review modal immediately after submission so long-running
+      // execute/anchor work does not keep the user stuck in the dialog.
+      setPendingAttachments([]);
+      setIsSubmittingAttachments(true);
+
       await execute(
         {
           attach: {
-            attachments: pendingAttachments.map(({ cid, displayName }) => ({
+            attachments: attachmentsToSubmit.map(({ cid, displayName }) => ({
               cid,
-              name: displayName.trim(),
+              name: displayName,
             })),
           },
         },
@@ -177,17 +185,23 @@ export default function Ownable(props: OwnableProps) {
         eventAttachments
       );
 
-      await Promise.all(
-        eventAttachments.map(({ name, file }) => packages.storeAttachment(name, file))
-      );
-
-      closeAttachmentDialog();
+      try {
+        await Promise.all(
+          eventAttachments.map(({ name, file }) => packages.storeAttachment(name, file))
+        );
+      } catch (error) {
+        props.onError(
+          "Failed to cache attachments",
+          error instanceof Error ? error.message : String(error)
+        );
+      }
     } catch (error) {
+      setPendingAttachments(pendingAttachments);
       setAttachmentError(error instanceof Error ? error.message : String(error));
     } finally {
       setIsSubmittingAttachments(false);
     }
-  }, [closeAttachmentDialog, execute, packages, pendingAttachments]);
+  }, [execute, packages, pendingAttachments, props]);
 
   const onDownloadAttachment = useCallback(
     async (name: string, cid: string) => {

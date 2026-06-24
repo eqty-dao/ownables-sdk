@@ -1,12 +1,18 @@
 import { Given, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { clearBrowserWalletState } from './utils/browser-state.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 
 const E2E_ADDRESS = '0x0000000000000000000000000000000000000001';
 const E2E_CHAIN_ID = 84532; // Base Sepolia
 const IDB_NAME = `ownables:${E2E_CHAIN_ID}:${E2E_ADDRESS}`;
+const PROJECT_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..'
+);
 
 const PACKAGES = [
   {
@@ -142,7 +148,8 @@ Given('I have a Dossier', async function () {
   await this.page.getByLabel('Name *').fill('Dossier');
   await this.page.getByLabel('Description').fill('A living file dossier');
   await this.page.getByRole('button', { name: 'Create Ownable' }).click();
-  await this.page.getByRole('button', { name: 'Dossier' }).first().click();
+  await this.page.getByRole('button', { name: /Dossier/ }).click();
+  await this.page.getByRole('heading', { name: 'Dossier' }).waitFor();
 });
 
 When('the ownable widget is ready', async function () {
@@ -152,7 +159,7 @@ When('the ownable widget is ready', async function () {
 When(
   'I upload the file {string} into the {string} file input',
   async function (filePath: string, placeholder: string) {
-    const absolutePath = path.resolve(process.cwd(), filePath);
+    const absolutePath = path.resolve(PROJECT_ROOT, filePath);
     const inputName = `${placeholder
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

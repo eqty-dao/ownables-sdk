@@ -24,9 +24,10 @@ export function useOwnableState(
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const busyRef = useRef(false);
+  const appliedRef = useRef<any>(new EventChain(chain.id).latestHash);
 
   const [initialized, setInitialized] = useState(false);
-  const [applied, setApplied] = useState<any>(new EventChain(chain.id).latestHash);
+  const [applied, setApplied] = useState<any>(appliedRef.current);
   const [stateDump, setStateDump] = useState<StateDump>([]);
   const [info, setInfo] = useState<TypedOwnableInfo | undefined>(undefined);
   const [metadata, setMetadata] = useState<TypedMetadata>({
@@ -38,11 +39,16 @@ export function useOwnableState(
   const [isClosed, setIsClosed] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (pkg) setMetadata({ name: pkg.title, description: pkg.description });
   }, [pkg]);
+
+  useEffect(() => {
+    appliedRef.current = applied;
+  }, [applied]);
 
   const effectiveAddress = (eqty?.address || liveAddress || "").toLowerCase();
   const ownerAddress = (info?.owner || "").toLowerCase();
@@ -111,6 +117,7 @@ export function useOwnableState(
           (await ownables.apply(partialChain, stateDump));
 
         await refresh(sd);
+        appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
         setStateDump(sd);
       } catch (e) {
@@ -122,7 +129,7 @@ export function useOwnableState(
         setIsApplying(false);
       }
     },
-    [chain.id, chain.latestHash, eventChains, ownables, onError, refresh, stateDump]
+    [chain.id, eventChains, ownables, onError, refresh, stateDump]
   );
 
   const execute = useCallback(
@@ -134,6 +141,7 @@ export function useOwnableState(
     ): Promise<void> => {
       if (!ownables) return;
       try {
+        setIsExecuting(true);
         const sd = await ownables.execute(
           chain,
           msg,
@@ -143,19 +151,28 @@ export function useOwnableState(
         );
         if (submitAnchors) await ownables.submitAnchors(onProgress as any);
 
-        await refresh(sd);
+        const persistedStateDump = await eventChains?.getStateDump(
+          chain.id,
+          chain.state.hex
+        );
+        const nextStateDump = persistedStateDump ?? sd;
+
+        await refresh(nextStateDump);
+        appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
-        setStateDump(sd);
+        setStateDump(nextStateDump);
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
         throw e;
+      } finally {
+        setIsExecuting(false);
       }
     },
-    [chain, ownables, onError, refresh, stateDump]
+    [chain, eventChains, ownables, onError, refresh, stateDump]
   );
 
   const onLoad = useCallback(async (): Promise<void> => {
-    if (!ownables || !pkg || !eventChains) return;
+    if (!ownables || !pkg || !eventChains || initialized) return;
 
     if (!pkg.isDynamic) {
       await ownables.initStore(chain, pkg.cid, pkg.uniqueMessageHash);
@@ -168,6 +185,7 @@ export function useOwnableState(
       const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
       if (nextStateDump) {
         setStateDump(nextStateDump);
+        appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
         await refresh(nextStateDump);
       }
@@ -175,7 +193,7 @@ export function useOwnableState(
     } catch (e) {
       onError("Failed to forge Ownable", ownableErrorMessage(e));
     }
-  }, [chain, eventChains, ownables, pkg, onError, refresh]);
+  }, [chain, eventChains, initialized, ownables, pkg, onError, refresh]);
 
   // Window message handler for widget-triggered execute calls
   const windowMessageHandler = useCallback(
@@ -209,12 +227,12 @@ export function useOwnableState(
   }, [chain.id, ownables]);
 
   // Apply pending chain events and refresh
-  const chainLatestHex = chain.latestHash.hex;
+  const chainEventCount = chain.events.length;
   const prev = useRef({ initialized, appliedHex: applied.hex });
   useEffect(() => {
-    if (isApplying || error) return;
+    if (isApplying || isExecuting || error) return;
 
-    const partial = chain.startingAfter(applied);
+    const partial = chain.startingAfter(appliedRef.current);
     if (partial.events.length > 0) {
       apply(partial).catch((e) => {
         console.error("Error applying chain:", e);
@@ -224,9 +242,9 @@ export function useOwnableState(
       refresh().then();
     }
     prev.current = { initialized, appliedHex: applied.hex };
-  // chainLatestHex ensures re-run when chain is mutated externally
+  // chainEventCount ensures re-run when the chain is mutated externally
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apply, applied, chainLatestHex, error, initialized, isApplying, refresh]);
+  }, [apply, applied, chainEventCount, error, initialized, isApplying, isExecuting, refresh]);
 
   return {
     iframeRef,
