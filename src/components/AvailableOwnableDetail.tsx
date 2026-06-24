@@ -70,9 +70,12 @@ export default function AvailableOwnableDetail({
               archived={true}
               isTransferable={false}
               isHubAvailable={false}
+              isClosable={false}
+              isClosed={false}
               isLockable={false}
               isLocked={false}
               onDelete={onDelete}
+              onCloseOwnable={() => {}}
               onTransfer={() => {}}
               onLock={() => {}}
               onRestore={onRestore}

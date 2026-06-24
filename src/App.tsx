@@ -26,7 +26,6 @@ const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDD
 export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showCreateOwnable, setShowCreateOwnable] = useState(false);
-  const [packageRefreshToken, setPackageRefreshToken] = useState(0);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -123,9 +122,9 @@ export default function App() {
     );
   }
 
-  const handleCreateOwnableSuccess = async (_pkg: TypedPackage) => {
+  const handleCreateOwnableSuccess = async (pkg: TypedPackage) => {
     setShowCreateOwnable(false);
-    setPackageRefreshToken((current) => current + 1);
+    await forge(pkg);
   };
 
   return (
@@ -193,7 +192,6 @@ export default function App() {
           onError={showError}
           onForge={forge}
           onCreate={() => setShowCreateOwnable(true)}
-          packageRefreshToken={packageRefreshToken}
         />
       </Box>
 

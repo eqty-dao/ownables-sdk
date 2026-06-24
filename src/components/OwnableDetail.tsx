@@ -1,8 +1,11 @@
-import { RefObject, useMemo } from "react";
+import { RefObject, useMemo, useState } from "react";
 import { Box, Button, IconButton, Link } from "@/components/ui";
 import {
   ArrowLeft,
   ArrowRightLeft,
+  ChevronDown,
+  ChevronRight,
+  Download,
   ExternalLink,
   ExternalLink as OpenInNew,
   Info,
@@ -53,13 +56,16 @@ interface OwnableDetailProps {
 }
 
 const unlockButton = cva(
-  "w-full rounded-xl bg-slate-700 px-6 font-semibold text-white transition-colors hover:bg-slate-800 active:bg-slate-900 dark:bg-slate-600 dark:hover:bg-slate-500 py-3 lg:py-4 lg:text-lg flex items-center justify-center gap-2"
+  "flex w-full items-center justify-center gap-2 rounded-xl bg-slate-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-slate-800 active:bg-slate-900 dark:bg-slate-600 dark:hover:bg-slate-500 lg:py-4 lg:text-lg"
 );
 
 const aboutLink = cva("link-primary flex items-center gap-1 text-sm font-medium");
 const issuerLink = cva("font-mono link-primary hover:underline");
 const consumeButton = cva(
-  "w-full rounded-xl bg-orange-500 px-6 font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700 py-3 lg:py-4 lg:text-lg"
+  "w-full rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-600 active:bg-orange-700 lg:py-4 lg:text-lg"
+);
+const primaryPanelButton = cva(
+  "w-full rounded-xl px-6 py-3 font-semibold lg:py-4 lg:text-lg"
 );
 
 export default function OwnableDetail(props: OwnableDetailProps) {
@@ -91,6 +97,9 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     onLock,
     onUnlock,
   } = props;
+  const [expandedAttachments, setExpandedAttachments] = useState<Set<string>>(
+    () => new Set()
+  );
   const shortIssuer =
     issuer && issuer.length > 10
       ? `${issuer.slice(0, 6)}...${issuer.slice(-4)}`
@@ -110,8 +119,20 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       versions,
     }));
   }, [attachments]);
-  const showManageActions =
-    !archived && !isTransferred && (pkg.hasAttachments || pkg.isClosable);
+  const showAddFilesAction =
+    !archived && !isTransferred && pkg.hasAttachments && !isClosed;
+
+  const toggleAttachmentGroup = (name: string) => {
+    setExpandedAttachments((current) => {
+      const next = new Set(current);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-5">
@@ -147,9 +168,12 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             archived={archived}
             isTransferable={!archived && pkg.isTransferable && !isTransferred}
             isHubAvailable={isHubAvailable}
+            isClosable={!archived && pkg.isClosable}
+            isClosed={isClosed}
             isLockable={!archived && isLockable}
             isLocked={isLocked}
             onArchive={onArchive}
+            onCloseOwnable={onCloseOwnable}
             onRestore={onRestore}
             onDelete={onDelete}
             onTransfer={onTransfer}
@@ -175,24 +199,16 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               onLoad={onLoad}
             />
             {isConsumed && <OverlayBanner icon={<Zap />} title="Consumed" />}
-            {isTransferred && !isConsumed && (
-              <OverlayBanner
-                icon={<ArrowRightLeft />}
-                title="Transferred"
-              />
-            )}
-            {isLocked && !isConsumed && !isTransferred && (
+            {isTransferred && !isConsumed ? (
+              <OverlayBanner icon={<ArrowRightLeft />} title="Transferred" />
+            ) : null}
+            {isLocked && !isConsumed && !isTransferred ? (
               <OverlayBanner icon={<Lock />} title="Locked" />
-            )}
+            ) : null}
           </Box>
-        ) : (
-          <Box className="mx-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300 lg:mx-auto lg:mb-6 lg:max-w-125">
-            This ownable has no widget. Use the details below to manage its files
-            and state.
-          </Box>
-        )}
+        ) : null}
 
-        {!archived && isConsumable && !isTransferred && !isConsumed && (
+        {!archived && isConsumable && !isTransferred && !isConsumed ? (
           <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
             <Button
               aria-label="Use Item"
@@ -202,8 +218,8 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               Use Item
             </Button>
           </Box>
-        )}
-        {!archived && isLocked && !isConsumed && !isTransferred && (
+        ) : null}
+        {!archived && isLocked && !isConsumed && !isTransferred ? (
           <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
             <Button
               aria-label="Unlock"
@@ -214,57 +230,23 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               Unlock
             </Button>
           </Box>
-        )}
+        ) : null}
+        {showAddFilesAction ? (
+          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
+            <Button
+              variant="primary"
+              className={cn(primaryPanelButton())}
+              onClick={onAddFiles}
+            >
+              Add files
+            </Button>
+          </Box>
+        ) : null}
       </Box>
 
       <Box className="px-4 pb-8 lg:px-2 lg:pb-0">
-        <h2 className="text-caption mb-2 uppercase tracking-wide">About</h2>
-        {metadata.description && (
-          <p className="text-body mb-3">{metadata.description}</p>
-        )}
-        <OwnableTags
-          className="mb-2"
-          display="ghost"
-          isClosable={pkg.isClosable}
-          isClosed={isClosed}
-          isLockable={isLockable}
-          isLocked={isLocked}
-          isConsumable={isConsumable}
-          isConsumed={isConsumed}
-          isTransferred={isTransferred}
-        />
-
-        {metadata.external_url && (
-          <Link
-            href={metadata.external_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(aboutLink(), "mb-3")}
-          >
-            <OpenInNew className="h-4 w-4" />
-            <span>Visit external link</span>
-          </Link>
-        )}
-        <OwnableInfo chain={chain} metadata={metadata} className={cn(aboutLink(), "px-0")}>
-          <Info className="h-4 w-4" />
-          <span>More information</span>
-        </OwnableInfo>
-
-        {showManageActions ? (
-          <section aria-label="Ownable actions" className="mt-6 flex flex-wrap gap-3">
-            {pkg.hasAttachments && !isClosed ? (
-              <Button onClick={onAddFiles}>Add files</Button>
-            ) : null}
-            {pkg.isClosable && !isClosed ? (
-              <Button variant="ghost" onClick={onCloseOwnable}>
-                Close
-              </Button>
-            ) : null}
-          </section>
-        ) : null}
-
         {pkg.hasAttachments ? (
-          <section aria-label="Attached files" className="mt-6">
+          <section aria-label="Attached files">
             <h3 className="text-caption mb-2 uppercase tracking-wide">
               Attached files
             </h3>
@@ -274,46 +256,113 @@ export default function OwnableDetail(props: OwnableDetailProps) {
               </p>
             ) : (
               <div className="space-y-4">
-                {groupedAttachments.map(({ name, versions }) => (
-                  <div
-                    key={name}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-[#2a2a2a] dark:bg-[#1a1a1a]"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {name}
-                        </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {versions.length === 1 ? "1 version" : `${versions.length} versions`}
-                        </p>
-                      </div>
-                    </div>
-                    <ul className="mt-3 space-y-2">
-                      {versions.map((version, index) => (
-                        <li
-                          key={`${version.cid}-${index}`}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900/60"
+                {groupedAttachments.map(({ name, versions }) => {
+                  const isExpanded = expandedAttachments.has(name);
+                  const latestVersion = versions[versions.length - 1];
+
+                  return (
+                    <div
+                      key={name}
+                      className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-[#2a2a2a] dark:bg-[#1a1a1a]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                          onClick={() => toggleAttachmentGroup(name)}
+                          aria-label={`${name} ${versions.length === 1 ? "1 version" : `${versions.length} versions`}`}
+                          aria-expanded={isExpanded}
                         >
-                          <code className="text-xs text-slate-600 dark:text-slate-300">
-                            {version.cid}
-                          </code>
-                          <Button
-                            size="small"
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                              {name}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {versions.length === 1 ? "1 version" : `${versions.length} versions`}
+                            </p>
+                          </div>
+                        </button>
+                        {!isExpanded ? (
+                          <IconButton
+                            aria-label={`Download latest ${name}`}
                             variant="ghost"
-                            onClick={() => onDownloadAttachment(name, version.cid)}
+                            onClick={() => onDownloadAttachment(name, latestVersion.cid)}
                           >
-                            Download
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                            <Download className="h-4 w-4" />
+                          </IconButton>
+                        ) : null}
+                      </div>
+                      {isExpanded ? (
+                        <ul className="mt-3 space-y-2">
+                          {versions.map((version, index) => (
+                            <li
+                              key={`${version.cid}-${index}`}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900/60"
+                            >
+                              <code className="text-xs text-slate-600 dark:text-slate-300">
+                                {version.cid}
+                              </code>
+                              <IconButton
+                                aria-label={`Download ${name} version ${index + 1}`}
+                                variant="ghost"
+                                onClick={() => onDownloadAttachment(name, version.cid)}
+                              >
+                                <Download className="h-4 w-4" />
+                              </IconButton>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>
         ) : null}
+
+        <section className={pkg.hasAttachments ? "mt-6" : undefined}>
+          <h2 className="text-caption mb-2 uppercase tracking-wide">About</h2>
+          {metadata.description ? (
+            <p className="text-body mb-3">{metadata.description}</p>
+          ) : null}
+          <OwnableTags
+            className="mb-2"
+            display="ghost"
+            isClosable={pkg.isClosable}
+            isClosed={isClosed}
+            isLockable={isLockable}
+            isLocked={isLocked}
+            isConsumable={isConsumable}
+            isConsumed={isConsumed}
+            isTransferred={isTransferred}
+          />
+
+          {metadata.external_url ? (
+            <Link
+              href={metadata.external_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(aboutLink(), "mb-3")}
+            >
+              <OpenInNew className="h-4 w-4" />
+              <span>Visit external link</span>
+            </Link>
+          ) : null}
+          <OwnableInfo
+            chain={chain}
+            metadata={metadata}
+            className={cn(aboutLink(), "px-0")}
+          >
+            <Info className="h-4 w-4" />
+            <span>More information</span>
+          </OwnableInfo>
+        </section>
       </Box>
     </Box>
   );

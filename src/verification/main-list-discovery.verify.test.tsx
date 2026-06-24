@@ -5,6 +5,9 @@ import { act, render, renderHook, screen, waitFor } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { EventChain } from "eqty-core";
 import GetStarted from "@/components/GetStarted";
+import IssueOwnablePanel, {
+  isInternalPackage,
+} from "@/components/IssueOwnablePanel";
 import MainSection from "@/components/MainSection";
 import OwnableList from "@/components/OwnableList";
 import Sidebar from "@/components/Sidebar";
@@ -32,6 +35,14 @@ const { serviceMap, accountState, e2eState, enqueueSnackbar, progressOpen, progr
   disconnectMock: vi.fn(),
 }));
 
+const packageManagerState = vi.hoisted(() => ({
+  packages: [] as any[],
+  isLoading: false,
+  importPackages: vi.fn(),
+  downloadExample: vi.fn(),
+  updatePackages: vi.fn(),
+}));
+
 vi.mock("notistack", () => ({
   enqueueSnackbar,
   SnackbarProvider: ({ children }: { children: ReactNode }) => children,
@@ -39,6 +50,10 @@ vi.mock("notistack", () => ({
 
 vi.mock("@/hooks/useService", () => ({
   useService: (key: string) => serviceMap[key] ?? null,
+}));
+
+vi.mock("@/hooks/usePackageManager", () => ({
+  usePackageManager: () => packageManagerState,
 }));
 
 vi.mock("@/utils/isE2E", () => ({
@@ -281,6 +296,8 @@ describe("main-list discovery verifier", () => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
     Object.keys(serviceMap).forEach((key) => delete serviceMap[key]);
+    packageManagerState.packages = [];
+    packageManagerState.isLoading = false;
     accountState.address = "0xabc";
     accountState.isConnected = true;
     accountState.isConnecting = false;
@@ -300,6 +317,84 @@ describe("main-list discovery verifier", () => {
     expect(screen.queryByText("Notifications")).toBeNull();
     expect(screen.queryByText("Available from Hub")).toBeNull();
     expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ACCOUNT);
+  });
+
+  it("treats internal keywords as hidden issuer-grid packages", () => {
+    expect(
+      isInternalPackage({
+        name: "ownable-dossier",
+        title: "Dossier",
+        keywords: ["internal"],
+      } as any)
+    ).toBe(true);
+    expect(
+      isInternalPackage({
+        name: "ownable-potion",
+        title: "Potion",
+        keywords: ["collectible"],
+      } as any)
+    ).toBe(false);
+  });
+
+  it("hides internal packages from the issue grid while leaving public packages visible", async () => {
+    packageManagerState.packages = [
+      {
+        title: "Dossier",
+        name: "ownable-dossier",
+        description: "Internal builder package",
+        cid: "bafy-dossier",
+        keywords: ["internal"],
+        isNotLocal: false,
+        isDynamic: false,
+        hasMetadata: false,
+        hasWidgetState: false,
+        hasAttachments: true,
+        isClosable: true,
+        isConsumable: false,
+        isConsumer: false,
+        isLockable: false,
+        isTransferable: false,
+        versions: [],
+      },
+      {
+        title: "Potion",
+        name: "ownable-potion",
+        description: "Public package",
+        cid: "bafy-potion",
+        keywords: [],
+        isNotLocal: false,
+        isDynamic: false,
+        hasMetadata: false,
+        hasWidgetState: false,
+        hasAttachments: false,
+        isClosable: false,
+        isConsumable: false,
+        isConsumer: false,
+        isLockable: false,
+        isTransferable: false,
+        versions: [],
+      },
+    ];
+    serviceMap.packages = {
+      getAsset: vi.fn(),
+    };
+    serviceMap.builder = {
+      createOwnable: vi.fn(),
+    };
+
+    render(
+      <IssueOwnablePanel
+        onBack={vi.fn()}
+        onSelect={vi.fn()}
+        onError={vi.fn()}
+        onCreate={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Potion/i })).toBeTruthy();
+    });
+    expect(screen.queryByRole("button", { name: /^Dossier\b/i })).toBeNull();
   });
 
   it("selects an available Hub row from the main list", async () => {

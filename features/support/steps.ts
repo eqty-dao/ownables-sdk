@@ -148,8 +148,8 @@ Given('I have a Dossier', async function () {
   await this.page.getByLabel('Name *').fill('Dossier');
   await this.page.getByLabel('Description').fill('A living file dossier');
   await this.page.getByRole('button', { name: 'Create Ownable' }).click();
-  await this.page.getByRole('button', { name: /Dossier/ }).click();
   await this.page.getByRole('heading', { name: 'Dossier' }).waitFor();
+  await this.page.getByRole('button', { name: 'Add files' }).waitFor();
 });
 
 When('the ownable widget is ready', async function () {

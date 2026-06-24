@@ -38,6 +38,10 @@ interface IssueOwnablePanelProps {
   packageRefreshToken?: number;
 }
 
+export const isInternalPackage = (pkg: TypedPackage | TypedPackageStub): boolean =>
+  !("stub" in pkg) &&
+  (pkg.keywords ?? []).some((keyword) => keyword.toLowerCase() === "internal");
+
 export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   const { onBack, onSelect, onError, onCreate, packageRefreshToken = 0 } = props;
   const {
@@ -58,7 +62,9 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
   }, [packageRefreshToken, updatePackages]);
 
   const filteredPackages = (() => {
-    const issuablePackages = packages.filter((pkg) => !pkg.isNotLocal);
+    const issuablePackages = packages.filter(
+      (pkg) => !pkg.isNotLocal && !isInternalPackage(pkg)
+    );
     const byName = new Map(issuablePackages.map((pkg) => [pkg.name, pkg]));
 
     for (const example of PACKAGE_EXAMPLES) {

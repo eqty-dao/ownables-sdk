@@ -9,10 +9,10 @@ Feature: Browser Builder
     When I set field "Name *" to "Dossier"
     And I set field "Description" to "A living file dossier"
     And I click button "Create Ownable"
-    Then button "Dossier" is visible
-    When I click button "Dossier"
-    Then text "This ownable has no widget" is visible
+    Then heading "Dossier" is visible
     And text "Add files" is visible
+    When I click button "Issue an Ownable"
+    Then `main[aria-label="main"]` does not contain `button:has-text("Dossier")`
 
   Scenario: Browser builder validates required inputs
     Given I'm on the homepage
