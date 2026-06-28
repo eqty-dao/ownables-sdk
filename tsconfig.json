@@ -14,13 +14,7 @@
     "preserveSymlinks": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@ownables/platform-browser": [
-        "node_modules/@ownables/platform-browser/dist/platform-browser/src/index.d.ts"
-      ],
-      "@ownables/platform-browser/*": [
-        "node_modules/@ownables/platform-browser/dist/platform-browser/src/*"
-      ]
+      "@/*": ["src/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

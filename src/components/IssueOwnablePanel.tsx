@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { TypedPackage, TypedPackageStub } from "@/interfaces/TypedPackage";
 import { Box, Button, IconButton, Skeleton } from "@/components/ui";
 import { ArrowLeft, ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
@@ -34,19 +35,36 @@ interface IssueOwnablePanelProps {
   onSelect: (pkg: TypedPackage) => void;
   onError: (title: string, message: string) => void;
   onCreate: () => void;
+  packageRefreshToken?: number;
 }
 
+export const isInternalPackage = (pkg: TypedPackage | TypedPackageStub): boolean =>
+  !("stub" in pkg) &&
+  (pkg.keywords ?? []).some((keyword) => keyword.toLowerCase() === "internal");
+
 export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
-  const { onBack, onSelect, onError, onCreate } = props;
-  const { packages, isLoading, importPackages, downloadExample } = usePackageManager();
+  const { onBack, onSelect, onError, onCreate, packageRefreshToken = 0 } = props;
+  const {
+    packages,
+    isLoading,
+    importPackages,
+    downloadExample,
+    updatePackages,
+  } = usePackageManager();
   const packageService = useService("packages");
   const builderService = useService("builder");
   const hasPackageService = !!packageService;
   const hasBuilder = !!builderService;
   const examplePackageNames = new Set(PACKAGE_EXAMPLES.map((pkg) => pkg.name));
 
+  useEffect(() => {
+    void updatePackages();
+  }, [packageRefreshToken, updatePackages]);
+
   const filteredPackages = (() => {
-    const issuablePackages = packages.filter((pkg) => !pkg.isNotLocal);
+    const issuablePackages = packages.filter(
+      (pkg) => !pkg.isNotLocal && !isInternalPackage(pkg)
+    );
     const byName = new Map(issuablePackages.map((pkg) => [pkg.name, pkg]));
 
     for (const example of PACKAGE_EXAMPLES) {

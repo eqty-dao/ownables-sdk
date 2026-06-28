@@ -1,15 +1,24 @@
 import allInlineModule from 'all-inline';
+import type { PackageAssetIO } from '@ownables/core';
 import React, { RefObject, useLayoutEffect, useRef } from 'react';
 import { useService } from '@/hooks/useService';
-import type PackageService from '@/services/Package.service';
+
+type AllInline = (
+  doc: Document,
+  resolver: (filename: string, encoding: 'data-uri' | 'text') => Promise<string>
+) => Promise<void>;
+
+type WidgetPackageAssets = PackageAssetIO & {
+  getAssetAsDataUri(cid: string, name: string): Promise<string>;
+};
 
 const allInline =
   typeof allInlineModule === 'function'
     ? allInlineModule
-    : allInlineModule.default;
+    : (allInlineModule as { default: AllInline }).default;
 
 async function generateWidgetHTML(
-  packageService: PackageService,
+  packageService: WidgetPackageAssets,
   packageCid: string
 ): Promise<string> {
   const html = await packageService.getAssetAsText(packageCid, 'index.html');

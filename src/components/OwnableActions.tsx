@@ -9,9 +9,12 @@ interface OwnableActionsProps {
   archived?: boolean;
   isTransferable: boolean;
   isHubAvailable?: boolean;
+  isClosable: boolean;
+  isClosed: boolean;
   isLockable: boolean;
   isLocked: boolean;
   onArchive?: () => void;
+  onCloseOwnable?: () => void;
   onRestore?: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
@@ -22,11 +25,14 @@ export default function OwnableActions(props: OwnableActionsProps) {
   const {
     archived = false,
     onArchive,
+    onCloseOwnable,
     onRestore,
     onDelete,
     onTransfer,
     isTransferable,
     isHubAvailable = true,
+    isClosable,
+    isClosed,
     isLockable,
     isLocked,
     onLock,
@@ -45,7 +51,11 @@ export default function OwnableActions(props: OwnableActionsProps) {
 
   return (
     <>
-      <IconButton className={props.className} onClick={open}>
+      <IconButton
+        aria-label="More options"
+        className={props.className}
+        onClick={open}
+      >
         <MoreVert />
       </IconButton>
       <Menu
@@ -68,6 +78,11 @@ export default function OwnableActions(props: OwnableActionsProps) {
                 Lock
               </MenuItem>
             )}
+            {isClosable && !isClosed && onCloseOwnable ? (
+              <MenuItem onClick={() => { close(); onCloseOwnable(); }}>
+                Close
+              </MenuItem>
+            ) : null}
             {onArchive ? (
               <MenuItem onClick={() => { close(); onArchive(); }}>
                 Archive

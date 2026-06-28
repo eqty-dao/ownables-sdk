@@ -1,9 +1,12 @@
 import { Tag } from "@/components/ui";
-import { ArrowRightLeft, Lock, LockOpen, Zap } from "lucide-react";
+import { ArrowRightLeft, CircleOff, Lock, LockOpen, Zap } from "lucide-react";
 import type { TagProps } from "@/components/ui/tag";
 import { cn } from "@/utils/cn"
 
 interface OwnableTagsProps {
+  isDossier?: boolean;
+  isClosable?: boolean;
+  isClosed?: boolean;
   isLockable: boolean;
   isLocked: boolean;
   isConsumable: boolean;
@@ -14,11 +17,29 @@ interface OwnableTagsProps {
   className?: string;
 }
 
-export default function OwnableTags({ isLockable, isLocked, isConsumable, isConsumed, isTransferred, showUnlocked = true, display = "badge", className }: OwnableTagsProps) {
-  if (!isTransferred && !isLockable && !isConsumable) return null;
+export default function OwnableTags({
+  isDossier = false,
+  isClosable = false,
+  isClosed = false,
+  isLockable,
+  isLocked,
+  isConsumable,
+  isConsumed,
+  isTransferred,
+  showUnlocked = true,
+  display = "badge",
+  className,
+}: OwnableTagsProps) {
+  if (!isDossier && !isTransferred && !isLockable && !isConsumable && !isClosable) return null;
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2.5', className)}>
+      {isDossier && (
+        <Tag display={display} variant="neutral" value="Dossier" />
+      )}
+      {isClosable && isClosed && (
+        <Tag display={display} variant="closed" icon={<CircleOff className="h-3 w-3" />} value="Closed" />
+      )}
       {isConsumable && (
         <Tag display={display} variant={isConsumed ? "consumed" : "consumable"} icon={<Zap className="h-3 w-3" />} value={isConsumed ? "Consumed" : "Consumable"} />
       )}

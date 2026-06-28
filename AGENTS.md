@@ -37,10 +37,10 @@ Stack: React + TypeScript app (Vite + Tailwind + BaseUI primitives).
 - Keep changes minimal and focused.
 - Avoid new dependencies; prefer existing stack.
 - If editing build config, verify both `yarn dev` and `yarn build`.
+- Do not duplicate upstream-owned builder, hub, runtime, storage, transport, or EQTY service implementations in the SDK. Keep SDK-local service code limited to thin composition and React wiring, and treat helper files like `E2EWallet.ts` as utility-only rather than justification for a local service fork.
 
 ## Submission Checklist
 - `yarn build` succeeds.
 - `yarn test:e2e` passes.
 - No unnecessary files added; changes are minimal.
 - Update README if new env vars or commands are introduced.
-

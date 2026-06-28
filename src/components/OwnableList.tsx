@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Box } from "@/components/ui";
 import { EventChain } from "eqty-core";
-import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
+import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { useService } from "@/hooks/useService";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
@@ -45,6 +45,36 @@ interface OwnableListProps {
   onConsume: (consumer: EventChain, consumable: EventChain) => void;
   onIssue: () => void;
   onImportAvailable: (entryId: string) => void | Promise<void>;
+}
+
+function metadataFromInstantiateEvent(chain: EventChain): Partial<TypedMetadata> | null {
+  const parsedData = chain.events[0]?.parsedData;
+  if (!parsedData || parsedData["@context"] !== "instantiate_msg.json") {
+    return null;
+  }
+
+  const metadata: Partial<TypedMetadata> = {};
+  if (typeof parsedData.name === "string" && parsedData.name.trim()) {
+    metadata.name = parsedData.name;
+  }
+  if (typeof parsedData.description === "string" && parsedData.description.trim()) {
+    metadata.description = parsedData.description;
+  }
+
+  return Object.keys(metadata).length > 0 ? metadata : null;
+}
+
+function importedMetadata(chain: EventChain, pkg?: { title?: string; description?: string }): TypedMetadata {
+  const instantiateMetadata = metadataFromInstantiateEvent(chain);
+
+  return {
+    name: instantiateMetadata?.name ?? pkg?.title ?? "",
+    description: instantiateMetadata?.description ?? pkg?.description,
+  };
+}
+
+function isDossierPackage(pkg?: { name?: string }): boolean {
+  return pkg?.name === "dossier" || pkg?.name === "ownable-dossier";
 }
 
 export default function OwnableList({
@@ -99,7 +129,8 @@ export default function OwnableList({
                 kind="imported"
                 chain={chain}
                 packageCid={packageCid}
-                metadata={{ name: pkg?.title ?? "", description: pkg?.description }}
+                metadata={importedMetadata(chain, pkg)}
+                isDossier={isDossierPackage(pkg)}
                 issuer={chain.events[0]?.signerAddress}
                 isConsumable={!!(pkg?.isConsumable)}
                 isConsumed={!!isConsumed}
@@ -172,10 +203,13 @@ export default function OwnableList({
                     kind="imported"
                     chain={entry.chain}
                     packageCid={entry.package}
-                    metadata={{
-                      name: maybePackageInfo(packageService, entry.package, entry.uniqueMessageHash)?.title ?? "",
-                      description: maybePackageInfo(packageService, entry.package, entry.uniqueMessageHash)?.description,
-                    }}
+                    metadata={importedMetadata(
+                      entry.chain,
+                      maybePackageInfo(packageService, entry.package, entry.uniqueMessageHash)
+                    )}
+                    isDossier={isDossierPackage(
+                      maybePackageInfo(packageService, entry.package, entry.uniqueMessageHash)
+                    )}
                     issuer={entry.chain.events[0]?.signerAddress}
                     isConsumable={!!maybePackageInfo(packageService, entry.package, entry.uniqueMessageHash)?.isConsumable}
                     isConsumed={!!entry.isConsumed}

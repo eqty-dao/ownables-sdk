@@ -1,11 +1,18 @@
 import { Given, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { clearBrowserWalletState } from './utils/browser-state.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 
 const E2E_ADDRESS = '0x0000000000000000000000000000000000000001';
 const E2E_CHAIN_ID = 84532; // Base Sepolia
 const IDB_NAME = `ownables:${E2E_CHAIN_ID}:${E2E_ADDRESS}`;
+const PROJECT_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..'
+);
 
 const PACKAGES = [
   {
@@ -18,6 +25,8 @@ const PACKAGES = [
     isDynamic: true,
     hasMetadata: true,
     hasWidgetState: true,
+    hasAttachments: false,
+    isClosable: false,
     isConsumable: true,
     isConsumer: false,
     isTransferable: true,
@@ -33,6 +42,8 @@ const PACKAGES = [
     isDynamic: false,
     hasMetadata: false,
     hasWidgetState: false,
+    hasAttachments: false,
+    isClosable: false,
     isConsumable: false,
     isConsumer: false,
     isTransferable: false,
@@ -48,6 +59,8 @@ const PACKAGES = [
     isDynamic: true,
     hasMetadata: true,
     hasWidgetState: true,
+    hasAttachments: false,
+    isClosable: false,
     isConsumable: false,
     isConsumer: true,
     isTransferable: true,
@@ -127,6 +140,33 @@ Given('there are example Ownables', async function () {
   await this.page.reload({ waitUntil: 'networkidle' });
 });
 
+Given('I have a Dossier', async function () {
+  await clearBrowserWalletState(this.page);
+  await this.page.goto('/');
+  await this.page.getByRole('button', { name: 'Issue an Ownable' }).click();
+  await this.page.getByRole('button', { name: 'Ownable Builder' }).click();
+  await this.page.getByLabel('Name *').fill('Dossier');
+  await this.page.getByLabel('Description').fill('A living file dossier');
+  await this.page.getByRole('button', { name: 'Create Ownable' }).click();
+  await this.page.getByRole('heading', { name: 'Dossier' }).waitFor();
+  await this.page.getByRole('button', { name: 'Add files' }).waitFor();
+});
+
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
 });
+
+When(
+  'I upload the file {string} into the {string} file input',
+  async function (filePath: string, placeholder: string) {
+    const absolutePath = path.resolve(PROJECT_ROOT, filePath);
+    const inputName = `${placeholder
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')}-input`;
+    const input = this.page.locator(
+      `input[type="file"][name="${inputName}"]`
+    );
+    await input.setInputFiles(absolutePath);
+  }
+);

@@ -18,6 +18,7 @@ import { useConsuming } from "@/hooks/useConsuming";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useService } from "@/hooks/useService";
 import useInterval from "@/hooks/useInterval";
+import type { TypedPackage } from "@/interfaces/TypedPackage";
 import { LoaderCircle } from "lucide-react"
 const ISSUE_OWNABLE_ID = "issue";
 const EMBEDDED = ['true', 'yes', 'on', '1'].includes(import.meta.env.VITE_EMBEDDED?.toLowerCase() ?? '');
@@ -121,6 +122,11 @@ export default function App() {
     );
   }
 
+  const handleCreateOwnableSuccess = async (pkg: TypedPackage) => {
+    setShowCreateOwnable(false);
+    await forge(pkg);
+  };
+
   return (
     <>
       {!EMBEDDED && (
@@ -205,7 +211,7 @@ export default function App() {
       <CreateOwnableDialog
         open={showCreateOwnable}
         onClose={() => setShowCreateOwnable(false)}
-        onSuccess={() => setShowCreateOwnable(false)}
+        onSuccess={handleCreateOwnableSuccess}
       />
 
       <ConsumingDrawer

@@ -5,8 +5,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { RelayService } from "@ownables/platform-browser";
 import ServiceContainer from "@/services/ServiceContainer";
-import { RelayService } from "@/services/Relay.service";
 import {
   useAccount,
   useChainId,
