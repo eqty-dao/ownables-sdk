@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { RelayService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
+import { RelayService } from "@ownables/platform-browser";
 import ServiceContainer from "@/services/ServiceContainer";
 import {
   useAccount,

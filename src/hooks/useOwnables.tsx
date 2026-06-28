@@ -6,7 +6,7 @@ import { useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
-import { LocalStorageService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
+import { LocalStorageService } from "@ownables/platform-browser";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import { Button } from "@/components/ui";
