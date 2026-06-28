@@ -55,7 +55,7 @@ export default function Ownable(props: OwnableProps) {
     isTransferred,
     execute,
     onLoad,
-  } = useOwnableState(chain, pkg, props.onError);
+  } = useOwnableState(chain, pkg, props.onError, !!props.archived);
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
   const { showConfirm } = useDialogs();

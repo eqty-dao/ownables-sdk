@@ -14,7 +14,8 @@ import { useProgress, LogProgress } from "@/contexts/Progress.context";
 export function useOwnableState(
   chain: EventChain,
   pkg: TypedPackage | undefined,
-  onError: (title: string, message: string) => void
+  onError: (title: string, message: string) => void,
+  archived = false
 ) {
   const ownables = useService("ownables");
   const eventChains = useService("eventChains");
@@ -140,6 +141,11 @@ export function useOwnableState(
       eventAttachments: Array<{ name: string; file: File }> = []
     ): Promise<void> => {
       if (!ownables) return;
+      if (archived) {
+        const message = "Archived ownables are read-only";
+        onError("Interaction unavailable", message);
+        throw new Error(message);
+      }
       try {
         setIsExecuting(true);
         const sd = await ownables.execute(
@@ -168,11 +174,11 @@ export function useOwnableState(
         setIsExecuting(false);
       }
     },
-    [chain, eventChains, ownables, onError, refresh, stateDump]
+    [archived, chain, eventChains, ownables, onError, refresh, stateDump]
   );
 
   const onLoad = useCallback(async (): Promise<void> => {
-    if (!ownables || !pkg || !eventChains || initialized) return;
+    if (!ownables || !pkg || initialized) return;
 
     if (!pkg.isDynamic) {
       await ownables.initStore(chain, pkg.cid, pkg.uniqueMessageHash);
@@ -182,12 +188,14 @@ export function useOwnableState(
     try {
       await ownables.init(chain, pkg.cid, pkg.uniqueMessageHash);
       ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
-      const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
-      if (nextStateDump) {
-        setStateDump(nextStateDump);
-        appliedRef.current = chain.latestHash;
-        setApplied(chain.latestHash);
-        await refresh(nextStateDump);
+      if (eventChains) {
+        const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
+        if (nextStateDump) {
+          setStateDump(nextStateDump);
+          appliedRef.current = chain.latestHash;
+          setApplied(chain.latestHash);
+          await refresh(nextStateDump);
+        }
       }
       setInitialized(true);
     } catch (e) {
@@ -201,6 +209,10 @@ export function useOwnableState(
       if (!isObject(event.data) || !("ownable_id" in event.data) || event.data.ownable_id !== chain.id) return;
       if (iframeRef.current?.contentWindow !== event.source)
         throw Error("Not allowed to execute msg on other Ownable");
+      if (archived) {
+        onError("Interaction unavailable", "Archived ownables are read-only");
+        return;
+      }
 
       const steps = [{ id: "signEvent", label: "Sign the event" }];
       if (ownables?.anchoring) steps.push({ id: "anchor", label: "Anchor the event" });
@@ -213,7 +225,7 @@ export function useOwnableState(
         console.error("Widget action failed", e);
       }
     },
-    [chain.id, execute, progress, ownables]
+    [archived, chain.id, execute, progress, ownables, onError]
   );
 
   useEffect(() => {
@@ -225,6 +237,17 @@ export function useOwnableState(
   useEffect(() => {
     return () => { ownables?.setWidgetWindow(chain.id, null); };
   }, [chain.id, ownables]);
+
+  useEffect(() => {
+    if (!ownables) return;
+    if (archived) {
+      ownables.setWidgetWindow(chain.id, null);
+      return;
+    }
+    if (initialized) {
+      ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
+    }
+  }, [archived, chain.id, initialized, ownables]);
 
   // Apply pending chain events and refresh
   const chainEventCount = chain.events.length;

@@ -735,6 +735,75 @@ describe("main-list discovery verifier", () => {
     );
   });
 
+  it("blocks archived ownable execution before reaching the runtime", async () => {
+    const chain = new EventChain(CHAIN_ID);
+    const onError = vi.fn();
+    const execute = vi.fn();
+
+    serviceMap.ownables = {
+      execute,
+      submitAnchors: vi.fn(),
+      rpc: vi.fn(),
+      setWidgetWindow: vi.fn(),
+    };
+    serviceMap.eventChains = {
+      getStateDump: vi.fn(),
+    };
+    serviceMap.eqty = {
+      address: "0xabc",
+    };
+
+    const { result } = renderHook(() =>
+      useOwnableState(chain, undefined, onError, true)
+    );
+
+    await act(async () => {
+      await expect(
+        result.current.execute({ transfer: { to: "0xdef" } }, undefined, false)
+      ).rejects.toThrow("Archived ownables are read-only");
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(
+      "Interaction unavailable",
+      "Archived ownables are read-only"
+    );
+  });
+
+  it("does not bind a widget window for archived ownables", async () => {
+    const chain = new EventChain(CHAIN_ID);
+    const onError = vi.fn();
+    const init = vi.fn().mockResolvedValue(undefined);
+    const setWidgetWindow = vi.fn();
+
+    serviceMap.ownables = {
+      init,
+      setWidgetWindow,
+    };
+
+    const { result } = renderHook(() =>
+      useOwnableState(
+        chain,
+        {
+          cid: "bafy",
+          uniqueMessageHash: "message-hash",
+          isDynamic: true,
+          title: "Archived ownable",
+          description: "desc",
+        } as any,
+        onError,
+        true
+      )
+    );
+
+    await act(async () => {
+      await result.current.onLoad();
+    });
+
+    expect(init).toHaveBeenCalledWith(chain, "bafy", "message-hash");
+    expect(setWidgetWindow).not.toHaveBeenCalledWith(chain.id, expect.anything());
+  });
+
   it("does not upload to Hub when transfer execution fails before upload", async () => {
     const user = userEvent.setup();
     const chain = new EventChain(CHAIN_ID);
