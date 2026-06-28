@@ -7,6 +7,7 @@ import {
   DialogActions,
   DialogContent,
   DialogHeader,
+  FileInput,
   TextField,
 } from "@/components/ui";
 import { enqueueSnackbar } from "notistack";
@@ -27,6 +28,7 @@ export default function CreateOwnableDialog({
 }: CreateOwnableDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +37,7 @@ export default function CreateOwnableDialog({
   const resetState = () => {
     setName("");
     setDescription("");
+    setThumbnail(null);
     setError(null);
   };
 
@@ -66,6 +69,7 @@ export default function CreateOwnableDialog({
       const pkg = await builderService.createOwnable({
         name,
         description,
+        ...(thumbnail ? { thumbnail } : {}),
       });
 
       enqueueSnackbar(`${pkg.title} is ready to issue`, { variant: "success" });
@@ -92,6 +96,11 @@ export default function CreateOwnableDialog({
 
     resetState();
     onClose();
+  };
+
+  const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextThumbnail = event.target.files?.[0] ?? null;
+    setThumbnail(nextThumbnail);
   };
 
   return (
@@ -124,6 +133,21 @@ export default function CreateOwnableDialog({
             required
             disabled={isCreating}
           />
+
+          <Box className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+              Thumbnail
+            </span>
+            <FileInput
+              accept="image/*"
+              disabled={isCreating}
+              fileName={thumbnail?.name}
+              name="thumbnail-input"
+              placeholder="Choose thumbnail…"
+              onChange={handleThumbnailChange}
+              className="w-full"
+            />
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions>

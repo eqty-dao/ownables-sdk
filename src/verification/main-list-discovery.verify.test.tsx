@@ -14,9 +14,22 @@ import Sidebar from "@/components/Sidebar";
 import { useOwnableState } from "@/hooks/useOwnableState";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 import { useOwnables } from "@/hooks/useOwnables";
-import HubService, {
+import * as PlatformBrowser from "@ownables/platform-browser";
+
+const {
+  HubService,
   AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE,
-} from "@/services/Hub.service";
+} = PlatformBrowser as any as {
+  HubService: new (
+    url?: string,
+    fetchFn?: (input: string, init?: RequestInit) => Promise<Response>
+  ) => {
+    parseHubDownloadUrl(url: string): URL;
+    getPackageDownloadUrl(cid: string): string;
+    listAvailableOwnables(ownerAccount: string): Promise<unknown>;
+  };
+  AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE: string;
+};
 
 const { serviceMap, accountState, e2eState, enqueueSnackbar, progressOpen, progressClose, disconnectMock } = vi.hoisted(() => ({
   serviceMap: {} as Record<string, any>,
@@ -656,7 +669,8 @@ describe("main-list discovery verifier", () => {
     await hub.listAvailableOwnables(ACCOUNT);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `https://hub.example/ownables/available?owner=${encodeURIComponent(ACCOUNT)}`
+      `https://hub.example/ownables/available?owner=${encodeURIComponent(ACCOUNT)}`,
+      undefined
     );
   });
 

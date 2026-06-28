@@ -114,7 +114,7 @@ export const ViewMessagesBar: React.FC<ViewMessagesBarProps> = ({
       const importedPackage = message ? await packageService?.processPackage(message, hash, true) : null;
 
       if (importedPackage) {
-        const chain = importedPackage.chain ? importedPackage.chain : null;
+        const chain = importedPackage.chain as EventChain | undefined;
 
         if (chain) {
           setOwnables((prevOwnables) => [

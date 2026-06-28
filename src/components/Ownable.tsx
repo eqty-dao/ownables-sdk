@@ -238,6 +238,7 @@ export default function Ownable(props: OwnableProps) {
       <OwnableDetail
         chain={chain}
         pkg={pkg}
+        info={info}
         metadata={metadata}
         issuer={info?.issuer}
         attachments={attachments}

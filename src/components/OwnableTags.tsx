@@ -4,6 +4,7 @@ import type { TagProps } from "@/components/ui/tag";
 import { cn } from "@/utils/cn"
 
 interface OwnableTagsProps {
+  isDossier?: boolean;
   isClosable?: boolean;
   isClosed?: boolean;
   isLockable: boolean;
@@ -17,6 +18,7 @@ interface OwnableTagsProps {
 }
 
 export default function OwnableTags({
+  isDossier = false,
   isClosable = false,
   isClosed = false,
   isLockable,
@@ -28,10 +30,13 @@ export default function OwnableTags({
   display = "badge",
   className,
 }: OwnableTagsProps) {
-  if (!isTransferred && !isLockable && !isConsumable && !isClosable) return null;
+  if (!isDossier && !isTransferred && !isLockable && !isConsumable && !isClosable) return null;
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2.5', className)}>
+      {isDossier && (
+        <Tag display={display} variant="neutral" value="Dossier" />
+      )}
       {isClosable && isClosed && (
         <Tag display={display} variant="closed" icon={<CircleOff className="h-3 w-3" />} value="Closed" />
       )}

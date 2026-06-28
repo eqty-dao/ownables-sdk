@@ -24,13 +24,17 @@ export interface FileInputProps {
   accept?: string;
   disabled?: boolean;
   fileName?: string;
+  name?: string;
   placeholder?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
 }
 
 export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(
-  ({ accept, disabled, fileName, placeholder = "Choose file…", onChange, className }, ref) => (
+  (
+    { accept, disabled, fileName, name, placeholder = "Choose file…", onChange, className },
+    ref
+  ) => (
     <label className={cn(fileInput({ disabled: !!disabled }), className)}>
       <Upload className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
       <span className={cn("truncate", fileName ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500")}>
@@ -41,6 +45,7 @@ export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(
         type="file"
         accept={accept}
         disabled={disabled}
+        name={name}
         onChange={onChange}
         className="sr-only"
       />

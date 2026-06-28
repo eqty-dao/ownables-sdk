@@ -1,18 +1,18 @@
 import { isE2E } from "@/utils/isE2E";
+import {
+  HubService,
+  IDBService,
+  LocalStorageService,
+  PackageService,
+  RelayService,
+} from "@ownables/platform-browser";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
-import EQTYService from "./EQTY.service";
-import IDBService from "./IDB.service";
-import {
-  EventChainService,
-  PollingService,
-} from "@ownables/core";
+import { EQTYService } from "@ownables/adapter-viem";
+import { EventChainService, PollingService } from "@ownables/core";
+import type { KVStore } from "@ownables/core";
 import BuilderService from "./Builder.service";
-import OwnableService from "./Ownable.service";
-import HubService from "./Hub.service";
-import LocalStorageService from "./LocalStorage.service";
-import PackageService from "./Package.service";
-import { RelayService } from "./Relay.service";
+import { OwnableService } from "@ownables/core";
 
 export interface ServiceMap {
   relay: RelayService;
@@ -30,6 +30,7 @@ export interface ServiceMap {
 export type ServiceKey = keyof ServiceMap;
 
 type ServiceFactory<T = any> = (container: ServiceContainer) => Promise<T> | T;
+const relayUrl = import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL || "";
 
 export default class ServiceContainer {
   private readonly cache = new Map<ServiceKey, Promise<any>>();
@@ -51,12 +52,7 @@ export default class ServiceContainer {
           return new EQTYService(address, c.chainId!, walletClient, publicClient);
         }
 
-        return new EQTYService(
-          c.address!,
-          c.chainId!,
-          c.walletClient,
-          c.publicClient
-        );
+        return new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient);
       }
     );
 
@@ -71,7 +67,7 @@ export default class ServiceContainer {
 
     this.register(
       "relay",
-      async (c) => new RelayService(await c.get("eqty"))
+      async (c) => new RelayService(await c.get("eqty"), { relayUrl })
     );
 
     this.register("hub", () => new HubService());
@@ -82,7 +78,7 @@ export default class ServiceContainer {
         new EventChainService(
           await c.get("idb"),
           await c.get("eqty"),
-          new LocalStorageService()
+          new LocalStorageService() as unknown as KVStore
         )
     );
 
@@ -91,7 +87,10 @@ export default class ServiceContainer {
       const idb = await IDBService.packages();
       const legacyIdb = await IDBService.main();
       const storage = new LocalStorageService();
-      return new PackageService(idb, await c.get("relay"), storage, legacyIdb);
+      return new PackageService(idb, await c.get("relay"), storage, {
+        exampleUrl: import.meta.env.VITE_OWNABLE_EXAMPLES_URL,
+        legacyIdb,
+      });
     });
 
     this.register(

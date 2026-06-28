@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { EventChain } from "eqty-core";
 import type { TypedAttachment } from "@/interfaces/TypedAttachment";
-import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
+import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import OwnableFrame from "./OwnableFrame";
 import OwnableActions from "./OwnableActions";
@@ -27,6 +27,7 @@ import { normalizeMetadataBackgroundColor } from "@/utils/metadataBackgroundColo
 interface OwnableDetailProps {
   chain: EventChain;
   pkg: TypedPackage;
+  info?: TypedOwnableInfo;
   metadata: TypedMetadata;
   issuer?: string;
   attachments: TypedAttachment[];
@@ -70,6 +71,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
   const {
     chain,
     pkg,
+    info,
     metadata,
     issuer,
     attachments,
@@ -236,6 +238,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <OwnableTags
             className="mb-2"
             display="ghost"
+            isDossier={info?.ownable_type === "dossier"}
             isClosable={pkg.isClosable}
             isClosed={isClosed}
             isLockable={isLockable}

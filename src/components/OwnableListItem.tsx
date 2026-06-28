@@ -42,6 +42,7 @@ interface ImportedOwnableListItemProps {
   chain: EventChain;
   packageCid: string;
   metadata: TypedMetadata;
+  isDossier?: boolean;
   issuer?: string;
   isConsumable: boolean;
   isConsumed: boolean;
@@ -169,6 +170,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
 
   const {
     metadata,
+    isDossier = false,
     isConsumable,
     isConsumed,
     isLockable,
@@ -216,6 +218,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
           <div className="mt-1">
             <OwnableTags
               display="ghost"
+              isDossier={isDossier}
               isLockable={isLockable}
               isLocked={isLocked}
               isConsumable={isConsumable}

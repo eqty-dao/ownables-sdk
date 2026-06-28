@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { Event, EventChain } from "eqty-core";
 import { decode, encode } from "cbor-x";
-import OwnableService, { StateDump } from "../services/Ownable.service";
-import EQTYService from "../services/EQTY.service";
-import WorkerRPC from "../services/WorkerRPC";
+import { EQTYService } from "@ownables/adapter-viem";
+import {
+  type StateDump,
+  OwnableService,
+  WorkerRPC,
+} from "@ownables/core";
 
 type StoreMap = Map<string, any>;
 

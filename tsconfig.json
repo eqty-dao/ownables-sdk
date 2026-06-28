@@ -15,12 +15,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@ownables/builder": ["../ownables-js/packages/builder/src/index.ts"],
+      "@ownables/builder": ["../ownables-js/packages/builder/dist/builder/src/index.js"],
+      "@ownables/core": ["../ownables-js/packages/core/dist/index.js"],
+      "@ownables/core/*": ["../ownables-js/packages/core/dist/*"],
       "@ownables/platform-browser": [
-        "node_modules/@ownables/platform-browser/dist/platform-browser/src/index.d.ts"
+        "../ownables-js/packages/platform-browser/dist/platform-browser/src/index.js"
       ],
       "@ownables/platform-browser/*": [
-        "node_modules/@ownables/platform-browser/dist/platform-browser/src/*"
+        "../ownables-js/packages/platform-browser/dist/platform-browser/src/*"
       ]
     },
     "resolveJsonModule": true,

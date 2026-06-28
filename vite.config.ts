@@ -7,8 +7,33 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: "@ownables/builder",
-        replacement: path.resolve(__dirname, "../ownables-js/packages/builder/src/index.ts"),
+        find: /^@ownables\/builder$/,
+        replacement: path.resolve(
+          __dirname,
+          "../ownables-js/packages/builder/dist/builder/src/index.js"
+        ),
+      },
+      {
+        find: /^@ownables\/core$/,
+        replacement: path.resolve(__dirname, "../ownables-js/packages/core/dist/index.js"),
+      },
+      {
+        find: /^@ownables\/core\/(.*)$/,
+        replacement: path.resolve(__dirname, "../ownables-js/packages/core/dist/$1"),
+      },
+      {
+        find: /^@ownables\/platform-browser$/,
+        replacement: path.resolve(
+          __dirname,
+          "../ownables-js/packages/platform-browser/dist/platform-browser/src/index.js"
+        ),
+      },
+      {
+        find: /^@ownables\/platform-browser\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../ownables-js/packages/platform-browser/dist/platform-browser/src/$1"
+        ),
       },
       {
         find: /^@\//,
