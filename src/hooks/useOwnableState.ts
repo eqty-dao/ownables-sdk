@@ -187,7 +187,7 @@ export function useOwnableState(
 
     try {
       await ownables.init(chain, pkg.cid, pkg.uniqueMessageHash);
-      ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
+      ownables.setWidgetWindow(chain.id, archived ? null : iframeRef.current?.contentWindow ?? null);
       if (eventChains) {
         const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
         if (nextStateDump) {
@@ -201,7 +201,7 @@ export function useOwnableState(
     } catch (e) {
       onError("Failed to forge Ownable", ownableErrorMessage(e));
     }
-  }, [chain, eventChains, initialized, ownables, pkg, onError, refresh]);
+  }, [archived, chain, eventChains, initialized, ownables, pkg, onError, refresh]);
 
   // Window message handler for widget-triggered execute calls
   const windowMessageHandler = useCallback(
