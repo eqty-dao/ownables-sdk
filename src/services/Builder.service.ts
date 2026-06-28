@@ -1,5 +1,5 @@
 import { prepareDossier } from "@ownables/builder";
-import type { PackageService as BrowserPackageService } from "@ownables/platform-browser";
+import type { PackageService as BrowserPackageService } from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 import type { TypedPackage } from "@/interfaces/TypedPackage";
 
 export interface CreateOwnableInput {

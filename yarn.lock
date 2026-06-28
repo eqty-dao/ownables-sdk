@@ -2021,6 +2021,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ownables/builder@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "@ownables/builder@npm:0.8.0"
+  dependencies:
+    "@ownables/core": "npm:0.8.0"
+  checksum: 10c0/62ea025ce28918286588677305d824944f6be08437aeff9a5f0f35538cb0ffc6cb185150e3ddb705023f00464ba0c6ecc89be11781f7ade9b169bf57ff5ac5be
+  languageName: node
+  linkType: hard
+
 "@ownables/core@npm:0.8.0, @ownables/core@npm:^0.8.0":
   version: 0.8.0
   resolution: "@ownables/core@npm:0.8.0"
@@ -2064,6 +2073,7 @@ __metadata:
     "@letsrunit/cucumber": "npm:^0.24.1"
     "@letsrunit/mcp-server": "npm:^0.24.1"
     "@ownables/adapter-viem": "npm:^0.8.0"
+    "@ownables/builder": "npm:^0.8.0"
     "@ownables/core": "npm:^0.8.0"
     "@ownables/platform-browser": "npm:^0.8.0"
     "@playwright/test": "npm:1.58.2"

@@ -14,16 +14,7 @@
     "preserveSymlinks": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@ownables/builder": ["../ownables-js/packages/builder/dist/builder/src/index.js"],
-      "@ownables/core": ["../ownables-js/packages/core/dist/index.js"],
-      "@ownables/core/*": ["../ownables-js/packages/core/dist/*"],
-      "@ownables/platform-browser": [
-        "../ownables-js/packages/platform-browser/dist/platform-browser/src/index.js"
-      ],
-      "@ownables/platform-browser/*": [
-        "../ownables-js/packages/platform-browser/dist/platform-browser/src/*"
-      ]
+      "@/*": ["src/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

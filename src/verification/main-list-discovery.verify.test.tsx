@@ -14,7 +14,7 @@ import Sidebar from "@/components/Sidebar";
 import { useOwnableState } from "@/hooks/useOwnableState";
 import { useOwnableTransfer } from "@/hooks/useOwnableTransfer";
 import { useOwnables } from "@/hooks/useOwnables";
-import * as PlatformBrowser from "@ownables/platform-browser";
+import * as PlatformBrowser from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 
 const {
   HubService,

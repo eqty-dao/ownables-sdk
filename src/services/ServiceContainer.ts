@@ -5,7 +5,7 @@ import {
   LocalStorageService,
   PackageService,
   RelayService,
-} from "@ownables/platform-browser";
+} from "@ownables/platform-browser/dist/platform-browser/src/index.js";
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
 import { EQTYService } from "@ownables/adapter-viem";
