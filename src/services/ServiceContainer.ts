@@ -10,14 +10,15 @@ import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
 import { EQTYService } from "@ownables/adapter-viem";
 import { EventChainService, PollingService } from "@ownables/core";
-import type { KVStore } from "@ownables/core";
+import type { AnchorProvider, KVStore } from "@ownables/core";
 import BuilderService from "./Builder.service";
 import { OwnableService } from "@ownables/core";
+import { normalizeAnchorProvider } from "./normalizeAnchorProvider";
 
 export interface ServiceMap {
   relay: RelayService;
   localStorage: LocalStorageService;
-  eqty: EQTYService;
+  eqty: EQTYService & AnchorProvider;
   idb: IDBService;
   eventChains: EventChainService;
   packages: PackageService;
@@ -49,10 +50,14 @@ export default class ServiceContainer {
           const { address, walletClient, publicClient } = createE2EViemClients(
             c.chainId!
           );
-          return new EQTYService(address, c.chainId!, walletClient, publicClient);
+          return normalizeAnchorProvider(
+            new EQTYService(address, c.chainId!, walletClient, publicClient)
+          );
         }
 
-        return new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient);
+        return normalizeAnchorProvider(
+          new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient)
+        );
       }
     );
 

@@ -1,4 +1,4 @@
-import { Given, When } from '@letsrunit/bdd';
+import { Given, Then, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -155,6 +155,61 @@ Given('I have a Dossier', async function () {
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
 });
+
+When('I start recording widget action messages', async function () {
+  await this.page.evaluate(() => {
+    const win = window as typeof window & {
+      __ownableWidgetMessages?: Array<unknown>;
+      __ownableWidgetMessageHandler?: (event: MessageEvent) => void;
+    };
+
+    win.__ownableWidgetMessages = [];
+    if (win.__ownableWidgetMessageHandler) {
+      window.removeEventListener('message', win.__ownableWidgetMessageHandler);
+    }
+
+    win.__ownableWidgetMessageHandler = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (!('type' in data) || !('ownable_id' in data) || !('msg' in data)) return;
+      win.__ownableWidgetMessages?.push(data);
+    };
+
+    window.addEventListener('message', win.__ownableWidgetMessageHandler);
+  });
+});
+
+Then(
+  'the latest widget action message is an emit for {string}',
+  async function (eventType: string) {
+    const message = await this.page.evaluate(() => {
+      const win = window as typeof window & {
+        __ownableWidgetMessages?: Array<{
+          type?: string;
+          ownable_id?: string;
+          msg?: Record<string, unknown>;
+        }>;
+      };
+
+      return win.__ownableWidgetMessages?.at(-1) ?? null;
+    });
+
+    if (!message) {
+      throw new Error('No widget action message was recorded');
+    }
+
+    if (message.type !== 'emit') {
+      throw new Error(`Expected widget action type emit but received ${String(message.type)}`);
+    }
+
+    const keys = Object.keys(message.msg ?? {});
+    if (keys.length !== 1 || keys[0] !== eventType) {
+      throw new Error(
+        `Expected widget emit envelope ${eventType} but received ${JSON.stringify(message.msg)}`
+      );
+    }
+  }
+);
 
 When(
   'I upload the file {string} into the {string} file input',

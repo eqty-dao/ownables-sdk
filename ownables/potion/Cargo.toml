@@ -35,6 +35,7 @@ thiserror = { workspace = true }
 ciborium = { workspace = true }
 ownable-std = { workspace = true }
 ownable-std-macros = { workspace = true }
+alloy-sol-types = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

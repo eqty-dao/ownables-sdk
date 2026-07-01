@@ -2284,14 +2284,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@npm:^0.8.1":
+"@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem::locator=%40ownables%2Fsdk%40workspace%3A.":
   version: 0.8.1
-  resolution: "@ownables/adapter-viem@npm:0.8.1"
+  resolution: "@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem#../ownables-js/packages/adapter-viem::hash=0bd0a4&locator=%40ownables%2Fsdk%40workspace%3A."
   dependencies:
-    "@ownables/core": "npm:0.8.1"
+    "@ownables/core": "workspace:*"
     eqty-core: "npm:^1.0.2"
     viem: "npm:^2.47.4"
-  checksum: 10c0/d8d7505781ddbe64bb7b2d7a2f5d67ac7357d5bb094388b2a0c633cdebc7f07ea2b001478fada3531e888977ff702fb6a137b0cf289a0487bcfa03e28ca5e187
+  checksum: 10c0/571908836750f10cb3d9ec4f52ca04a68e3bf19a1e20a243356582c0c71db5d30d0f077f41eeab853f58c0869ba94fefeb767d60327fbd8bd4922ab3f4ce1bef
   languageName: node
   linkType: hard
 
@@ -2304,7 +2304,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/core@npm:0.8.1, @ownables/core@npm:^0.8.1":
+"@ownables/core@file:../ownables-js/packages/core::locator=%40ownables%2Fsdk%40workspace%3A.":
+  version: 0.8.1
+  resolution: "@ownables/core@file:../ownables-js/packages/core#../ownables-js/packages/core::hash=d9ec05&locator=%40ownables%2Fsdk%40workspace%3A."
+  dependencies:
+    blockstore-core: "npm:^6.1.2"
+    cbor-x: "npm:^1.6.0"
+    eqty-core: "npm:^1.0.2"
+    ipfs-unixfs-importer: "npm:^16.1.4"
+    jszip: "npm:^3.10.1"
+  checksum: 10c0/78c340ce72a2164e6156e9d57c3a814dad0511d6dd98288e8de41653b6ca1ead3a585cb094a5fab35244306608e7554cce5627b6e8d6486002a810f3ec569224
+  languageName: node
+  linkType: hard
+
+"@ownables/core@npm:0.8.1":
   version: 0.8.1
   resolution: "@ownables/core@npm:0.8.1"
   dependencies:
@@ -2317,11 +2330,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@npm:^0.8.1":
+"@ownables/platform-browser@file:../ownables-js/packages/platform-browser::locator=%40ownables%2Fsdk%40workspace%3A.":
   version: 0.8.1
-  resolution: "@ownables/platform-browser@npm:0.8.1"
+  resolution: "@ownables/platform-browser@file:../ownables-js/packages/platform-browser#../ownables-js/packages/platform-browser::hash=047343&locator=%40ownables%2Fsdk%40workspace%3A."
   dependencies:
-    "@ownables/core": "npm:0.8.1"
+    "@ownables/core": "workspace:*"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
@@ -2329,7 +2342,7 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/95b93e22c0566445d13372c3501e9414b446d63076ce7917036e238b99bd2596747876d2b235da619327abf45c7a1ef30cf28077357179d247b41d2e46f72f47
+  checksum: 10c0/7413257da6b775fe71cb9d98bc2fc7d124de51fa34a338cb5ff566513bab236e8a5f645ae389131e9b1b6349ef85c42c0b4787e1788ae0ab63352aa161643a0f
   languageName: node
   linkType: hard
 
@@ -2347,10 +2360,10 @@ __metadata:
     "@letsrunit/cli": "npm:^0.24.1"
     "@letsrunit/cucumber": "npm:^0.24.1"
     "@letsrunit/mcp-server": "npm:^0.24.1"
-    "@ownables/adapter-viem": "npm:^0.8.1"
+    "@ownables/adapter-viem": "file:../ownables-js/packages/adapter-viem"
     "@ownables/builder": "npm:^0.8.1"
-    "@ownables/core": "npm:^0.8.1"
-    "@ownables/platform-browser": "npm:^0.8.1"
+    "@ownables/core": "file:../ownables-js/packages/core"
+    "@ownables/platform-browser": "file:../ownables-js/packages/platform-browser"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"

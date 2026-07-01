@@ -5,7 +5,9 @@ Feature: Potion
     When I click link "the examples"
     And I click button "Potion Drink a colorful potion"
     And the ownable widget is ready
+    And I start recording widget action messages
     And I click button "Drink" within iframe "Ownable widget"
+    Then the latest widget action message is an emit for "drink"
     Then text "50" within iframe "Ownable widget" is visible
 
   Scenario: Drink too much from a potion

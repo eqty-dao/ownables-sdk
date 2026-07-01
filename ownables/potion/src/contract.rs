@@ -3,18 +3,32 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{
     CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID,
 };
+use alloy_sol_types::sol;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
+use ownable_std::abi::cbor_from_slice;
 use ownable_std::{
     EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
-    ensure_owner, get_random_color, package_title_from_name,
+    decode_abi_for, encode_abi, ensure_owner, get_random_color, package_title_from_name,
 };
 
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const DRINK_EVENT_TYPE: &str = "drink";
+
+sol! {
+    struct DrinkEvent {
+        uint8 amount;
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct DrinkPayload {
+    amount: u8,
+}
 
 pub fn instantiate(
     deps: DepsMut,
@@ -82,10 +96,12 @@ pub fn register(
     deps: DepsMut,
     event: PublicEvent,
 ) -> Result<Response, ContractError> {
-    let _ = (info, deps);
-    Err(ContractError::MatchEventError {
-        val: event.event_type,
-    })
+    match event.event_type.as_str() {
+        DRINK_EVENT_TYPE => try_register_drink(info, deps, event),
+        _ => Err(ContractError::MatchEventError {
+            val: event.event_type,
+        }),
+    }
 }
 
 pub fn ingest(
@@ -100,9 +116,35 @@ pub fn ingest(
 }
 
 pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>, ContractError> {
-    Err(ContractError::MatchEventError {
-        val: request.event_type,
-    })
+    match request.event_type.as_str() {
+        DRINK_EVENT_TYPE => {
+            let payload: DrinkPayload = cbor_from_slice(request.data.as_slice())
+                .map_err(|_| ContractError::InvalidExternalEventArgs {})?;
+            Ok(encode_abi::<DrinkEvent>(&DrinkEvent {
+                amount: payload.amount,
+            }))
+        }
+        _ => Err(ContractError::MatchEventError {
+            val: request.event_type,
+        }),
+    }
+}
+
+fn try_register_drink(
+    _info: MessageInfo,
+    deps: DepsMut,
+    event: PublicEvent,
+) -> Result<Response, ContractError> {
+    let owner = OWNABLE_INFO.load(deps.storage)?.owner;
+    if event.source.to_lowercase() != owner.to_string().to_lowercase() {
+        return Err(ContractError::Unauthorized {
+            val: "Unable to drink potion".into(),
+        });
+    }
+
+    let decoded = decode_abi_for::<DrinkEvent>(&event, DRINK_EVENT_TYPE)
+        .map_err(|_| ContractError::InvalidExternalEventArgs {})?;
+    apply_drink(deps, decoded.amount)
 }
 
 
@@ -112,23 +154,10 @@ pub fn try_drink(
     consumption_amount: u8,
 ) -> Result<Response, ContractError> {
     let ownership = OWNABLE_INFO.load(deps.storage)?;
-    let config = CONFIG.load(deps.storage)?;
     ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
         val: "Unable to drink potion".into(),
     })?;
-
-    let mut c = config;
-    if c.current_amount < consumption_amount {
-        return Err(ContractError::CustomError {
-            val: "Attempt to drink more than is available".into(),
-        });
-    }
-    c.current_amount -= consumption_amount;
-    CONFIG.save(deps.storage, &c.clone())?;
-
-    Ok(Response::new()
-        .add_attribute("method", "try_drink")
-        .add_attribute("new_amount", c.current_amount.to_string()))
+    apply_drink(deps, consumption_amount)
 }
 
 pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {
@@ -181,4 +210,20 @@ fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
 fn query_ownable_metadata(deps: Deps) -> StdResult<Binary> {
     let meta = METADATA.load(deps.storage)?;
     to_json_binary(&meta)
+}
+
+fn apply_drink(deps: DepsMut, consumption_amount: u8) -> Result<Response, ContractError> {
+    let mut config = CONFIG.load(deps.storage)?;
+    if config.current_amount < consumption_amount {
+        return Err(ContractError::CustomError {
+            val: "Attempt to drink more than is available".into(),
+        });
+    }
+
+    config.current_amount -= consumption_amount;
+    CONFIG.save(deps.storage, &config.clone())?;
+
+    Ok(Response::new()
+        .add_attribute("method", "try_drink")
+        .add_attribute("new_amount", config.current_amount.to_string()))
 }

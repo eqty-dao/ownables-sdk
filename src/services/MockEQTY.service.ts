@@ -87,9 +87,31 @@ export default class MockEQTYService {
     verified: boolean;
     anchors: Record<string, string | undefined>;
     map: Record<string, string>;
+    details: Record<
+      string,
+      {
+        key: string;
+        expectedValue: string;
+        value: string;
+        transactionHash?: string;
+        verified: boolean;
+        source: "provider";
+      }
+    >;
   }> {
     const hashMap: Record<string, string | undefined> = {};
     const map: Record<string, string> = {};
+    const details: Record<
+      string,
+      {
+        key: string;
+        expectedValue: string;
+        value: string;
+        transactionHash?: string;
+        verified: boolean;
+        source: "provider";
+      }
+    > = {};
 
     const toBinary = (b: any) => (b instanceof Binary ? b : Binary.fromHex(b.hex));
     const first = anchors[0] as any;
@@ -98,9 +120,18 @@ export default class MockEQTYService {
       for (const anchor of anchors as Array<any>) {
         const key = toBinary(anchor).hex;
         hashMap[key] = `0x${"b".repeat(64)}`;
-        map[key] = Binary.fromHex(`0x${"0".repeat(64)}`).hex.toLowerCase();
+        const value = Binary.fromHex(`0x${"0".repeat(64)}`).hex.toLowerCase();
+        map[key] = value;
+        details[key] = {
+          key,
+          expectedValue: value,
+          value,
+          transactionHash: hashMap[key],
+          verified: true,
+          source: "provider",
+        };
       }
-      return { verified: true, anchors: hashMap, map };
+      return { verified: true, anchors: hashMap, map, details };
     }
 
     for (const anchor of anchors as Array<any>) {
@@ -108,8 +139,16 @@ export default class MockEQTYService {
       const value = toBinary(anchor.value).hex.toLowerCase();
       hashMap[key] = `0x${"b".repeat(64)}`;
       map[key] = value;
+      details[key] = {
+        key,
+        expectedValue: value,
+        value,
+        transactionHash: hashMap[key],
+        verified: true,
+        source: "provider",
+      };
     }
 
-    return { verified: true, anchors: hashMap, map };
+    return { verified: true, anchors: hashMap, map, details };
   }
 }

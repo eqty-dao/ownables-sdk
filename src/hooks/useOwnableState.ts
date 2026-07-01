@@ -11,6 +11,24 @@ import { useService } from "./useService";
 import { useAccount } from "wagmi";
 import { useProgress, LogProgress } from "@/contexts/Progress.context";
 
+function getWidgetEmitEnvelope(msg: unknown): { eventType: string; payload: TypedDict } {
+  if (!isObject(msg)) {
+    throw new Error("Widget emit msg must be an object");
+  }
+
+  const entries = Object.entries(msg as Record<string, unknown>);
+  if (entries.length !== 1) {
+    throw new Error("Widget emit msg must contain exactly one event key");
+  }
+
+  const [eventType, payload] = entries[0] as [string, unknown];
+  if (!isObject(payload)) {
+    throw new Error("Widget emit payload must be an object");
+  }
+
+  return { eventType, payload: payload as TypedDict };
+}
+
 export function useOwnableState(
   chain: EventChain,
   pkg: TypedPackage | undefined,
@@ -177,6 +195,49 @@ export function useOwnableState(
     [archived, chain, eventChains, ownables, onError, refresh, stateDump]
   );
 
+  const emit = useCallback(
+    async (
+      msg: TypedDict,
+      onProgress?: LogProgress
+    ): Promise<void> => {
+      if (!ownables) return;
+      if (archived) {
+        const message = "Archived ownables are read-only";
+        onError("Interaction unavailable", message);
+        throw new Error(message);
+      }
+
+      const { eventType, payload } = getWidgetEmitEnvelope(msg);
+
+      try {
+        setIsExecuting(true);
+        const replay = await ownables.emitPublicEvent(
+          chain,
+          eventType,
+          payload,
+          onProgress as any
+        );
+
+        const persistedStateDump = await eventChains?.getStateDump(
+          chain.id,
+          chain.state.hex
+        );
+        const nextStateDump = persistedStateDump ?? replay.stateDump;
+
+        await refresh(nextStateDump);
+        appliedRef.current = chain.latestHash;
+        setApplied(chain.latestHash);
+        setStateDump(nextStateDump);
+      } catch (e) {
+        onError("The Ownable returned an error", ownableErrorMessage(e));
+        throw e;
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [archived, chain, eventChains, onError, ownables, refresh]
+  );
+
   const onLoad = useCallback(async (): Promise<void> => {
     if (!ownables || !pkg || initialized) return;
 
@@ -203,7 +264,7 @@ export function useOwnableState(
     }
   }, [archived, chain, eventChains, initialized, ownables, pkg, onError, refresh]);
 
-  // Window message handler for widget-triggered execute calls
+  // Window message handler for widget-triggered actions
   const windowMessageHandler = useCallback(
     async (event: MessageEvent) => {
       if (!isObject(event.data) || !("ownable_id" in event.data) || event.data.ownable_id !== chain.id) return;
@@ -214,18 +275,33 @@ export function useOwnableState(
         return;
       }
 
-      const steps = [{ id: "signEvent", label: "Sign the event" }];
-      if (ownables?.anchoring) steps.push({ id: "anchor", label: "Anchor the event" });
-
       try {
+        const isEmit = event.data.type === "emit";
+        if (!isEmit && event.data.type !== "execute") return;
+
+        const steps = isEmit
+          ? [
+              { id: "encodePublicEvent", label: "Encode the public event" },
+              { id: "emitPublicEvent", label: "Emit the public event" },
+              { id: "signPublicEvent", label: "Register the public event" },
+            ]
+          : [{ id: "signEvent", label: "Sign the event" }];
+        if (!isEmit && ownables?.anchoring) {
+          steps.push({ id: "anchor", label: "Anchor the event" });
+        }
+
         const [ctrl, onProgress] = progress.open({ title: "Processing action", steps });
-        await execute(event.data.msg, onProgress);
+        if (isEmit) {
+          await emit(event.data.msg, onProgress);
+        } else {
+          await execute(event.data.msg, onProgress);
+        }
         ctrl.close();
       } catch (e) {
         console.error("Widget action failed", e);
       }
     },
-    [archived, chain.id, execute, progress, ownables, onError]
+    [archived, chain.id, emit, execute, progress, ownables, onError]
   );
 
   useEffect(() => {
