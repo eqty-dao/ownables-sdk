@@ -81,7 +81,19 @@ export function useOwnableState(
       if (!ownables || !pkg || !ownables.isReady(chain.id)) return;
       const effective = sd ?? stateDump;
 
-      if (pkg.hasWidgetState) await ownables.rpc(chain.id).refresh(effective);
+      if (pkg.hasWidgetState) {
+        ownables.setWidgetWindow(
+          chain.id,
+          archived ? null : iframeRef.current?.contentWindow ?? null
+        );
+        const widgetState = await ownables
+          .rpc(chain.id)
+          .query({ get_widget_state: {} }, effective);
+        iframeRef.current?.contentWindow?.postMessage(
+          { ownable_id: chain.id, state: widgetState },
+          "*"
+        );
+      }
 
       const infoResp = (await ownables
         .rpc(chain.id)
@@ -120,7 +132,7 @@ export function useOwnableState(
       setIsClosed(closed);
       setIsLocked(locked);
     },
-    [chain.id, metadata, ownables, pkg, stateDump]
+    [archived, chain.id, metadata, ownables, pkg, stateDump]
   );
 
   const apply = useCallback(
@@ -174,17 +186,10 @@ export function useOwnableState(
           eventAttachments
         );
         if (submitAnchors) await ownables.submitAnchors(onProgress as any);
-
-        const persistedStateDump = await eventChains?.getStateDump(
-          chain.id,
-          chain.state.hex
-        );
-        const nextStateDump = persistedStateDump ?? sd;
-
-        await refresh(nextStateDump);
+        await refresh(sd);
         appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
-        setStateDump(nextStateDump);
+        setStateDump(sd);
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
         throw e;
@@ -217,17 +222,10 @@ export function useOwnableState(
           payload,
           onProgress as any
         );
-
-        const persistedStateDump = await eventChains?.getStateDump(
-          chain.id,
-          chain.state.hex
-        );
-        const nextStateDump = persistedStateDump ?? replay.stateDump;
-
-        await refresh(nextStateDump);
+        await refresh(replay.stateDump);
         appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
-        setStateDump(nextStateDump);
+        setStateDump(replay.stateDump);
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
         throw e;

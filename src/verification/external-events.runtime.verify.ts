@@ -7,6 +7,7 @@ import {
   OwnableService,
   WorkerRPC,
 } from "@ownables/core";
+import ServiceContainer from "@/services/ServiceContainer";
 
 type StoreMap = Map<string, any>;
 
@@ -75,7 +76,7 @@ class MockEqty {
   address = "0x0000000000000000000000000000000000000001";
   chainId = 84532;
   signed: Event[] = [];
-  emitted: Array<{ chainId: string; eventType: string; data: Uint8Array }> = [];
+  emitted: Array<{ subjectId: string; eventType: string; data: Uint8Array }> = [];
   private signer = {
     getAddress: async () => this.address,
     signTypedData: async () =>
@@ -87,9 +88,10 @@ class MockEqty {
     this.signed.push(event);
   }
 
-  async emitPublicEvent(chainId: string, eventType: string, data: Uint8Array) {
-    this.emitted.push({ chainId, eventType, data });
+  async emitPublicEvent(subjectId: string, eventType: string, data: Uint8Array) {
+    this.emitted.push({ subjectId, eventType, data });
     return {
+      subjectId,
       source: this.address,
       transactionHash: "0x" + "44".repeat(32),
       blockNumber: 1,
@@ -365,6 +367,11 @@ async function verifyEmitPublicEventFlow() {
 async function verifyEqtyPublicEventFeeForwarding() {
   const transactionHash = "0x" + "55".repeat(32);
   let writeContractInput: any;
+  const anchorContractAddress = import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS;
+  if (!anchorContractAddress) {
+    throw new Error("VITE_BASE_SEPOLIA_ANCHOR_ADDRESS must be configured for runtime verification");
+  }
+  const verifiedAnchorContractAddress: `0x${string}` = anchorContractAddress;
 
   const walletClient = {
     account: "0x0000000000000000000000000000000000000001",
@@ -409,7 +416,13 @@ async function verifyEqtyPublicEventFeeForwarding() {
     "0x0000000000000000000000000000000000000001",
     84532,
     walletClient as any,
-    publicClient as any
+    publicClient as any,
+    undefined,
+    {
+      anchor: {
+        contractAddress: verifiedAnchorContractAddress,
+      },
+    }
   );
 
   const event = await service.emitPublicEvent(
@@ -425,6 +438,43 @@ async function verifyEqtyPublicEventFeeForwarding() {
   assert.equal(event.data, "0x010203");
 }
 
+async function verifyServiceContainerInjectsAnchorConfig() {
+  const walletClient = {
+    account: "0x0000000000000000000000000000000000000001",
+  };
+  const publicClient = {
+    readContract: async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "quoteEqtyCost":
+        case "quoteEthCost":
+          return 0n;
+        case "eqtyToken":
+          return "0x0000000000000000000000000000000000000000";
+        default:
+          throw new Error(`unexpected readContract ${functionName}`);
+      }
+    },
+  };
+
+  const container = new ServiceContainer(
+    "0x0000000000000000000000000000000000000001",
+    84532,
+    walletClient as any,
+    publicClient as any
+  );
+
+  try {
+    const eqty = (await container.get("eqty")) as any;
+    assert.equal(
+      eqty.anchorContractAddress,
+      import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS,
+      "ServiceContainer must inject the SDK-owned Anchor address into EQTYService"
+    );
+  } finally {
+    await container.dispose();
+  }
+}
+
 async function main() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
@@ -432,6 +482,7 @@ async function main() {
   await verifyEncodePublicEventBridge();
   await verifyEmitPublicEventFlow();
   await verifyEqtyPublicEventFeeForwarding();
+  await verifyServiceContainerInjectsAnchorConfig();
   console.log("external-events runtime verification passed");
 }
 

@@ -1,10 +1,17 @@
-import { useAccount, useBalance, useChainId } from 'wagmi';
-import { BASE_EQTY_TOKEN, BASE_SEPOLIA_EQTY_TOKEN, BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from 'eqty-core';
+import { useAccount, useBalance, useChainId } from "wagmi";
 
 export type EqtyTokenBalance = { address?: string; balance?: { value: bigint; decimals: number; symbol: string } };
 type UseBalanceParameters = Parameters<typeof useBalance>[0];
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const BASE_CHAIN_ID = 8453;
+const BASE_SEPOLIA_CHAIN_ID = 84532;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+const eqtyTokenAddresses: Record<number, `0x${string}` | undefined> = {
+  [BASE_CHAIN_ID]: import.meta.env.VITE_BASE_MAINNET_EQTY_TOKEN_ADDRESS as `0x${string}` | undefined,
+  [BASE_SEPOLIA_CHAIN_ID]:
+    import.meta.env.VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS as `0x${string}` | undefined,
+};
 
 /**
  * useEqtyToken
@@ -20,9 +27,9 @@ export default function useEqtyToken(params?: UseBalanceParameters): EqtyTokenBa
   const effectiveChainId = params?.chainId ?? chainIdCtx;
   const account = params?.address ?? currentAddress;
 
-  let tokenAddress: string | undefined;
-  if (effectiveChainId === BASE_CHAIN_ID) tokenAddress = BASE_EQTY_TOKEN as string;
-  else if (effectiveChainId === BASE_SEPOLIA_CHAIN_ID) tokenAddress = BASE_SEPOLIA_EQTY_TOKEN as string;
+  const tokenAddress = effectiveChainId
+    ? eqtyTokenAddresses[effectiveChainId]
+    : undefined;
   const isSupported =
     !!effectiveChainId &&
     !!account &&
@@ -43,4 +50,4 @@ export default function useEqtyToken(params?: UseBalanceParameters): EqtyTokenBa
   const data = balanceQuery.data;
   const balance = data ? { value: data.value, decimals: data.decimals, symbol: data.symbol } : undefined;
   return { address: tokenAddress!, balance };
-};
+}

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { EventChain } from "eqty-core";
 import { useOwnableState } from "@/hooks/useOwnableState";
+import type { TypedPackage } from "@/interfaces/TypedPackage";
 
 const {
   serviceMap,
@@ -53,7 +54,17 @@ describe("widget bridge verification", () => {
     );
   });
 
-  function setupHook({ archived = false }: { archived?: boolean } = {}) {
+  function setupHook({
+    archived = false,
+    pkg,
+    staleStateDump,
+    emitReplayStateDump = [],
+  }: {
+    archived?: boolean;
+    pkg?: TypedPackage;
+    staleStateDump?: any;
+    emitReplayStateDump?: any;
+  } = {}) {
     const chain = EventChain.create(
       "0x0000000000000000000000000000000000000abc",
       84532
@@ -61,7 +72,7 @@ describe("widget bridge verification", () => {
     const onError = vi.fn();
     const execute = vi.fn().mockResolvedValue([]);
     const emitPublicEvent = vi.fn().mockResolvedValue({
-      stateDump: [],
+      stateDump: emitReplayStateDump,
       appliedEvents: [],
       appliedReplayKeys: [],
       duplicateReplayKeys: [],
@@ -70,7 +81,29 @@ describe("widget bridge verification", () => {
       complete: true,
       ignoredPublicEvents: [],
     });
-    const getStateDump = vi.fn().mockResolvedValue(undefined);
+    const getStateDump = vi.fn().mockResolvedValue(staleStateDump);
+    const query = vi.fn(async (msg: Record<string, unknown>, state: any) => {
+      if ("get_widget_state" in msg) {
+        const stacked =
+          state.find?.(([key]: [string, unknown]) => key === "stacked_blocks")?.[1] ?? 1;
+        return { stacked_blocks: stacked };
+      }
+      if ("get_info" in msg) {
+        return {
+          owner: "0xabc",
+          issuer: "0xabc",
+          ownable_type: "block_stack",
+        };
+      }
+      if ("get_metadata" in msg) {
+        return {
+          name: pkg?.title ?? "Block Stack",
+          description: pkg?.description ?? "Stack seven crooked public blocks",
+        };
+      }
+      return false;
+    });
+    const rpc = { query };
 
     const ctrl = {
       close: progressClose,
@@ -84,6 +117,8 @@ describe("widget bridge verification", () => {
     serviceMap.ownables = {
       execute,
       emitPublicEvent,
+      isReady: vi.fn().mockReturnValue(true),
+      rpc: vi.fn().mockReturnValue(rpc),
       setWidgetWindow: vi.fn(),
       submitAnchors: vi.fn(),
       anchoring: true,
@@ -96,9 +131,11 @@ describe("widget bridge verification", () => {
     };
 
     const render = renderHook(() =>
-      useOwnableState(chain, undefined, onError, archived)
+      useOwnableState(chain, pkg, onError, archived)
     );
-    const widgetWindow = {} as Window;
+    const widgetWindow = {
+      postMessage: vi.fn(),
+    } as unknown as Window;
 
     act(() => {
       render.result.current.iframeRef.current = {
@@ -118,6 +155,8 @@ describe("widget bridge verification", () => {
       getStateDump,
       messageHandler,
       onError,
+      query,
+      rpc,
       widgetWindow,
     };
   }
@@ -238,5 +277,55 @@ describe("widget bridge verification", () => {
     ).rejects.toThrow("Not allowed to execute msg on other Ownable");
     expect(execute).not.toHaveBeenCalled();
     expect(emitPublicEvent).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the widget from the emitted replay state instead of a stale persisted dump", async () => {
+    const pkg = {
+      title: "Block Stack",
+      name: "ownable-block-stack",
+      description: "Stack seven crooked public blocks",
+      cid: "bafy-test",
+      versions: [],
+      isDynamic: true,
+      hasMetadata: true,
+      hasWidgetState: true,
+      hasAttachments: false,
+      isClosable: false,
+      isConsumable: false,
+      isConsumer: false,
+      isLockable: false,
+      isTransferable: false,
+    } satisfies TypedPackage;
+    const staleStateDump: any = [];
+    const replayStateDump: any = [["stacked_blocks", 2]];
+    const {
+      chain,
+      emitPublicEvent,
+      messageHandler,
+      query,
+      widgetWindow,
+    } = setupHook({
+      pkg,
+      staleStateDump,
+      emitReplayStateDump: replayStateDump,
+    });
+
+    await act(async () => {
+      await messageHandler({
+        data: {
+          type: "emit",
+          ownable_id: chain.id,
+          msg: { stack: { total_blocks: 2 } },
+        },
+        source: widgetWindow,
+      } as MessageEvent);
+    });
+
+    expect(emitPublicEvent).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenCalledWith({ get_widget_state: {} }, replayStateDump);
+    expect((widgetWindow as any).postMessage).toHaveBeenCalledWith(
+      { ownable_id: chain.id, state: { stacked_blocks: 2 } },
+      "*"
+    );
   });
 });

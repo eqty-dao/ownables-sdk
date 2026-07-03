@@ -2,17 +2,40 @@ import { Given, Then, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createPublicClient, http, parseAbiItem } from 'viem';
+import { mnemonicToAccount } from 'viem/accounts';
+import { baseSepolia } from 'viem/chains';
 import { clearBrowserWalletState } from './utils/browser-state.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 
-const E2E_ADDRESS = '0x0000000000000000000000000000000000000001';
+const DEFAULT_E2E_MNEMONIC =
+  'test test test test test test test test test test test junk';
 const E2E_CHAIN_ID = 84532; // Base Sepolia
+const E2E_RPC_URL = process.env.VITE_E2E_RPC_URL || 'http://127.0.0.1:8545';
+const ANCHOR_ADDRESS = '0x7607af0cea78815c71bbea90110b2c218879354b' as const;
+const E2E_ADDRESS = resolveE2EAddress();
 const IDB_NAME = `ownables:${E2E_CHAIN_ID}:${E2E_ADDRESS}`;
 const PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
   '..'
 );
+const PUBLIC_EVENT_ABI = parseAbiItem(
+  'event PublicEvent(bytes32 indexed subjectId, address indexed source, string eventType, bytes data, uint64 timestamp)'
+);
+
+function resolveE2EAddress() {
+  const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
+  const indexRaw = process.env.VITE_E2E_ACCOUNT_INDEX;
+  const addressIndex = Number.isFinite(Number(indexRaw)) ? Number(indexRaw) : 0;
+  return mnemonicToAccount(mnemonic, { addressIndex }).address.toLowerCase();
+}
+
+function debugString(value: unknown) {
+  return JSON.stringify(value, (_, currentValue) =>
+    typeof currentValue === 'bigint' ? currentValue.toString() : currentValue
+  );
+}
 
 const PACKAGES = [
   {
@@ -79,6 +102,44 @@ function makeOwnableSeeds() {
       latestHash: chain.latestHash.hex,
     };
   });
+}
+
+function createE2EPublicClient() {
+  return createPublicClient({
+    chain: {
+      ...baseSepolia,
+      rpcUrls: {
+        ...baseSepolia.rpcUrls,
+        default: { http: [E2E_RPC_URL] },
+      },
+    },
+    transport: http(E2E_RPC_URL),
+  });
+}
+
+async function waitFor<T>(
+  getValue: () => Promise<T | null>,
+  validate: (value: T) => boolean,
+  label: string,
+  timeoutMs = 10_000
+): Promise<T> {
+  const started = Date.now();
+  let lastValue: T | null = null;
+
+  while (Date.now() - started < timeoutMs) {
+    const value = await getValue();
+    if (value !== null) {
+      lastValue = value;
+      if (validate(value)) {
+        return value;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(
+    `${label} timed out${lastValue === null ? '' : `: ${debugString(lastValue)}`}`
+  );
 }
 
 Given('my wallet is empty', async function () {
@@ -152,8 +213,67 @@ Given('I have a Dossier', async function () {
   await this.page.getByRole('button', { name: 'Add files' }).waitFor();
 });
 
+Given('the local Anchor preflight succeeds', async function () {
+  const client = createE2EPublicClient();
+  const chainId = await client.getChainId();
+  if (chainId !== E2E_CHAIN_ID) {
+    throw new Error(`Expected local chain ID ${E2E_CHAIN_ID} but received ${chainId}`);
+  }
+
+  const code = await client.getCode({ address: ANCHOR_ADDRESS });
+  if (!code || code === '0x') {
+    throw new Error(`Expected contract code at ${ANCHOR_ADDRESS}`);
+  }
+
+  const [eqtyCost, ethCost] = await Promise.all([
+    client.readContract({
+      address: ANCHOR_ADDRESS,
+      abi: [
+        {
+          type: 'function',
+          name: 'quoteEqtyCost',
+          stateMutability: 'view',
+          inputs: [{ name: 'count', type: 'uint256' }],
+          outputs: [{ name: 'cost', type: 'uint256' }],
+        },
+      ],
+      functionName: 'quoteEqtyCost',
+      args: [1n],
+    }),
+    client.readContract({
+      address: ANCHOR_ADDRESS,
+      abi: [
+        {
+          type: 'function',
+          name: 'quoteEthCost',
+          stateMutability: 'view',
+          inputs: [{ name: 'count', type: 'uint256' }],
+          outputs: [{ name: 'cost', type: 'uint256' }],
+        },
+      ],
+      functionName: 'quoteEthCost',
+      args: [1n],
+    }),
+  ]);
+
+  if (eqtyCost !== 0n) {
+    throw new Error(`Expected quoteEqtyCost(1) to be 0 but received ${eqtyCost.toString()}`);
+  }
+  if (ethCost !== 0n) {
+    throw new Error(`Expected quoteEthCost(1) to be 0 but received ${ethCost.toString()}`);
+  }
+});
+
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
+});
+
+When('I forge the example ownable {string}', async function (title: string) {
+  await this.page.goto('/');
+  await this.page.getByRole('link', { name: 'the examples' }).click();
+  const button = this.page.locator('button').filter({ hasText: title }).first();
+  await button.waitFor();
+  await button.click();
 });
 
 When('I start recording widget action messages', async function () {
@@ -177,6 +297,11 @@ When('I start recording widget action messages', async function () {
 
     window.addEventListener('message', win.__ownableWidgetMessageHandler);
   });
+});
+
+When('I start recording local Anchor public events', async function () {
+  const client = createE2EPublicClient();
+  (this as any).anchorPublicEventsFromBlock = (await client.getBlockNumber()) + 1n;
 });
 
 Then(
@@ -210,6 +335,35 @@ Then(
     }
   }
 );
+
+Then('the latest local Anchor public event is {string}', async function (eventType: string) {
+  const fromBlock = (this as any).anchorPublicEventsFromBlock as bigint | undefined;
+  if (fromBlock === undefined) {
+    throw new Error('Local Anchor public-event recording has not been started');
+  }
+
+  const client = createE2EPublicClient();
+  const latest = await waitFor(
+    async () => {
+      const logs = await client.getLogs({
+        address: ANCHOR_ADDRESS,
+        event: PUBLIC_EVENT_ABI,
+        fromBlock,
+      });
+      return logs.at(-1) ?? null;
+    },
+    (log) =>
+      String(log.args.eventType) === eventType &&
+      String(log.args.source).toLowerCase() === E2E_ADDRESS.toLowerCase(),
+    `public event ${eventType}`
+  );
+
+  if (String(latest.args.eventType) !== eventType) {
+    throw new Error(
+      `Expected latest Anchor public event ${eventType} but received ${String(latest.args.eventType)}`
+    );
+  }
+});
 
 When(
   'I upload the file {string} into the {string} file input',

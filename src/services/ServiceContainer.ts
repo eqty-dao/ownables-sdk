@@ -14,6 +14,14 @@ import type { AnchorProvider, KVStore } from "@ownables/core";
 import BuilderService from "./Builder.service";
 import { OwnableService } from "@ownables/core";
 import { normalizeAnchorProvider } from "./normalizeAnchorProvider";
+import { normalizeBrowserEqty } from "./normalizeBrowserEqty";
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
+const anchorAddresses: Record<number, `0x${string}` | undefined> = {
+  8453: import.meta.env.VITE_BASE_MAINNET_ANCHOR_ADDRESS as `0x${string}` | undefined,
+  84532: import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS as `0x${string}` | undefined,
+};
 
 export interface ServiceMap {
   relay: RelayService;
@@ -37,6 +45,10 @@ export default class ServiceContainer {
   private readonly cache = new Map<ServiceKey, Promise<any>>();
   private readonly factories = new Map<ServiceKey, ServiceFactory>();
 
+  private getAnchorContractAddress(): `0x${string}` {
+    return anchorAddresses[this.chainId] ?? ZERO_ADDRESS;
+  }
+
   constructor(
     public readonly address: string,
     public readonly chainId: number,
@@ -51,12 +63,24 @@ export default class ServiceContainer {
             c.chainId!
           );
           return normalizeAnchorProvider(
-            new EQTYService(address, c.chainId!, walletClient, publicClient)
+            normalizeBrowserEqty(
+              new EQTYService(address, c.chainId!, walletClient, publicClient, undefined, {
+                anchor: {
+                  contractAddress: c.getAnchorContractAddress(),
+                },
+              })
+            )
           );
         }
 
         return normalizeAnchorProvider(
-          new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient)
+          normalizeBrowserEqty(
+            new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient, undefined, {
+              anchor: {
+                contractAddress: c.getAnchorContractAddress(),
+              },
+            })
+          )
         );
       }
     );

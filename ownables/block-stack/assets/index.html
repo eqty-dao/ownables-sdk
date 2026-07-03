@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top, #dff5ff 0%, #c2e5ff 38%, #eef6ff 100%);
+        font-family: "Montserrat", sans-serif;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #16324f;
+      }
+
+      .scene-card {
+        width: min(92vw, 460px);
+        margin: 18px auto 12px;
+        padding: 18px 18px 10px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: 0 16px 40px rgba(25, 62, 114, 0.14);
+        backdrop-filter: blur(6px);
+      }
+
+      .status {
+        margin: 0 0 14px;
+        font-size: 18px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .hint {
+        margin: 10px 0 0;
+        font-size: 13px;
+        line-height: 1.4;
+        text-align: center;
+        color: #49617c;
+      }
+
+      svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .ownable-actions {
+        width: min(92vw, 460px);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0 auto 20px;
+      }
+
+      .ownable-actions button {
+        border: 0;
+        border-radius: 18px;
+        padding: 14px 16px;
+        font-size: 16px;
+        font-weight: 700;
+        color: white;
+        cursor: pointer;
+        transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .ownable-actions button:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      .ownable-actions button:disabled {
+        opacity: 0.45;
+        cursor: default;
+        box-shadow: none;
+      }
+
+      #stack-button {
+        background: linear-gradient(135deg, #0f7b73, #1f9d8f);
+        box-shadow: 0 12px 24px rgba(15, 123, 115, 0.22);
+      }
+
+      #reset-button {
+        background: linear-gradient(135deg, #d94f42, #ef705d);
+        box-shadow: 0 12px 24px rgba(217, 79, 66, 0.22);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scene-card">
+      <p class="status" id="status">1 of 7 blocks stacked</p>
+      <svg id="scene" viewBox="0 0 360 320" aria-label="Block stack scene"></svg>
+      <p class="hint">Public actions rebuild the crooked tower one block at a time.</p>
+    </div>
+    <div class="ownable-actions">
+      <button id="stack-button">Stack one more</button>
+      <button id="reset-button">Reset</button>
+    </div>
+    <script>
+      const TOTAL_BLOCKS = 7;
+      const BLOCKS = [
+        { label: "1", color: "#ff7b72", scatter: { x: 42, y: 244, r: -18 }, stack: { x: 179, y: 246, r: -7 } },
+        { label: "2", color: "#ffb347", scatter: { x: 104, y: 258, r: 13 }, stack: { x: 184, y: 214, r: 9 } },
+        { label: "3", color: "#ffe066", scatter: { x: 146, y: 236, r: -11 }, stack: { x: 177, y: 182, r: -5 } },
+        { label: "4", color: "#7bd389", scatter: { x: 246, y: 256, r: 17 }, stack: { x: 183, y: 150, r: 6 } },
+        { label: "5", color: "#4fc3f7", scatter: { x: 286, y: 238, r: -15 }, stack: { x: 176, y: 118, r: -8 } },
+        { label: "6", color: "#6c8cff", scatter: { x: 76, y: 212, r: 11 }, stack: { x: 182, y: 86, r: 4 } },
+        { label: "7", color: "#b388ff", scatter: { x: 218, y: 222, r: -13 }, stack: { x: 178, y: 54, r: -10 } },
+      ];
+
+      const scene = document.getElementById("scene");
+      const status = document.getElementById("status");
+      const stackButton = document.getElementById("stack-button");
+      const resetButton = document.getElementById("reset-button");
+
+      let ownable_id = null;
+      let currentState = { stacked_blocks: 1 };
+
+      function renderScene(stackedBlocks) {
+        scene.innerHTML = `
+          <defs>
+            <linearGradient id="ground" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#89c77d" />
+              <stop offset="100%" stop-color="#5f9b57" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="360" height="320" rx="24" fill="rgba(255,255,255,0)" />
+          <circle cx="66" cy="58" r="16" fill="#fff6b5" opacity="0.9"></circle>
+          <ellipse cx="180" cy="276" rx="156" ry="30" fill="url(#ground)"></ellipse>
+          <path d="M0 278 C60 252 118 266 180 258 C240 250 290 270 360 246 L360 320 L0 320 Z" fill="#7dbc6f"></path>
+          ${BLOCKS.map((block, index) => {
+            const stacked = index < stackedBlocks;
+            const position = stacked ? block.stack : block.scatter;
+            return `
+              <g transform="translate(${position.x} ${position.y}) rotate(${position.r})">
+                <rect x="-24" y="-24" width="48" height="48" rx="8" fill="${block.color}" stroke="rgba(22,50,79,0.18)" stroke-width="2"></rect>
+                <text x="0" y="9" text-anchor="middle" font-size="20" font-weight="800" fill="#16324f">${block.label}</text>
+              </g>
+            `;
+          }).join("")}
+        `;
+
+        status.textContent = `${stackedBlocks} of ${TOTAL_BLOCKS} blocks stacked`;
+        stackButton.disabled = stackedBlocks >= TOTAL_BLOCKS;
+        resetButton.disabled = stackedBlocks === 1;
+      }
+
+      function emitAction(eventType, payload) {
+        if (!ownable_id) return;
+        window.parent.postMessage(
+          {
+            type: "emit",
+            ownable_id,
+            msg: { [eventType]: payload },
+          },
+          "*"
+        );
+      }
+
+      stackButton.addEventListener("click", () => {
+        const nextCount = Math.min(currentState.stacked_blocks + 1, TOTAL_BLOCKS);
+        emitAction("stack", { total_blocks: nextCount });
+      });
+
+      resetButton.addEventListener("click", () => {
+        emitAction("reset", { total_blocks: 1 });
+      });
+
+      window.addEventListener("message", (event) => {
+        ownable_id = event.data.ownable_id;
+        currentState = event.data.state || currentState;
+        renderScene(currentState.stacked_blocks || 1);
+      });
+
+      renderScene(currentState.stacked_blocks);
+    </script>
+  </body>
+</html>

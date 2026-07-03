@@ -44,6 +44,12 @@ Runs the Cucumber-based end-to-end tests.
 This command is not accepted proof for the Hub receive flow in the
 `feat/hub` workstream because the current suite has no active scenarios.
 
+### `yarn verify:public-events-e2e`
+
+Runs the accepted local-anvil public-events proof with a real Anchor surfaced at
+the SDK-resolved Base Sepolia address, zero-fee preflight checks, and the
+dedicated public-event example ownable.
+
 ### `yarn verify:main-list-discovery`
 
 Runs the accepted Vitest/jsdom verifier for Hub-backed main-list discovery,

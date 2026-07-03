@@ -7,7 +7,8 @@
   "description": "Development tools for Ownables",
   "homepage": "https://ownables.info",
   "resolutions": {
-    "@ownables/core@workspace:*": "file:../ownables-js/packages/core"
+    "@ownables/core": "file:../ownables-js/packages/core",
+    "eqty-core": "file:../eqty-core"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -28,7 +29,7 @@
     "cbor-x": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "eqty-core": "^1.0.2",
+    "eqty-core": "file:../eqty-core",
     "ipfs-unixfs-importer": "^16.1.4",
     "jszip": "^3.10.1",
     "lucide-react": "^0.577.0",
@@ -68,6 +69,7 @@
     "ownables:copy": "node bin/ownables-copy.mjs",
     "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts",
     "verify:widget-bridge": "vitest run src/verification/widget-bridge.verify.test.tsx",
+    "verify:public-events-e2e": "node bin/refresh-local-ownables-js.mjs && node bin/verify-public-events-e2e.mjs",
     "verify:hub-transfer": "node bin/verify-hub-transfer.mjs",
     "verify:main-list-discovery": "vitest run src/verification/main-list-discovery.verify.test.tsx"
   },
