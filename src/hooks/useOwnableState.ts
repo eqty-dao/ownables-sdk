@@ -278,11 +278,7 @@ export function useOwnableState(
         if (!isEmit && event.data.type !== "execute") return;
 
         const steps = isEmit
-          ? [
-              { id: "encodePublicEvent", label: "Encode the public event" },
-              { id: "emitPublicEvent", label: "Emit the public event" },
-              { id: "signPublicEvent", label: "Register the public event" },
-            ]
+          ? [{ id: "emitPublicEvent", label: "Emit the public event" }]
           : [{ id: "signEvent", label: "Sign the event" }];
         if (!isEmit && ownables?.anchoring) {
           steps.push({ id: "anchor", label: "Anchor the event" });

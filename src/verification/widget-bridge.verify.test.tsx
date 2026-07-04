@@ -215,11 +215,7 @@ describe("widget bridge verification", () => {
     );
     expect(progressOpen).toHaveBeenCalledWith({
       title: "Processing action",
-      steps: [
-        { id: "encodePublicEvent", label: "Encode the public event" },
-        { id: "emitPublicEvent", label: "Emit the public event" },
-        { id: "signPublicEvent", label: "Register the public event" },
-      ],
+      steps: [{ id: "emitPublicEvent", label: "Emit the public event" }],
     });
     expect(progressClose).toHaveBeenCalledTimes(1);
   });
