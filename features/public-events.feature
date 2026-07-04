@@ -16,3 +16,16 @@ Feature: Public events
     Then the latest widget action message is an emit for "reset"
     And the latest local Anchor public event is "reset"
     And text "1 of 7 blocks stacked" within iframe "Ownable widget" is visible
+
+  Scenario: Change and reset Anchor allowance in settings
+    Given the local Anchor preflight succeeds
+    And I'm on the homepage
+    When I open the Anchor allowance dialog
+    Then the Anchor allowance is shown as "0.00 EQTY"
+    When I save the Anchor allowance amount "5"
+    Then the Anchor allowance is shown as "5.00 EQTY"
+    And the local EQTY allowance is "5"
+    When I open the Anchor allowance dialog
+    And I reset the Anchor allowance to zero
+    Then the Anchor allowance is shown as "0.00 EQTY"
+    And the local EQTY allowance is "0"

@@ -2,7 +2,7 @@ import { Given, Then, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPublicClient, http, parseAbiItem } from 'viem';
+import { createPublicClient, formatUnits, http, parseAbiItem, parseUnits } from 'viem';
 import { mnemonicToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { clearBrowserWalletState } from './utils/browser-state.ts';
@@ -12,7 +12,10 @@ const DEFAULT_E2E_MNEMONIC =
   'test test test test test test test test test test test junk';
 const E2E_CHAIN_ID = 84532; // Base Sepolia
 const E2E_RPC_URL = process.env.VITE_E2E_RPC_URL || 'http://127.0.0.1:8545';
-const ANCHOR_ADDRESS = '0x7607af0cea78815c71bbea90110b2c218879354b' as const;
+const ANCHOR_ADDRESS = (process.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS ||
+  '0x7607af0cea78815c71bbea90110b2c218879354b') as `0x${string}`;
+const EQTY_TOKEN_ADDRESS = (process.env.VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS ||
+  '0x24159513a74ca294f5367764557438d318eb7ffe') as `0x${string}`;
 const E2E_ADDRESS = resolveE2EAddress();
 const IDB_NAME = `ownables:${E2E_CHAIN_ID}:${E2E_ADDRESS}`;
 const PROJECT_ROOT = path.resolve(
@@ -379,3 +382,56 @@ When(
     await input.setInputFiles(absolutePath);
   }
 );
+
+When('I open the Anchor allowance dialog', async function () {
+  const changeButton = this.page.getByRole('button', { name: 'change' });
+  if ((await changeButton.count()) === 0) {
+    await this.page.getByRole('button', { name: 'menu' }).click();
+  }
+  await changeButton.click();
+});
+
+When('I save the Anchor allowance amount {string}', async function (amount: string) {
+  await this.page.getByLabel('Allowance amount (EQTY)').fill(amount);
+  await this.page.getByRole('button', { name: 'Save allowance' }).click();
+});
+
+When('I reset the Anchor allowance to zero', async function () {
+  await this.page.getByRole('button', { name: 'Reset to zero' }).click();
+});
+
+Then('the Anchor allowance is shown as {string}', async function (amountLabel: string) {
+  await this.page.getByText(`Allowance: ${amountLabel}`).waitFor();
+});
+
+Then('the local EQTY allowance is {string}', async function (amount: string) {
+  const client = createE2EPublicClient();
+  const allowance = await waitFor(
+    async () =>
+      client.readContract({
+        address: EQTY_TOKEN_ADDRESS,
+        abi: [
+          {
+            type: 'function',
+            name: 'allowance',
+            stateMutability: 'view',
+            inputs: [
+              { name: 'owner', type: 'address' },
+              { name: 'spender', type: 'address' },
+            ],
+            outputs: [{ name: 'remaining', type: 'uint256' }],
+          },
+        ],
+        functionName: 'allowance',
+        args: [E2E_ADDRESS, ANCHOR_ADDRESS],
+      }),
+    (value) => formatUnits(value, 18) === formatUnits(parseUnits(amount, 18), 18),
+    `EQTY allowance ${amount}`
+  );
+
+  if (allowance !== parseUnits(amount, 18)) {
+    throw new Error(
+      `Expected EQTY allowance ${amount} but received ${formatUnits(allowance, 18)}`
+    );
+  }
+});

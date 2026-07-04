@@ -2293,12 +2293,12 @@ __metadata:
 
 "@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem::locator=%40ownables%2Fsdk%40workspace%3A.":
   version: 0.8.1
-  resolution: "@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem#../ownables-js/packages/adapter-viem::hash=30b453&locator=%40ownables%2Fsdk%40workspace%3A."
+  resolution: "@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem#../ownables-js/packages/adapter-viem::hash=769abf&locator=%40ownables%2Fsdk%40workspace%3A."
   dependencies:
     "@ownables/core": "workspace:*"
     eqty-core: "file:../../../eqty-core"
     viem: "npm:^2.47.4"
-  checksum: 10c0/8c9df040a76ce20272c801a3368a5f67965edf267c3ef7774cdf7d7b955c7e2fb1e56d5b6701871e560d24de0940121b0094459e17987b9ee3b8eacc03a245a8
+  checksum: 10c0/90123f5cdaef7e8765f74428df4471c096287e25cc5341b6a4d2ab83052b6494494f89a9af76a2a31252ec2befee6cf2f8dcb3c10ea7896350c90a0bc438c31f
   languageName: node
   linkType: hard
 
@@ -2313,20 +2313,20 @@ __metadata:
 
 "@ownables/core@file:../ownables-js/packages/core::locator=%40ownables%2Fsdk%40workspace%3A.":
   version: 0.8.1
-  resolution: "@ownables/core@file:../ownables-js/packages/core#../ownables-js/packages/core::hash=49f5f1&locator=%40ownables%2Fsdk%40workspace%3A."
+  resolution: "@ownables/core@file:../ownables-js/packages/core#../ownables-js/packages/core::hash=baf113&locator=%40ownables%2Fsdk%40workspace%3A."
   dependencies:
     blockstore-core: "npm:^6.1.2"
     cbor-x: "npm:^1.6.0"
     eqty-core: "file:../../../eqty-core"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
-  checksum: 10c0/4f80e5e0993d298de7ac68c47470ebb54c6272c5531c11b177b318769f30f0f778468a129a3539c03a4dbf81ee0765b25f4d8edf94220f79799ec3cec5dacafa
+  checksum: 10c0/d9cf57fdd33d812a95046f66ac84b6d5c2156ca41e6719c6994369fafc372b665b89107510040b0ec28adad0400994a09f8e9858b9dd459e313b8d63f907559c
   languageName: node
   linkType: hard
 
 "@ownables/platform-browser@file:../ownables-js/packages/platform-browser::locator=%40ownables%2Fsdk%40workspace%3A.":
   version: 0.8.1
-  resolution: "@ownables/platform-browser@file:../ownables-js/packages/platform-browser#../ownables-js/packages/platform-browser::hash=08a892&locator=%40ownables%2Fsdk%40workspace%3A."
+  resolution: "@ownables/platform-browser@file:../ownables-js/packages/platform-browser#../ownables-js/packages/platform-browser::hash=bfb8b2&locator=%40ownables%2Fsdk%40workspace%3A."
   dependencies:
     "@ownables/core": "workspace:*"
     axios: "npm:^1.13.6"
@@ -2336,7 +2336,7 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/0385c8b2e5717e80f35826fe9f3340fccce254eec6bf8fab2cb62f06569994e070f07b73de0eed847ac2ba23e38674779f973557992e110bcef1499e72a1f6d7
+  checksum: 10c0/656e7c5514b8568ffea0aecfd7ea4cefc1aa22fa43bf1943b779f7338e94a0d638bb096d42fd8a3e381486bb2a5a0d88cfd2266886ac9c86daab415e95f7f267
   languageName: node
   linkType: hard
 

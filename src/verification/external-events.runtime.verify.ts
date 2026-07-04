@@ -475,6 +475,62 @@ async function verifyServiceContainerInjectsAnchorConfig() {
   }
 }
 
+async function verifyEqtyAllowanceManagement() {
+  let approveInput: any;
+  const anchorContractAddress = import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS;
+  if (!anchorContractAddress) {
+    throw new Error("VITE_BASE_SEPOLIA_ANCHOR_ADDRESS must be configured for runtime verification");
+  }
+  const verifiedAnchorContractAddress: `0x${string}` = anchorContractAddress;
+
+  const walletClient = {
+    account: "0x0000000000000000000000000000000000000001",
+    writeContract: async (input: any) => {
+      approveInput = input;
+      return "0x" + "77".repeat(32);
+    },
+  };
+
+  const publicClient = {
+    readContract: async ({ functionName, args }: { functionName: string; args?: unknown[] }) => {
+      switch (functionName) {
+        case "eqtyToken":
+          return "0x1111111111111111111111111111111111111111";
+        case "allowance":
+          assert.deepEqual(
+            args,
+            ["0x0000000000000000000000000000000000000001", verifiedAnchorContractAddress],
+            "allowance reads must target the signer and configured Anchor contract"
+          );
+          return 27n;
+        default:
+          throw new Error(`unexpected readContract ${functionName}`);
+      }
+    },
+  };
+
+  const service = new EQTYService(
+    "0x0000000000000000000000000000000000000001",
+    84532,
+    walletClient as any,
+    publicClient as any,
+    undefined,
+    {
+      anchor: {
+        contractAddress: verifiedAnchorContractAddress,
+      },
+    }
+  );
+
+  const allowance = await service.getAnchorEqtyAllowance();
+  const approvalTxHash = await service.setAnchorEqtyAllowance(42n);
+
+  assert.equal(allowance, 27n);
+  assert.equal(approvalTxHash, "0x" + "77".repeat(32));
+  assert.equal(approveInput.functionName, "approve");
+  assert.deepEqual(approveInput.args, [verifiedAnchorContractAddress, 42n]);
+}
+
 async function main() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
@@ -483,6 +539,7 @@ async function main() {
   await verifyEmitPublicEventFlow();
   await verifyEqtyPublicEventFeeForwarding();
   await verifyServiceContainerInjectsAnchorConfig();
+  await verifyEqtyAllowanceManagement();
   console.log("external-events runtime verification passed");
 }
 

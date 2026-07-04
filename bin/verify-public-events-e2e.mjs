@@ -4,14 +4,24 @@ import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  createPublicClient,
+  createWalletClient,
+  encodeDeployData,
+  encodeFunctionData,
+  http,
+} from "viem";
+import { mnemonicToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
 const RPC_URL = "http://127.0.0.1:8545";
 const APP_PORT = "3300";
 const APP_URL = `http://127.0.0.1:${APP_PORT}`;
-const ANCHOR_ADDRESS = "0x7607af0cea78815c71bbea90110b2c218879354b";
 const REQUIRED_ZIPS = ["potion.zip", "block-stack.zip"];
 const PUBLIC_OWNABLES_DIR = join(ROOT, "public", "ownables");
+const DEFAULT_E2E_MNEMONIC =
+  "test test test test test test test test test test test junk";
 let cleaningUp = false;
 
 function fail(message) {
@@ -97,7 +107,7 @@ function syncOwnableZips() {
   }
 }
 
-function resolveAnchorRuntimeBytecode() {
+function inspectContractBytecode(contractPath, field) {
   const forgeDir = join(tmpdir(), `ownables-sdk-anchor-${process.pid}`);
   const outDir = join(forgeDir, "out");
   const cacheDir = join(forgeDir, "cache");
@@ -113,17 +123,120 @@ function resolveAnchorRuntimeBytecode() {
       outDir,
       "--cache-path",
       cacheDir,
-      "src/Anchor.sol:Anchor",
-      "deployedBytecode",
+      contractPath,
+      field,
     ]);
   } finally {
     rmSync(forgeDir, { recursive: true, force: true });
   }
 }
 
-async function bootstrapAnchor() {
-  const runtimeBytecode = resolveAnchorRuntimeBytecode();
-  await rpc("anvil_setCode", [ANCHOR_ADDRESS, runtimeBytecode]);
+function createDeploymentClients() {
+  const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
+  const account = mnemonicToAccount(mnemonic);
+  const walletClient = createWalletClient({
+    account,
+    chain: {
+      ...baseSepolia,
+      rpcUrls: {
+        ...baseSepolia.rpcUrls,
+        default: { http: [RPC_URL] },
+      },
+    },
+    transport: http(RPC_URL),
+  });
+  const publicClient = createPublicClient({
+    chain: {
+      ...baseSepolia,
+      rpcUrls: {
+        ...baseSepolia.rpcUrls,
+        default: { http: [RPC_URL] },
+      },
+    },
+    transport: http(RPC_URL),
+  });
+
+  return { account, walletClient, publicClient };
+}
+
+async function sendAndWait(walletClient, publicClient, request) {
+  const hash = await walletClient.sendTransaction(request);
+  return publicClient.waitForTransactionReceipt({ hash });
+}
+
+async function bootstrapContracts() {
+  const { account, walletClient, publicClient } = createDeploymentClients();
+  const eqtyBytecode = inspectContractBytecode("src/EQTY.sol:EQTY", "bytecode");
+  const anchorBytecode = inspectContractBytecode("src/Anchor.sol:Anchor", "bytecode");
+  const deployAbi = [
+    {
+      type: "constructor",
+      inputs: [
+        { name: "_bridgeWallet", type: "address" },
+        { name: "_mintDeadline", type: "uint256" },
+      ],
+    },
+  ];
+
+  const eqtyDeployReceipt = await sendAndWait(walletClient, publicClient, {
+    account,
+    data: encodeDeployData({
+      abi: deployAbi,
+      bytecode: eqtyBytecode,
+      args: [account.address, BigInt(Math.floor(Date.now() / 1000) + 86400)],
+    }),
+  });
+  const eqtyTokenAddress = eqtyDeployReceipt.contractAddress;
+  if (!eqtyTokenAddress) {
+    fail("EQTY deployment did not return a contract address");
+  }
+
+  const anchorDeployReceipt = await sendAndWait(walletClient, publicClient, {
+    account,
+    data: anchorBytecode,
+  });
+  const anchorAddress = anchorDeployReceipt.contractAddress;
+  if (!anchorAddress) {
+    fail("Anchor deployment did not return a contract address");
+  }
+
+  await sendAndWait(walletClient, publicClient, {
+    account,
+    to: anchorAddress,
+    data: encodeFunctionData({
+      abi: [
+        {
+          type: "function",
+          name: "setEqtyToken",
+          stateMutability: "nonpayable",
+          inputs: [{ name: "newEqtyToken", type: "address" }],
+          outputs: [],
+        },
+      ],
+      functionName: "setEqtyToken",
+      args: [eqtyTokenAddress],
+    }),
+  });
+
+  await sendAndWait(walletClient, publicClient, {
+    account,
+    to: anchorAddress,
+    data: encodeFunctionData({
+      abi: [
+        {
+          type: "function",
+          name: "setEqtyFee",
+          stateMutability: "nonpayable",
+          inputs: [{ name: "newFee", type: "uint256" }],
+          outputs: [],
+        },
+      ],
+      functionName: "setEqtyFee",
+      args: [0n],
+    }),
+  });
+
+  return { anchorAddress, eqtyTokenAddress };
 }
 
 function spawnProcess(cmd, args, options = {}) {
@@ -182,7 +295,7 @@ async function main() {
   children.push(anvil);
 
   await waitFor(async () => (await rpc("eth_chainId")) === "0x14a34", "anvil RPC");
-  await bootstrapAnchor();
+  const { anchorAddress, eqtyTokenAddress } = await bootstrapContracts();
 
   const env = {
     ...process.env,
@@ -190,6 +303,8 @@ async function main() {
     VITE_E2E: "1",
     VITE_E2E_RPC_URL: RPC_URL,
     VITE_BASE_SEPOLIA_RPC_URL: RPC_URL,
+    VITE_BASE_SEPOLIA_ANCHOR_ADDRESS: anchorAddress,
+    VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS: eqtyTokenAddress,
     VITE_OWNABLE_EXAMPLES_URL: "/ownables",
   };
 
