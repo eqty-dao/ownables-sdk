@@ -59,11 +59,13 @@ describe("widget bridge verification", () => {
     pkg,
     staleStateDump,
     emitReplayStateDump = [],
+    emitObservation,
   }: {
     archived?: boolean;
     pkg?: TypedPackage;
     staleStateDump?: any;
     emitReplayStateDump?: any;
+    emitObservation?: any;
   } = {}) {
     const chain = EventChain.create(
       "0x0000000000000000000000000000000000000abc",
@@ -71,10 +73,34 @@ describe("widget bridge verification", () => {
     );
     const onError = vi.fn();
     const execute = vi.fn().mockResolvedValue([]);
-    const emitPublicEvent = vi.fn().mockResolvedValue({
+    const emitPublicEvent = vi.fn().mockImplementation(async (_chain, eventType) => (
+      emitObservation ?? {
+        receipt: {
+          subjectId: `0x${"1".repeat(64)}`,
+          source: "0xabc",
+          transactionHash: `0x${"2".repeat(64)}`,
+          blockNumber: 1,
+          transactionIndex: 0,
+          logIndex: 0,
+          eventType,
+          data: new Uint8Array([1, 2, 3]),
+        },
+        publicEvent: {
+          source: "0xabc",
+          transactionHash: `0x${"2".repeat(64)}`,
+          blockNumber: 1,
+          transactionIndex: 0,
+          logIndex: 0,
+          eventType,
+          data: new Uint8Array([1, 2, 3]),
+        },
+        ignoredPublicEvents: [],
+      }
+    ));
+    const replayPublicEvent = vi.fn().mockResolvedValue({
       stateDump: emitReplayStateDump,
       appliedEvents: [],
-      appliedReplayKeys: [],
+      appliedReplayKeys: [`0x${"2".repeat(64)}:0`],
       duplicateReplayKeys: [],
       appliedPublicEvents: [],
       duplicatePublicEvents: [],
@@ -117,6 +143,7 @@ describe("widget bridge verification", () => {
     serviceMap.ownables = {
       execute,
       emitPublicEvent,
+      replayPublicEvent,
       isReady: vi.fn().mockReturnValue(true),
       rpc: vi.fn().mockReturnValue(rpc),
       setWidgetWindow: vi.fn(),
@@ -151,6 +178,7 @@ describe("widget bridge verification", () => {
       chain,
       ctrl,
       emitPublicEvent,
+      replayPublicEvent,
       execute,
       getStateDump,
       messageHandler,
@@ -162,7 +190,7 @@ describe("widget bridge verification", () => {
   }
 
   it("keeps execute messages on the private execute path", async () => {
-    const { chain, execute, emitPublicEvent, messageHandler, widgetWindow } = setupHook();
+    const { chain, execute, emitPublicEvent, replayPublicEvent, messageHandler, widgetWindow } = setupHook();
 
     await act(async () => {
       await messageHandler({
@@ -193,7 +221,7 @@ describe("widget bridge verification", () => {
   });
 
   it("routes emit messages through the public-event flow with the single-key msg envelope", async () => {
-    const { chain, execute, emitPublicEvent, messageHandler, widgetWindow } = setupHook();
+    const { chain, execute, emitPublicEvent, replayPublicEvent, messageHandler, widgetWindow } = setupHook();
 
     await act(async () => {
       await messageHandler({
@@ -211,6 +239,13 @@ describe("widget bridge verification", () => {
       expect.any(EventChain),
       "drink",
       { amount: 25 },
+      expect.any(Function)
+    );
+    expect(replayPublicEvent).toHaveBeenCalledWith(
+      expect.any(EventChain),
+      expect.objectContaining({
+        eventType: "drink",
+      }),
       expect.any(Function)
     );
     expect(progressOpen).toHaveBeenCalledWith({
@@ -297,6 +332,7 @@ describe("widget bridge verification", () => {
     const {
       chain,
       emitPublicEvent,
+      replayPublicEvent,
       messageHandler,
       query,
       widgetWindow,
@@ -318,10 +354,47 @@ describe("widget bridge verification", () => {
     });
 
     expect(emitPublicEvent).toHaveBeenCalledTimes(1);
+    expect(replayPublicEvent).toHaveBeenCalledTimes(1);
     expect(query).toHaveBeenCalledWith({ get_widget_state: {} }, replayStateDump);
     expect((widgetWindow as any).postMessage).toHaveBeenCalledWith(
       { ownable_id: chain.id, state: { stacked_blocks: 2 } },
       "*"
     );
+  });
+
+  it("silently ignores invalid public emits that return ignored public events without replay data", async () => {
+    const { chain, emitPublicEvent, replayPublicEvent, messageHandler, onError, widgetWindow } =
+      setupHook({
+        emitObservation: {
+          receipt: {
+            subjectId: `0x${"9".repeat(64)}`,
+            source: "0xabc",
+            transactionHash: `0x${"2".repeat(64)}`,
+            blockNumber: 1,
+            transactionIndex: 0,
+            logIndex: 0,
+            eventType: "stack",
+            data: new Uint8Array([1, 2, 3]),
+          },
+          publicEvent: undefined,
+          ignoredPublicEvents: [{ reason: "invalid_subject_id" }],
+        },
+      });
+
+    await act(async () => {
+      await messageHandler({
+        data: {
+          type: "emit",
+          ownable_id: chain.id,
+          msg: { stack: { total_blocks: 2 } },
+        },
+        source: widgetWindow,
+      } as MessageEvent);
+    });
+
+    expect(emitPublicEvent).toHaveBeenCalledTimes(1);
+    expect(replayPublicEvent).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(progressClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -12,6 +12,8 @@ type AnchorProviderCompatible = Omit<AnchorProvider, "verifyAnchors" | "validate
   validateAnchors?: AnchorProvider["validateAnchors"];
 };
 
+const NORMALIZED_ANCHOR_PROVIDER = Symbol.for("ownables-sdk.normalizedAnchorProvider");
+
 function hasDetails(
   result: AnchorValidationResult | LegacyAnchorValidationResult
 ): result is AnchorValidationResult {
@@ -21,6 +23,14 @@ function hasDetails(
 export function normalizeAnchorProvider<T extends AnchorProviderCompatible>(
   provider: T
 ): T & AnchorProvider {
+  const normalizedProvider = provider as T & AnchorProvider & {
+    [NORMALIZED_ANCHOR_PROVIDER]?: true;
+  };
+
+  if (normalizedProvider[NORMALIZED_ANCHOR_PROVIDER]) {
+    return normalizedProvider;
+  }
+
   const originalVerifyAnchors = provider.verifyAnchors.bind(provider);
 
   async function normalizedVerifyAnchors(...anchors: any[]): Promise<AnchorValidationResult> {
@@ -49,8 +59,17 @@ export function normalizeAnchorProvider<T extends AnchorProviderCompatible>(
     return buildAnchorValidationResult(pairs, records);
   }
 
-  return Object.assign(provider, {
-    verifyAnchors: normalizedVerifyAnchors,
-    validateAnchors: normalizedVerifyAnchors,
+  return new Proxy(provider, {
+    get(target, prop, receiver) {
+      if (prop === NORMALIZED_ANCHOR_PROVIDER) {
+        return true;
+      }
+      if (prop === "verifyAnchors" || prop === "validateAnchors") {
+        return normalizedVerifyAnchors;
+      }
+
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
   }) as T & AnchorProvider;
 }

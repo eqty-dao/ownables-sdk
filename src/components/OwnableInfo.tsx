@@ -16,6 +16,8 @@ import shortId from "@/utils/shortId";
 import Tooltip from "./Tooltip";
 import useInterval from "@/hooks/useInterval";
 import { useService } from "@/hooks/useService";
+import { buildMixedTimelineEntries, type TimelineEntry } from "./ownableTimeline";
+import { loadOwnableVerification } from "@/services/ownableVerification";
 
 interface OwnableInfoProps {
   className?: string;
@@ -28,30 +30,50 @@ export default function OwnableInfo(props: OwnableInfoProps) {
   const { chain, metadata } = props;
   const [open, setOpen] = useState(false);
   const [verified, setVerified] = useState(false);
-  const [anchors, setAnchors] = useState<
-    Array<{ tx: string | undefined; verified: boolean } | null>
-  >([]);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const eventChainService = useService("eventChains");
+  const eqty = useService("eqty");
+  const hub = useService("hub");
 
   const verify = useCallback(
-    (chain: EventChain, open: boolean) => {
-      if (!open || !eventChainService) return;
+    async (nextChain: EventChain, isOpen: boolean) => {
+      if (!isOpen || !eventChainService) return;
 
-      eventChainService.verify(chain).then(({ verified, anchors, map }) => {
-        setVerified(verified);
-        setAnchors(
-          chain.anchorMap.map(({ key, value }) => ({
-            tx: anchors[key.hex],
-            verified: map[key.hex]?.toLowerCase() === value.hex.toLowerCase(),
-          }))
-        );
-      });
+      const anchorVerification = await eventChainService.verify(nextChain);
+      const nextAnchors = nextChain.anchorMap.map(({ key, value }) => ({
+        tx: anchorVerification.anchors[key.hex],
+        verified: anchorVerification.map[key.hex]?.toLowerCase() === value.hex.toLowerCase(),
+      }));
+
+      const ownableVerification = await loadOwnableVerification(
+        nextChain,
+        anchorVerification,
+        eqty,
+        hub
+      );
+
+      setVerified(ownableVerification.verified);
+      setTimeline(
+        buildMixedTimelineEntries(
+          nextChain,
+          ownableVerification.anchorVerification,
+          nextAnchors,
+          ownableVerification.publicEvents,
+          ownableVerification.source === "local" ? "development" : "production"
+        )
+      );
     },
-    [eventChainService]
+    [eqty, eventChainService, hub]
   );
 
-  useEffect(() => verify(chain, open), [chain, open, verify]);
-  useInterval(() => verify(chain, open), 5 * 1000);
+  useEffect(() => {
+    void verify(chain, open);
+  }, [chain, open, verify]);
+  useInterval(() => {
+    void verify(chain, open);
+  }, 5 * 1000);
+
+  const isStaticOwnable = chain.events.length === 0 && timeline.length === 0;
 
   return (
     <>
@@ -69,7 +91,6 @@ export default function OwnableInfo(props: OwnableInfoProps) {
         open={open}
         className="sm:w-[min(900px,calc(100vw-32px))]"
       >
-        {/* Header */}
         <div className="flex items-start justify-between px-6 pt-6 pb-1">
           <div className="min-w-0">
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
@@ -89,20 +110,20 @@ export default function OwnableInfo(props: OwnableInfoProps) {
           />
         </div>
 
-        {/* Events */}
         <DialogContent>
-          {chain.events.length === 0 ? (
+          {isStaticOwnable ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               This is a static ownable. It does not contain any events.
             </p>
           ) : (
-            chain.events.map((event, i) => (
+            timeline.map((entry) => (
               <EventCard
-                key={event.timestamp}
-                event={event}
-                anchorTx={anchors[i]?.tx}
-                verified={!!anchors[i]?.verified}
-                isFirst={i === 0}
+                key={
+                  entry.kind === "private"
+                    ? entry.event.hash.hex
+                    : entry.event.replayKey
+                }
+                entry={entry}
               />
             ))
           )}

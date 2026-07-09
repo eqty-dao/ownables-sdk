@@ -216,10 +216,25 @@ export function useOwnableState(
 
       try {
         setIsExecuting(true);
-        const replay = await ownables.emitPublicEvent(
+        const observation = await ownables.emitPublicEvent(
           chain,
           eventType,
           payload,
+          onProgress as any
+        );
+        if (
+          !observation.publicEvent &&
+          Array.isArray(observation.ignoredPublicEvents) &&
+          observation.ignoredPublicEvents.length > 0
+        ) {
+          return;
+        }
+        if (!observation.publicEvent) {
+          throw new Error("Public event replay was not available after emit");
+        }
+        const replay = await ownables.replayPublicEvent(
+          chain,
+          observation.publicEvent,
           onProgress as any
         );
         await refresh(replay.stateDump);

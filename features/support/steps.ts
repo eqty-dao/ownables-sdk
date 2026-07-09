@@ -40,6 +40,17 @@ function debugString(value: unknown) {
   );
 }
 
+type PrivateChainSnapshot = Array<{
+  storeName: string;
+  latestHash: string | null;
+  eventCount: number;
+}>;
+
+type PublicReplaySnapshot = Array<{
+  storeName: string;
+  replayKeys: string[];
+}>;
+
 const PACKAGES = [
   {
     title: 'Antenna',
@@ -143,6 +154,92 @@ async function waitFor<T>(
   throw new Error(
     `${label} timed out${lastValue === null ? '' : `: ${debugString(lastValue)}`}`
   );
+}
+
+async function readPrivateChainSnapshot(page: {
+  evaluate: <T, U>(fn: (arg: T) => Promise<U> | U, arg: T) => Promise<U>;
+}) {
+  return page.evaluate(async ({ idbName }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(idbName);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    try {
+      const storeNames = Array.from(db.objectStoreNames)
+        .filter((name) => name.startsWith('ownable:') && !name.includes('.'))
+        .sort();
+
+      const snapshot = await Promise.all(
+        storeNames.map(
+          (storeName) =>
+            new Promise<{ storeName: string; latestHash: string | null; eventCount: number }>(
+              (resolve, reject) => {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const latestHashReq = store.get('latestHash');
+                const chainReq = store.get('chain');
+
+                tx.oncomplete = () => {
+                  const chain = chainReq.result as { events?: Array<unknown> } | undefined;
+                  resolve({
+                    storeName,
+                    latestHash: (latestHashReq.result as string | undefined) ?? null,
+                    eventCount: Array.isArray(chain?.events) ? chain.events.length : 0,
+                  });
+                };
+                tx.onerror = () => reject(tx.error);
+              }
+            )
+        )
+      );
+
+      return snapshot;
+    } finally {
+      db.close();
+    }
+  }, { idbName: IDB_NAME });
+}
+
+async function readPublicReplaySnapshot(page: {
+  evaluate: <T, U>(fn: (arg: T) => Promise<U> | U, arg: T) => Promise<U>;
+}) {
+  return page.evaluate(async ({ idbName }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(idbName);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    try {
+      const storeNames = Array.from(db.objectStoreNames)
+        .filter((name) => name.startsWith('ownable:') && name.endsWith('.public-event-replays'))
+        .sort();
+
+      const snapshot = await Promise.all(
+        storeNames.map(
+          (storeName) =>
+            new Promise<{ storeName: string; replayKeys: string[] }>((resolve, reject) => {
+              const tx = db.transaction(storeName, 'readonly');
+              const store = tx.objectStore(storeName);
+              const keysReq = store.getAllKeys();
+
+              tx.oncomplete = () =>
+                resolve({
+                  storeName,
+                  replayKeys: (keysReq.result as string[]).map(String).sort(),
+                });
+              tx.onerror = () => reject(tx.error);
+            })
+        )
+      );
+
+      return snapshot;
+    } finally {
+      db.close();
+    }
+  }, { idbName: IDB_NAME });
 }
 
 Given('my wallet is empty', async function () {
@@ -302,6 +399,14 @@ When('I start recording widget action messages', async function () {
   });
 });
 
+When('I record the current private chain snapshots', async function () {
+  (this as any).privateChainSnapshot = await readPrivateChainSnapshot(this.page);
+});
+
+When('I start recording public replay evidence', async function () {
+  (this as any).publicReplaySnapshot = await readPublicReplaySnapshot(this.page);
+});
+
 When('I start recording local Anchor public events', async function () {
   const client = createE2EPublicClient();
   (this as any).anchorPublicEventsFromBlock = (await client.getBlockNumber()) + 1n;
@@ -330,6 +435,7 @@ Then(
       throw new Error(`Expected widget action type emit but received ${String(message.type)}`);
     }
 
+    (this as any).latestWidgetActionMessage = message;
     const keys = Object.keys(message.msg ?? {});
     if (keys.length !== 1 || keys[0] !== eventType) {
       throw new Error(
@@ -366,6 +472,70 @@ Then('the latest local Anchor public event is {string}', async function (eventTy
       `Expected latest Anchor public event ${eventType} but received ${String(latest.args.eventType)}`
     );
   }
+
+  (this as any).latestAnchorPublicEvent = {
+    transactionHash: latest.transactionHash,
+    logIndex: latest.logIndex,
+    eventType: String(latest.args.eventType),
+    source: String(latest.args.source),
+  };
+});
+
+Then('the private chain snapshots are unchanged', async function () {
+  const before = ((this as any).privateChainSnapshot ?? null) as PrivateChainSnapshot | null;
+  if (!before) {
+    throw new Error('Private chain snapshot recording has not been started');
+  }
+
+  const after = await readPrivateChainSnapshot(this.page);
+  if (debugString(before) !== debugString(after)) {
+    throw new Error(
+      `Expected public emit to leave private chains unchanged.\nBefore: ${debugString(before)}\nAfter: ${debugString(after)}`
+    );
+  }
+});
+
+Then('the latest local Anchor public event replay is stored', async function () {
+  const before = ((this as any).publicReplaySnapshot ?? null) as PublicReplaySnapshot | null;
+  const latestAnchorPublicEvent = (this as any).latestAnchorPublicEvent as
+    | { transactionHash: `0x${string}`; logIndex: number; eventType: string; source: string }
+    | undefined;
+  const latestWidgetActionMessage = (this as any).latestWidgetActionMessage as
+    | { ownable_id?: string }
+    | undefined;
+
+  if (!before) {
+    throw new Error('Public replay recording has not been started');
+  }
+  if (!latestAnchorPublicEvent) {
+    throw new Error('No Anchor public event was recorded');
+  }
+  const ownableId = latestWidgetActionMessage?.ownable_id;
+  if (!ownableId) {
+    throw new Error('No widget ownable id was recorded for the latest emit');
+  }
+
+  const replayKey = `${latestAnchorPublicEvent.transactionHash}:${latestAnchorPublicEvent.logIndex}`;
+  const storeName = `ownable:${ownableId}.public-event-replays`;
+
+  const after = await waitFor(
+    async () => {
+      const snapshot = await readPublicReplaySnapshot(this.page);
+      return snapshot.find((entry) => entry.storeName === storeName) ?? null;
+    },
+    (snapshot) => snapshot.replayKeys.includes(replayKey),
+    `replay evidence ${replayKey}`
+  );
+
+  const beforeKeys =
+    before.find((entry) => entry.storeName === storeName)?.replayKeys ?? [];
+
+  if (beforeKeys.includes(replayKey)) {
+    throw new Error(`Replay key ${replayKey} was already present before the emit`);
+  }
+  if (!after.replayKeys.includes(replayKey)) {
+    throw new Error(`Expected replay store ${storeName} to contain ${replayKey}`);
+  }
 });
 
 When(
@@ -389,6 +559,116 @@ When('I open the Anchor allowance dialog', async function () {
     await this.page.getByRole('button', { name: 'menu' }).click();
   }
   await changeButton.click();
+});
+
+When('I open More information for the current ownable', async function () {
+  await this.page.getByRole('button', { name: 'More information' }).click();
+});
+
+Then('the More information dialog is visible for {string}', async function (name: string) {
+  const dialog = this.page.getByRole('dialog');
+  await dialog.waitFor();
+  await dialog.getByRole('heading', { name }).waitFor();
+});
+
+Then('the More information dialog shows a replay-ordered mixed timeline', async function () {
+  const dialog = this.page.getByRole('dialog');
+  const privateCards = dialog.getByTestId('private-event-card');
+  const publicCards = dialog.getByTestId('public-event-card');
+  const timelineCards = dialog.locator('[data-timeline-kind]');
+
+  await privateCards.first().getByText('Private chain event').waitFor();
+  await privateCards.first().getByText('Anchor tx:', { exact: false }).waitFor();
+  await publicCards.first().getByText('Public replay event').waitFor();
+  await publicCards.first().getByText('Replay applied').waitFor();
+  await publicCards.first().getByText('Anchor tx:', { exact: false }).waitFor();
+  await publicCards.first().getByText('Data:', { exact: false }).waitFor();
+  const privateCount = await privateCards.count();
+  const publicCount = await publicCards.count();
+  if (privateCount < 1) {
+    throw new Error('Expected at least one private timeline card');
+  }
+  if (publicCount < 2) {
+    throw new Error(`Expected at least two public timeline cards but found ${publicCount}`);
+  }
+
+  const timelineCount = await timelineCards.count();
+  const orderedEntries = await Promise.all(
+    Array.from({ length: timelineCount }, async (_, index) => {
+      const card = timelineCards.nth(index);
+      return {
+        index,
+        kind: await card.getAttribute('data-timeline-kind'),
+        eventType: await card.getAttribute('data-event-type'),
+        text: await card.innerText(),
+      };
+    })
+  );
+  const firstPrivate = orderedEntries.find((entry) => entry.kind === 'private');
+  const stackPublic = orderedEntries.find(
+    (entry) => entry.kind === 'public' && entry.eventType === 'stack'
+  );
+  const resetPublic = orderedEntries.find(
+    (entry) => entry.kind === 'public' && entry.eventType === 'reset'
+  );
+
+  if (!firstPrivate) {
+    throw new Error(`Expected a private timeline card but found sequence ${debugString(orderedEntries)}`);
+  }
+  if (!stackPublic || !resetPublic) {
+    throw new Error(
+      `Expected stack and reset public cards but found sequence ${debugString(orderedEntries)}`
+    );
+  }
+  if (stackPublic.index !== 0) {
+    throw new Error(
+      `Expected the stack replay card to lead the rendered timeline but found sequence ${debugString(orderedEntries)}`
+    );
+  }
+  if (resetPublic.index !== stackPublic.index + 1) {
+    throw new Error(
+      `Expected reset to render immediately after stack but found sequence ${debugString(orderedEntries)}`
+    );
+  }
+  if (firstPrivate.index !== resetPublic.index + 1) {
+    throw new Error(
+      `Expected the retained private instantiate card after the replayed public cards but found sequence ${debugString(orderedEntries)}`
+    );
+  }
+});
+
+Then('public timeline cards omit private chain rails', async function () {
+  const dialog = this.page.getByRole('dialog');
+  const publicCards = dialog.getByTestId('public-event-card');
+  const count = await publicCards.count();
+  if (count === 0) {
+    throw new Error('Expected at least one public timeline card');
+  }
+
+  for (let index = 0; index < count; index += 1) {
+    const card = publicCards.nth(index);
+    if (await card.getByText('Previous:', { exact: false }).count()) {
+      throw new Error(`Public timeline card ${index} rendered a Previous rail`);
+    }
+    if (await card.getByText('Hash:', { exact: false }).count()) {
+      throw new Error(`Public timeline card ${index} rendered a Hash rail`);
+    }
+  }
+});
+
+Then('private timeline cards keep private chain rails', async function () {
+  const dialog = this.page.getByRole('dialog');
+  const privateCards = dialog.getByTestId('private-event-card');
+  const count = await privateCards.count();
+  if (count === 0) {
+    throw new Error('Expected at least one private timeline card');
+  }
+
+  const lastPrivateCard = privateCards.nth(count - 1);
+  const hashLabels = await lastPrivateCard.getByText('Hash:', { exact: false }).count();
+  if (hashLabels < 1) {
+    throw new Error('Expected at least one private chain hash rail');
+  }
 });
 
 When('I save the Anchor allowance amount {string}', async function (amount: string) {

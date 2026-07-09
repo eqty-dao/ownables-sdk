@@ -77,6 +77,7 @@ class MockEqty {
   chainId = 84532;
   signed: Event[] = [];
   emitted: Array<{ subjectId: string; eventType: string; data: Uint8Array }> = [];
+  emittedSubjectIdOverride?: string;
   private signer = {
     getAddress: async () => this.address,
     signTypedData: async () =>
@@ -89,9 +90,10 @@ class MockEqty {
   }
 
   async emitPublicEvent(subjectId: string, eventType: string, data: Uint8Array) {
-    this.emitted.push({ subjectId, eventType, data });
+    const emittedSubjectId = this.emittedSubjectIdOverride ?? subjectId;
+    this.emitted.push({ subjectId: emittedSubjectId, eventType, data });
     return {
-      subjectId,
+      subjectId: emittedSubjectId,
       source: this.address,
       transactionHash: "0x" + "44".repeat(32),
       blockNumber: 1,
@@ -156,6 +158,35 @@ function createRpcMock(chainId: string) {
   };
 }
 
+function installReplayRegisterGuard(service: any, rpc: ReturnType<typeof createRpcMock>) {
+  let replayDepth = 0;
+  let replayAttempts = 0;
+  const originalAttemptReplayIndexedPublicEvents =
+    service.attemptReplayIndexedPublicEvents.bind(service);
+  service.attemptReplayIndexedPublicEvents = async (...args: Parameters<any>) => {
+    replayAttempts += 1;
+    replayDepth += 1;
+    try {
+      return await originalAttemptReplayIndexedPublicEvents(...(args as [any, any, any, any?]));
+    } finally {
+      replayDepth -= 1;
+    }
+  };
+
+  const originalRegister = rpc.register.bind(rpc);
+  rpc.register = async (...args: any[]) => {
+    assert.ok(
+      replayDepth > 0,
+      "rpc.register must run only while replay is consuming public events"
+    );
+    return await originalRegister(...(args as [any, any, any]));
+  };
+
+  return {
+    getReplayAttempts: () => replayAttempts,
+  };
+}
+
 class FakeWorker extends EventTarget {
   messages: any[] = [];
 
@@ -182,7 +213,7 @@ class FakeWorker extends EventTarget {
   terminate(): void {}
 }
 
-async function verifyReplayContexts() {
+async function verifyStoredRegisterEventsAreRejected() {
   const idb = new MemoryIDB();
   const eventChains = new MockEventChains();
   const eqty = new MockEqty();
@@ -193,10 +224,10 @@ async function verifyReplayContexts() {
     {} as any
   ) as any;
 
-  const registerChain = EventChain.create(eqty.address, eqty.chainId);
-  const registerRpc = createRpcMock(registerChain.id);
-  service._rpc.set(registerChain.id, registerRpc);
-
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
   new Event({
     "@context": "register_msg.json",
     source: eqty.address,
@@ -206,29 +237,28 @@ async function verifyReplayContexts() {
     logIndex: 0,
     eventType: "consume",
     data: "0x1234",
-  }).addTo(registerChain);
+  }).addTo(chain);
 
-  await service.apply(registerChain, []);
+  const originalConsoleError = console.error;
+  const capturedErrors: unknown[][] = [];
+  console.error = (...args: unknown[]) => {
+    capturedErrors.push(args);
+  };
 
-  const ingestChain = EventChain.create(eqty.address, eqty.chainId);
-  const ingestRpc = createRpcMock(ingestChain.id);
-  service._rpc.set(ingestChain.id, ingestRpc);
+  try {
+    await assert.rejects(
+      service.apply(chain, []),
+      /Unknown event type/,
+      "stored register events must not replay as private-chain events"
+    );
+  } finally {
+    console.error = originalConsoleError;
+  }
 
-  new Event({
-    "@context": "ingest_msg.json",
-    source: { id: "source-1", owner: "owner-1", issuer: "issuer-1" },
-    eventType: "consume",
-    attributes: { amount: "10" },
-  }).addTo(ingestChain);
-
-  await service.apply(ingestChain, []);
-
-  assert.equal(registerRpc.calls.register.length, 1, "register replay must be invoked once");
-  assert.equal(ingestRpc.calls.ingest.length, 1, "ingest replay must be invoked once");
   assert.equal(
-    registerRpc.calls.register[0].info.sender,
-    eqty.address,
-    "replay sender should resolve to active signer address"
+    capturedErrors.length > 0,
+    true,
+    "stored register events should still hit the rejected unknown-event path internally"
   );
 }
 
@@ -273,7 +303,7 @@ async function verifyConsumeFlow() {
   assert.equal(eqty.signed.length, 2, "consume flow should sign both producer and consumer events");
 }
 
-async function verifyRegisterPublicEventFlow() {
+async function verifyReplayIndexedPublicEventsFlow() {
   const idb = new MemoryIDB();
   const eventChains = new MockEventChains();
   const eqty = new MockEqty();
@@ -287,7 +317,9 @@ async function verifyRegisterPublicEventFlow() {
   const chain = EventChain.create(eqty.address, eqty.chainId);
   const rpc = createRpcMock(chain.id);
   service._rpc.set(chain.id, rpc);
+  const replayGuard = installReplayRegisterGuard(service, rpc);
   eventChains.setStateDump(chain.id, chain.state.hex, []);
+  const initialLatestHash = chain.latestHash.hex;
 
   const publicEvent = {
     source: eqty.address,
@@ -299,16 +331,60 @@ async function verifyRegisterPublicEventFlow() {
     data: new Uint8Array([1, 2, 3]),
   };
 
-  await service.registerPublicEvent(chain, publicEvent);
-  eventChains.setStateDump(chain.id, chain.state.hex, []);
-  await service.registerPublicEvent(chain, publicEvent);
+  const replay = await service.replayIndexedPublicEvents(chain.id, [], [publicEvent, publicEvent]);
 
-  assert.equal(rpc.calls.register.length, 1, "duplicate public event replay must be ignored");
-  assert.equal(eqty.signed.length, 1, "deduped public event should sign once");
+  assert.equal(replay.complete, true, "indexed public replay should complete");
+  assert.equal(replay.appliedReplayKeys.length, 1, "only one unique replay key should apply");
+  assert.equal(replay.duplicateReplayKeys.length, 1, "duplicate replay keys should be reported");
+  assert.equal(replay.appliedPublicEvents.length, 1, "one public event should be applied");
+  assert.equal(replay.duplicatePublicEvents.length, 1, "duplicate public events should be surfaced");
+  assert.equal(replay.ignoredPublicEvents.length, 0, "valid public replay must not be ignored");
   assert.equal(
-    eqty.signed[0].parsedData["@context"],
-    "register_msg.json",
-    "registerPublicEvent must persist a register replay event"
+    replayGuard.getReplayAttempts(),
+    1,
+    "indexed public replay must route register through a replay attempt"
+  );
+  assert.equal(rpc.calls.register.length, 1, "indexed public replay must register exactly once");
+  assert.equal(eqty.signed.length, 0, "public replay must not sign a private follow-up event");
+  assert.equal(
+    chain.latestHash.hex,
+    initialLatestHash,
+    "public replay must not mutate the private event chain"
+  );
+}
+
+async function verifyRegisterOutsideReplayIsRejected() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  installReplayRegisterGuard(service, rpc);
+
+  await assert.rejects(
+    rpc.register(
+      {
+        source: eqty.address,
+        eventType: "consume",
+        data: new Uint8Array([1, 2, 3]),
+        blockNumber: 1,
+        transactionHash: new Uint8Array(32),
+        transactionIndex: 0,
+        logIndex: 0,
+      },
+      { sender: eqty.address, funds: [] },
+      []
+    ),
+    /rpc\.register must run only while replay is consuming public events/,
+    "rpc.register must fail immediately when replay is inactive"
   );
 }
 
@@ -345,22 +421,107 @@ async function verifyEmitPublicEventFlow() {
   const chain = EventChain.create(eqty.address, eqty.chainId);
   const rpc = createRpcMock(chain.id);
   service._rpc.set(chain.id, rpc);
+  const replayGuard = installReplayRegisterGuard(service, rpc);
   eventChains.setStateDump(chain.id, chain.state.hex, []);
+  const initialLatestHash = chain.latestHash.hex;
 
-  await service.emitPublicEvent(chain, "consume", { amount: "10" });
+  const observation = await service.emitPublicEvent(chain, "consume", { amount: "10" });
 
   assert.equal(rpc.calls.encodePublicEvent.length, 1, "emit flow must encode the public event");
   assert.equal(eqty.emitted.length, 1, "emit flow must publish through EQTY");
-  assert.equal(rpc.calls.register.length, 1, "emitted public event must be registered locally");
+  assert.equal(
+    replayGuard.getReplayAttempts(),
+    0,
+    "emit flow must not silently trigger replay on its own"
+  );
+  assert.equal(
+    rpc.calls.register.length,
+    0,
+    "emit flow must not bless an imperative post-emit register step"
+  );
+  assert.equal(
+    observation.ignoredPublicEvents.length,
+    0,
+    "emit flow must surface a valid emitted public event without replay errors"
+  );
+  assert.ok(observation.publicEvent, "emit flow must return the emitted public event for replay");
   assert.deepEqual(
     Array.from(eqty.emitted[0].data),
     Array.from(rpc.calls.encodePublicEvent[0].payload),
     "published data must be the worker-encoded payload"
   );
   assert.equal(
-    eqty.signed[0].parsedData["@context"],
-    "register_msg.json",
-    "emit flow must persist a register replay event"
+    eqty.signed.length,
+    0,
+    "emit flow must not sign a private follow-up event"
+  );
+  assert.equal(
+    chain.latestHash.hex,
+    initialLatestHash,
+    "emit flow must leave the private chain unchanged"
+  );
+
+  const replay = await service.replayPublicEvent(chain, observation.publicEvent);
+
+  assert.equal(replay.complete, true, "replay must apply the emitted public event");
+  assert.equal(
+    replayGuard.getReplayAttempts(),
+    1,
+    "ownable-side register must happen only while replay is consuming the emitted public event"
+  );
+  assert.equal(replay.appliedReplayKeys.length, 1, "replay must apply exactly one replay key");
+  assert.equal(replay.appliedPublicEvents.length, 1, "replay must apply one public event");
+  assert.equal(replay.duplicatePublicEvents.length, 0, "replay must not report duplicates");
+  assert.equal(replay.ignoredPublicEvents.length, 0, "replay must not ignore a valid public event");
+  assert.equal(rpc.calls.register.length, 1, "replay must register exactly once");
+  assert.equal(
+    await idb.get(`ownable:${chain.id}.public-event-replays`, replay.appliedReplayKeys[0]),
+    true,
+    "replay must persist evidence for the emitted public event"
+  );
+}
+
+async function verifyEmitPublicEventIgnoresInvalidSubjectId() {
+  const idb = new MemoryIDB();
+  const eventChains = new MockEventChains();
+  const eqty = new MockEqty();
+  eqty.emittedSubjectIdOverride = "0x" + "99".repeat(32);
+  const service = new OwnableService(
+    idb as any,
+    eventChains as any,
+    eqty as any,
+    {} as any
+  ) as any;
+
+  const chain = EventChain.create(eqty.address, eqty.chainId);
+  const rpc = createRpcMock(chain.id);
+  service._rpc.set(chain.id, rpc);
+  eventChains.setStateDump(chain.id, chain.state.hex, []);
+  const initialLatestHash = chain.latestHash.hex;
+
+  const observation = await service.emitPublicEvent(chain, "consume", { amount: "10" });
+
+  assert.equal(
+    observation.ignoredPublicEvents.length,
+    1,
+    "invalid subject ids must be surfaced without replay"
+  );
+  assert.equal(
+    observation.ignoredPublicEvents[0].reason,
+    "invalid_subject_id",
+    "invalid subject ids must be ignored rather than stored privately"
+  );
+  assert.equal(
+    observation.publicEvent,
+    undefined,
+    "invalid subject ids must not produce a replayable public event"
+  );
+  assert.equal(rpc.calls.register.length, 0, "invalid subject ids must not call register");
+  assert.equal(eqty.signed.length, 0, "ignored public events must not sign a private follow-up");
+  assert.equal(
+    chain.latestHash.hex,
+    initialLatestHash,
+    "ignored public events must leave the private chain unchanged"
   );
 }
 
@@ -532,11 +693,13 @@ async function verifyEqtyAllowanceManagement() {
 }
 
 async function main() {
-  await verifyReplayContexts();
+  await verifyStoredRegisterEventsAreRejected();
   await verifyConsumeFlow();
-  await verifyRegisterPublicEventFlow();
+  await verifyReplayIndexedPublicEventsFlow();
+  await verifyRegisterOutsideReplayIsRejected();
   await verifyEncodePublicEventBridge();
   await verifyEmitPublicEventFlow();
+  await verifyEmitPublicEventIgnoresInvalidSubjectId();
   await verifyEqtyPublicEventFeeForwarding();
   await verifyServiceContainerInjectsAnchorConfig();
   await verifyEqtyAllowanceManagement();
