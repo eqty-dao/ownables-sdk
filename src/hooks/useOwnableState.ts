@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import type { StateDump } from "@ownables/core";
+import type { ReplayAttemptResult, StateDump } from "@ownables/core";
 import type { TypedAttachment } from "@/interfaces/TypedAttachment";
 import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -33,7 +33,12 @@ export function useOwnableState(
   chain: EventChain,
   pkg: TypedPackage | undefined,
   onError: (title: string, message: string) => void,
-  archived = false
+  archived = false,
+  publicEventRefreshToken = 0,
+  onPublicEventsChanged?: (
+    entryId: string,
+    replay: ReplayAttemptResult
+  ) => void | Promise<void>
 ) {
   const ownables = useService("ownables");
   const eventChains = useService("eventChains");
@@ -44,6 +49,7 @@ export function useOwnableState(
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const busyRef = useRef(false);
   const appliedRef = useRef<any>(new EventChain(chain.id).latestHash);
+  const publicEventRefreshRef = useRef(publicEventRefreshToken);
 
   const [initialized, setInitialized] = useState(false);
   const [applied, setApplied] = useState<any>(appliedRef.current);
@@ -222,6 +228,7 @@ export function useOwnableState(
           payload,
           onProgress as any
         );
+        await onPublicEventsChanged?.(chain.id, replay);
         await refresh(replay.stateDump);
         appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
@@ -233,7 +240,7 @@ export function useOwnableState(
         setIsExecuting(false);
       }
     },
-    [archived, chain, eventChains, onError, ownables, refresh]
+    [archived, chain, eventChains, onError, onPublicEventsChanged, ownables, refresh]
   );
 
   const onLoad = useCallback(async (): Promise<void> => {
@@ -318,6 +325,36 @@ export function useOwnableState(
       ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
     }
   }, [archived, chain.id, initialized, ownables]);
+
+  useEffect(() => {
+    if (publicEventRefreshToken === publicEventRefreshRef.current) {
+      return;
+    }
+
+    publicEventRefreshRef.current = publicEventRefreshToken;
+
+    if (!initialized || !eventChains) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const sync = async () => {
+      const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
+      if (!nextStateDump || cancelled) {
+        return;
+      }
+
+      setStateDump(nextStateDump);
+      await refresh(nextStateDump);
+    };
+
+    void sync();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chain.id, chain.state.hex, eventChains, initialized, publicEventRefreshToken, refresh]);
 
   // Apply pending chain events and refresh
   const chainEventCount = chain.events.length;

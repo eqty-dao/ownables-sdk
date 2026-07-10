@@ -41,6 +41,7 @@ export function createE2EViemClients(chainId: number): {
   const publicClient = createPublicClient({
     chain,
     transport: http(rpcUrl),
+    pollingInterval: 250,
   }) as PublicClient;
 
   return { address: account.address, walletClient, publicClient };

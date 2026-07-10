@@ -10,6 +10,13 @@ export default defineConfig({
         find: /^@\//,
         replacement: `${path.resolve(__dirname, "src")}/`,
       },
+      {
+        find: /^@ownables\/platform-browser$/,
+        replacement: path.resolve(
+          __dirname,
+          "../ownables-js/packages/platform-browser/src/index.ts"
+        ),
+      },
     ],
   },
   server: {
@@ -19,6 +26,9 @@ export default defineConfig({
         path.resolve(__dirname),
       ],
       deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.letsrunit/**']
+    },
+    watch: {
+      ignored: ["**/.letsrunit/**"],
     }
   },
   test: {

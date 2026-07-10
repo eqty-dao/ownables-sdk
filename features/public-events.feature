@@ -1,31 +1,31 @@
 Feature: Public events
 
-  Scenario: Stack and reset a public block ownable on local Anchor
-    Given the local Anchor preflight succeeds
+  Scenario: Confirm a pending public event from the Hub transport
+    Given the Hub transport verifier backend is reset
+    And my wallet is empty
     And I'm on the homepage
     When I forge the example ownable "Block Stack"
     And the ownable widget is ready
-    Then text "1 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    Then the Hub recorded a public-events snapshot request for the current ownable
+    And the Hub recorded a public-events stream request for the current ownable set
     When I start recording widget action messages
-    And I start recording local Anchor public events
     And I click button "Stack one more" within iframe "Ownable widget"
     Then the latest widget action message is an emit for "stack"
-    And the latest local Anchor public event is "stack"
+    And the tracked public-event status for the current ownable becomes "pending" for "stack"
+    When the Hub confirms the latest pending public event for the current ownable
+    Then the tracked public-event status for the current ownable becomes "confirmed" for "stack"
+    And there is exactly "1" tracked public event for "stack" on the current ownable
     And text "2 of 7 blocks stacked" within iframe "Ownable widget" is visible
-    When I click button "Reset" within iframe "Ownable widget"
-    Then the latest widget action message is an emit for "reset"
-    And the latest local Anchor public event is "reset"
-    And text "1 of 7 blocks stacked" within iframe "Ownable widget" is visible
 
-  Scenario: Change and reset Anchor allowance in settings
-    Given the local Anchor preflight succeeds
+  Scenario: Reconnect the public-events stream when the watched ownable set changes
+    Given the Hub transport verifier backend is reset
+    And my wallet is empty
     And I'm on the homepage
-    When I open the Anchor allowance dialog
-    Then the Anchor allowance is shown as "0.00 EQTY"
-    When I save the Anchor allowance amount "5"
-    Then the Anchor allowance is shown as "5.00 EQTY"
-    And the local EQTY allowance is "5"
-    When I open the Anchor allowance dialog
-    And I reset the Anchor allowance to zero
-    Then the Anchor allowance is shown as "0.00 EQTY"
-    And the local EQTY allowance is "0"
+    When I forge the example ownable "Potion"
+    And I remember the current ownable id as "first"
+    Then the Hub recorded a public-events stream request for the current ownable set
+    When I forge the example ownable "Block Stack"
+    And the ownable widget is ready
+    And I remember the current ownable id as "second"
+    Then the Hub recorded a later public-events stream request for remembered ownables "first,second"
+    And the latest Hub public-events stream request uses only repeated "id" params plus "from"

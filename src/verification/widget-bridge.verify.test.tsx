@@ -59,11 +59,13 @@ describe("widget bridge verification", () => {
     pkg,
     staleStateDump,
     emitReplayStateDump = [],
+    onPublicEventsChanged,
   }: {
     archived?: boolean;
     pkg?: TypedPackage;
     staleStateDump?: any;
     emitReplayStateDump?: any;
+    onPublicEventsChanged?: (entryId: string, replay: any) => void | Promise<void>;
   } = {}) {
     const chain = EventChain.create(
       "0x0000000000000000000000000000000000000abc",
@@ -80,6 +82,20 @@ describe("widget bridge verification", () => {
       duplicatePublicEvents: [],
       complete: true,
       ignoredPublicEvents: [],
+      pendingPublicEvents: [
+        {
+          replayKey: "0xpending:1",
+          event: {
+            eventType: "drink",
+            transactionHash: "0x" + "44".repeat(32),
+            logIndex: 1,
+            blockNumber: 5,
+          },
+          status: "pending",
+          sources: ["local"],
+        },
+      ],
+      confirmedPendingPublicEvents: [],
     });
     const getStateDump = vi.fn().mockResolvedValue(staleStateDump);
     const query = vi.fn(async (msg: Record<string, unknown>, state: any) => {
@@ -131,7 +147,7 @@ describe("widget bridge verification", () => {
     };
 
     const render = renderHook(() =>
-      useOwnableState(chain, pkg, onError, archived)
+      useOwnableState(chain, pkg, onError, archived, 0, onPublicEventsChanged)
     );
     const widgetWindow = {
       postMessage: vi.fn(),
@@ -322,6 +338,43 @@ describe("widget bridge verification", () => {
     expect((widgetWindow as any).postMessage).toHaveBeenCalledWith(
       { ownable_id: chain.id, state: { stacked_blocks: 2 } },
       "*"
+    );
+  });
+
+  it("forwards emitted pending replay records to the outer public-event sync callback", async () => {
+    const onPublicEventsChanged = vi.fn().mockResolvedValue(undefined);
+    const {
+      chain,
+      emitPublicEvent,
+      messageHandler,
+      widgetWindow,
+    } = setupHook({
+      onPublicEventsChanged,
+    });
+
+    await act(async () => {
+      await messageHandler({
+        data: {
+          type: "emit",
+          ownable_id: chain.id,
+          msg: { drink: { amount: 25 } },
+        },
+        source: widgetWindow,
+      } as MessageEvent);
+    });
+
+    expect(emitPublicEvent).toHaveBeenCalledTimes(1);
+    expect(onPublicEventsChanged).toHaveBeenCalledTimes(1);
+    expect(onPublicEventsChanged).toHaveBeenCalledWith(
+      chain.id,
+      expect.objectContaining({
+        pendingPublicEvents: [
+          expect.objectContaining({
+            status: "pending",
+            sources: ["local"],
+          }),
+        ],
+      })
     );
   });
 });

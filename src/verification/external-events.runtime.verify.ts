@@ -347,20 +347,32 @@ async function verifyEmitPublicEventFlow() {
   service._rpc.set(chain.id, rpc);
   eventChains.setStateDump(chain.id, chain.state.hex, []);
 
-  await service.emitPublicEvent(chain, "consume", { amount: "10" });
+  const replay = await service.emitPublicEvent(chain, "consume", { amount: "10" });
 
   assert.equal(rpc.calls.encodePublicEvent.length, 1, "emit flow must encode the public event");
   assert.equal(eqty.emitted.length, 1, "emit flow must publish through EQTY");
-  assert.equal(rpc.calls.register.length, 1, "emitted public event must be registered locally");
+  assert.equal(
+    rpc.calls.register.length,
+    0,
+    "emit flow must not register the public event until Hub confirmation arrives"
+  );
   assert.deepEqual(
     Array.from(eqty.emitted[0].data),
     Array.from(rpc.calls.encodePublicEvent[0].payload),
     "published data must be the worker-encoded payload"
   );
-  assert.equal(
-    eqty.signed[0].parsedData["@context"],
-    "register_msg.json",
-    "emit flow must persist a register replay event"
+  assert.deepEqual(
+    replay.appliedReplayKeys,
+    [],
+    "emit flow must not report immediate replay application"
+  );
+  assert.equal(replay.pendingPublicEvents.length, 1, "emit flow must create one pending replay record");
+  assert.equal(replay.pendingPublicEvents[0].status, "pending");
+  assert.deepEqual(replay.pendingPublicEvents[0].sources, ["local"]);
+  assert.deepEqual(
+    await service.listTrackedPublicEvents(chain.id),
+    replay.pendingPublicEvents,
+    "pending local public events must be stored in the replay store"
   );
 }
 
@@ -475,6 +487,31 @@ async function verifyServiceContainerInjectsAnchorConfig() {
   }
 }
 
+async function verifyServiceContainerInjectsHubConfig() {
+  const container = new ServiceContainer(
+    "0x0000000000000000000000000000000000000001",
+    84532
+  );
+
+  try {
+    const hub = (await container.get("hub")) as any;
+    assert.equal(
+      hub.isConfigured,
+      Boolean(import.meta.env.VITE_HUB),
+      "ServiceContainer must inject the SDK-owned Hub URL into HubService"
+    );
+    if (import.meta.env.VITE_HUB) {
+      assert.equal(
+        hub.origin,
+        new URL(import.meta.env.VITE_HUB).origin,
+        "HubService must derive its origin from the configured VITE_HUB"
+      );
+    }
+  } finally {
+    await container.dispose();
+  }
+}
+
 async function verifyEqtyAllowanceManagement() {
   let approveInput: any;
   const anchorContractAddress = import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS;
@@ -539,6 +576,7 @@ async function main() {
   await verifyEmitPublicEventFlow();
   await verifyEqtyPublicEventFeeForwarding();
   await verifyServiceContainerInjectsAnchorConfig();
+  await verifyServiceContainerInjectsHubConfig();
   await verifyEqtyAllowanceManagement();
   console.log("external-events runtime verification passed");
 }

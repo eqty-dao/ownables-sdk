@@ -40,6 +40,7 @@ export type ServiceKey = keyof ServiceMap;
 
 type ServiceFactory<T = any> = (container: ServiceContainer) => Promise<T> | T;
 const relayUrl = import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL || "";
+const hubUrl = import.meta.env.VITE_HUB || "";
 
 export default class ServiceContainer {
   private readonly cache = new Map<ServiceKey, Promise<any>>();
@@ -99,7 +100,7 @@ export default class ServiceContainer {
       async (c) => new RelayService(await c.get("eqty"), { relayUrl })
     );
 
-    this.register("hub", () => new HubService());
+    this.register("hub", () => new HubService(hubUrl));
 
     this.register(
       "eventChains",

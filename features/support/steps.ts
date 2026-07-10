@@ -2,7 +2,7 @@ import { Given, Then, When } from '@letsrunit/bdd';
 import { EventChain } from 'eqty-core';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPublicClient, formatUnits, http, parseAbiItem, parseUnits } from 'viem';
+import { createPublicClient, formatUnits, http, parseUnits } from 'viem';
 import { mnemonicToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { clearBrowserWalletState } from './utils/browser-state.ts';
@@ -17,15 +17,27 @@ const ANCHOR_ADDRESS = (process.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS ||
 const EQTY_TOKEN_ADDRESS = (process.env.VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS ||
   '0x24159513a74ca294f5367764557438d318eb7ffe') as `0x${string}`;
 const E2E_ADDRESS = resolveE2EAddress();
+const IDB_PREFIX = `ownables:${E2E_CHAIN_ID}:`;
 const IDB_NAME = `ownables:${E2E_CHAIN_ID}:${E2E_ADDRESS}`;
 const PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
   '..'
 );
-const PUBLIC_EVENT_ABI = parseAbiItem(
-  'event PublicEvent(bytes32 indexed subjectId, address indexed source, string eventType, bytes data, uint64 timestamp)'
-);
+const HUB_CONTROL_URL = process.env.PUBLIC_EVENTS_VERIFY_HUB_CONTROL_URL;
+
+interface TrackedPublicEventRecord {
+  replayKey: string;
+  status: 'pending' | 'confirmed';
+  sources: string[];
+  event: {
+    eventType: string;
+    transactionHash: string;
+    logIndex: number;
+    blockNumber: number;
+    [key: string]: unknown;
+  };
+}
 
 function resolveE2EAddress() {
   const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
@@ -145,8 +157,119 @@ async function waitFor<T>(
   );
 }
 
+async function hubControl(pathname: string, init?: RequestInit) {
+  if (!HUB_CONTROL_URL) {
+    throw new Error('PUBLIC_EVENTS_VERIFY_HUB_CONTROL_URL is not configured');
+  }
+
+  const response = await fetch(
+    new URL(pathname.replace(/^\//, ''), HUB_CONTROL_URL),
+    init
+  );
+  if (!response.ok) {
+    throw new Error(`Hub verifier control request failed: ${response.status} ${response.statusText}`);
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+async function resolveOwnablesDatabaseName(page: any): Promise<string> {
+  return page.evaluate(async ({ preferredName, prefix }) => {
+    if (typeof indexedDB.databases !== 'function') {
+      return preferredName;
+    }
+
+    const databases = await indexedDB.databases();
+    const names = databases
+      .map((database) => database?.name)
+      .filter((name): name is string => Boolean(name));
+
+    return (
+      names.find((name) => name === preferredName) ??
+      names.find((name) => name.startsWith(prefix)) ??
+      preferredName
+    );
+  }, { preferredName: IDB_NAME, prefix: IDB_PREFIX });
+}
+
+async function listImportedOwnableIds(page: any): Promise<string[]> {
+  const idbName = await resolveOwnablesDatabaseName(page);
+  return page.evaluate(async ({ idbName }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(idbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    const ids = Array.from(db.objectStoreNames)
+      .filter((storeName) => storeName.startsWith('ownable:'))
+      .filter((storeName) => !storeName.endsWith('.snapshots'))
+      .filter((storeName) => !storeName.endsWith('.state'))
+      .filter((storeName) => !storeName.endsWith('.public-event-replays'))
+      .map((storeName) => storeName.slice('ownable:'.length))
+      .sort();
+
+    db.close();
+    return ids;
+  }, { idbName });
+}
+
+async function currentOwnableId(page: any): Promise<string> {
+  const activeOwnableId = await page
+    .locator('iframe[aria-label="Ownable widget"]')
+    .getAttribute('id');
+  if (activeOwnableId) {
+    return activeOwnableId;
+  }
+
+  const ids = await listImportedOwnableIds(page);
+  if (ids.length === 0) {
+    throw new Error('No imported ownables were found in IndexedDB');
+  }
+
+  return ids[ids.length - 1]!;
+}
+
+async function trackedPublicEvents(page: any, ownableId: string): Promise<TrackedPublicEventRecord[]> {
+  const idbName = await resolveOwnablesDatabaseName(page);
+  return page.evaluate(async ({ idbName, ownableId }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(idbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    const storeName = `ownable:${ownableId}.public-event-replays`;
+    if (!db.objectStoreNames.contains(storeName)) {
+      db.close();
+      return [];
+    }
+
+    const records = await new Promise<any[]>((resolve, reject) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const request = tx.objectStore(storeName).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    db.close();
+    return records;
+  }, { idbName, ownableId });
+}
+
 Given('my wallet is empty', async function () {
   await clearBrowserWalletState(this.page);
+});
+
+Given('the Hub transport verifier backend is reset', async function () {
+  await hubControl('/reset', {
+    method: 'POST',
+  });
+  (this as any).rememberedOwnableIds = {};
 });
 
 Given('there are example Ownables', async function () {
@@ -273,7 +396,29 @@ When('the ownable widget is ready', async function () {
 
 When('I forge the example ownable {string}', async function (title: string) {
   await this.page.goto('/');
-  await this.page.getByRole('link', { name: 'the examples' }).click();
+  const examplesLink = this.page.getByRole('link', { name: 'the examples' });
+  const issueButton = this.page.getByRole('button', { name: /Issue an Ownable/ });
+  const isExamplesVisible = async () =>
+    (await examplesLink.count()) > 0 && (await examplesLink.first().isVisible());
+  const isIssueVisible = async () =>
+    (await issueButton.count()) > 0 && (await issueButton.first().isVisible());
+
+  if (await isExamplesVisible()) {
+    await examplesLink.click();
+  } else {
+    if (!(await isIssueVisible())) {
+      const backButton = this.page.getByRole('button', { name: 'Back' }).first();
+      if ((await backButton.count()) > 0) {
+        await backButton.click({ force: true });
+      }
+    }
+
+    if (await isExamplesVisible()) {
+      await examplesLink.click();
+    } else {
+      await issueButton.click();
+    }
+  }
   const button = this.page.locator('button').filter({ hasText: title }).first();
   await button.waitFor();
   await button.click();
@@ -300,11 +445,6 @@ When('I start recording widget action messages', async function () {
 
     window.addEventListener('message', win.__ownableWidgetMessageHandler);
   });
-});
-
-When('I start recording local Anchor public events', async function () {
-  const client = createE2EPublicClient();
-  (this as any).anchorPublicEventsFromBlock = (await client.getBlockNumber()) + 1n;
 });
 
 Then(
@@ -339,34 +479,178 @@ Then(
   }
 );
 
-Then('the latest local Anchor public event is {string}', async function (eventType: string) {
-  const fromBlock = (this as any).anchorPublicEventsFromBlock as bigint | undefined;
-  if (fromBlock === undefined) {
-    throw new Error('Local Anchor public-event recording has not been started');
+When('I remember the current ownable id as {string}', async function (label: string) {
+  const rememberedOwnableIds = ((this as any).rememberedOwnableIds ??= {});
+  rememberedOwnableIds[label] = await currentOwnableId(this.page);
+});
+
+When('the Hub confirms the latest pending public event for the current ownable', async function () {
+  const ownableId = await currentOwnableId(this.page);
+  const records = await trackedPublicEvents(this.page, ownableId);
+  const pendingRecord = [...records]
+    .reverse()
+    .find((record) => record.status === 'pending');
+
+  if (!pendingRecord) {
+    throw new Error(`No pending public event was found for ownable ${ownableId}`);
   }
 
-  const client = createE2EPublicClient();
-  const latest = await waitFor(
-    async () => {
-      const logs = await client.getLogs({
-        address: ANCHOR_ADDRESS,
-        event: PUBLIC_EVENT_ABI,
-        fromBlock,
-      });
-      return logs.at(-1) ?? null;
+  await hubControl('/public-event', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
     },
-    (log) =>
-      String(log.args.eventType) === eventType &&
-      String(log.args.source).toLowerCase() === E2E_ADDRESS.toLowerCase(),
-    `public event ${eventType}`
+    body: JSON.stringify({
+      ownableId,
+      publicEvent: pendingRecord.event,
+    }),
+  });
+});
+
+Then('the Hub recorded a public-events snapshot request for the current ownable', async function () {
+  const ownableId = await currentOwnableId(this.page);
+  await waitFor(
+    async () => {
+      const requests = await hubControl('/requests');
+      return requests?.publicEventSnapshots?.find?.(
+        (request: { ownableId: string }) => request.ownableId === ownableId
+      ) ?? null;
+    },
+    Boolean,
+    `public-events snapshot request for ${ownableId}`
+  );
+});
+
+Then('the Hub recorded a public-events stream request for the current ownable set', async function () {
+  const importedIds = await listImportedOwnableIds(this.page);
+  const expectedIds =
+    importedIds.length > 0 ? importedIds : [await currentOwnableId(this.page)];
+  const request = await waitFor(
+    async () => {
+      const requests = await hubControl('/requests');
+      const streamRequests = requests?.publicEventStreams ?? [];
+      return (
+        [...streamRequests]
+          .reverse()
+          .find((candidate: { ids: string[] }) =>
+            JSON.stringify(candidate.ids) === JSON.stringify(expectedIds)
+          ) ?? null
+      );
+    },
+    Boolean,
+    `public-events stream request for ${expectedIds.join(',')}`
   );
 
-  if (String(latest.args.eventType) !== eventType) {
-    throw new Error(
-      `Expected latest Anchor public event ${eventType} but received ${String(latest.args.eventType)}`
-    );
-  }
+  (this as any).latestPublicEventStreamRequest = request;
 });
+
+Then(
+  'the Hub recorded a later public-events stream request for remembered ownables {string}',
+  async function (labels: string) {
+    const rememberedOwnableIds = (this as any).rememberedOwnableIds ?? {};
+    const expectedIds = labels
+      .split(',')
+      .map((label) => rememberedOwnableIds[label.trim()])
+      .filter(Boolean)
+      .sort();
+
+    if (expectedIds.length === 0) {
+      throw new Error(`No remembered ownable ids were found for ${labels}`);
+    }
+
+    const request = await waitFor(
+      async () => {
+        const requests = await hubControl('/requests');
+        const streamRequests = requests?.publicEventStreams ?? [];
+        return (
+          [...streamRequests]
+            .reverse()
+            .find((candidate: { ids: string[] }) =>
+              JSON.stringify(candidate.ids) === JSON.stringify(expectedIds)
+            ) ?? null
+        );
+      },
+      Boolean,
+      `later public-events stream request for ${expectedIds.join(',')}`
+    );
+
+    (this as any).latestPublicEventStreamRequest = request;
+  }
+);
+
+Then(
+  'the latest Hub public-events stream request uses only repeated {string} params plus {string}',
+  async function (idParamName: string, fromParamName: string) {
+    const request = (this as any).latestPublicEventStreamRequest as
+      | { queryEntries: Array<[string, string]>; queryKeys: string[] }
+      | undefined;
+
+    if (!request) {
+      throw new Error('No public-events stream request has been recorded');
+    }
+
+    const uniqueKeys = [...new Set(request.queryKeys)];
+    if (
+      JSON.stringify(uniqueKeys.sort()) !==
+      JSON.stringify([fromParamName, idParamName].sort())
+    ) {
+      throw new Error(
+        `Expected only ${idParamName} and ${fromParamName} query keys but received ${JSON.stringify(uniqueKeys)}`
+      );
+    }
+
+    if (!request.queryEntries.some(([key]) => key === fromParamName)) {
+      throw new Error(`Expected a ${fromParamName} query parameter`);
+    }
+
+    const idEntries = request.queryEntries.filter(([key]) => key === idParamName);
+    if (idEntries.length < 1) {
+      throw new Error(`Expected at least one repeated ${idParamName} query parameter`);
+    }
+  }
+);
+
+Then(
+  'the tracked public-event status for the current ownable becomes {string} for {string}',
+  async function (status: 'pending' | 'confirmed', eventType: string) {
+    const ownableId = await currentOwnableId(this.page);
+    const record = await waitFor(
+      async () => {
+        const records = await trackedPublicEvents(this.page, ownableId);
+        return (
+          [...records]
+            .reverse()
+            .find(
+              (candidate) =>
+                candidate.status === status && candidate.event.eventType === eventType
+            ) ?? null
+        );
+      },
+      Boolean,
+      `${status} tracked public event ${eventType}`
+    );
+
+    if (!record) {
+      throw new Error(`Missing ${status} tracked public event ${eventType}`);
+    }
+  }
+);
+
+Then(
+  'there is exactly {string} tracked public event for {string} on the current ownable',
+  async function (countText: string, eventType: string) {
+    const ownableId = await currentOwnableId(this.page);
+    const expectedCount = Number.parseInt(countText, 10);
+    const records = await trackedPublicEvents(this.page, ownableId);
+    const matches = records.filter((record) => record.event.eventType === eventType);
+
+    if (matches.length !== expectedCount) {
+      throw new Error(
+        `Expected ${expectedCount} tracked public events for ${eventType} but found ${matches.length}: ${debugString(matches)}`
+      );
+    }
+  }
+);
 
 When(
   'I upload the file {string} into the {string} file input',
