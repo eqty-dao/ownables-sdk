@@ -5,7 +5,9 @@ Feature: Issue
     When I click link "the examples"
     And I click button "Robot An adorable robot companion"
     Then heading "Robot" is visible
-    And the page contains text "More information"
+    When I click button "More information"
+    Then the page contains text "Signed by:"
+    And the page contains text "Media type:"
 
   Scenario: Issue multiple ownables
     Given I'm on the homepage

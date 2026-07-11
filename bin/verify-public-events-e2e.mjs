@@ -437,6 +437,21 @@ function createHubVerifierServer() {
       return;
     }
 
+    const verificationMatch = url.pathname.match(/^\/ownables\/([^/]+)\/verification$/);
+    if (req.method === "GET" && verificationMatch) {
+      const ownableId = decodeURIComponent(verificationMatch[1]);
+      writeJson(res, 200, {
+        ownableId,
+        verified: false,
+        anchorVerification: {
+          verified: false,
+          anchors: {},
+          map: {},
+        },
+      });
+      return;
+    }
+
     if (req.method === "POST" && url.pathname === "/__control/reset") {
       reset();
       writeJson(res, 200, { ok: true });

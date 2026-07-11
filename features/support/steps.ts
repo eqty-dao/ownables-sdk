@@ -402,12 +402,30 @@ When('I forge the example ownable {string}', async function (title: string) {
     (await examplesLink.count()) > 0 && (await examplesLink.first().isVisible());
   const isIssueVisible = async () =>
     (await issueButton.count()) > 0 && (await issueButton.first().isVisible());
+  const backButton = this.page.getByRole('button', { name: 'Back' }).first();
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await isExamplesVisible()) {
+      break;
+    }
+
+    if (await isIssueVisible()) {
+      await issueButton.first().click();
+      break;
+    }
+
+    if ((await backButton.count()) > 0 && (await backButton.isVisible())) {
+      await backButton.click({ force: true });
+      continue;
+    }
+
+    await this.page.goto('/');
+  }
 
   if (await isExamplesVisible()) {
     await examplesLink.click();
   } else {
     if (!(await isIssueVisible())) {
-      const backButton = this.page.getByRole('button', { name: 'Back' }).first();
       if ((await backButton.count()) > 0) {
         await backButton.click({ force: true });
       }

@@ -6,7 +6,11 @@ Feature: Public events
     And I'm on the homepage
     When I forge the example ownable "Block Stack"
     And the ownable widget is ready
-    Then the Hub recorded a public-events snapshot request for the current ownable
+    And I click button "More information"
+    Then the page contains text "Signed by:"
+    And the page contains text "Anchor tx:"
+    When I click button "Close"
+    And the Hub recorded a public-events snapshot request for the current ownable
     And the Hub recorded a public-events stream request for the current ownable set
     When I start recording widget action messages
     And I click button "Stack one more" within iframe "Ownable widget"

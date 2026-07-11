@@ -8,6 +8,7 @@ import {
   WorkerRPC,
 } from "@ownables/core";
 import ServiceContainer from "@/services/ServiceContainer";
+import { encodeAbiParameters, encodeEventTopics, parseAbiItem } from "viem";
 
 type StoreMap = Map<string, any>;
 
@@ -52,6 +53,10 @@ class MemoryIDB {
         for (const [k, v] of Object.entries(value)) target.set(k, v);
       }
     }
+  }
+
+  async delete(store: string, key: string): Promise<void> {
+    this.stores.get(store)?.delete(key);
   }
 }
 
@@ -384,6 +389,25 @@ async function verifyEqtyPublicEventFeeForwarding() {
     throw new Error("VITE_BASE_SEPOLIA_ANCHOR_ADDRESS must be configured for runtime verification");
   }
   const verifiedAnchorContractAddress: `0x${string}` = anchorContractAddress;
+  const publicEventAbi = parseAbiItem(
+    "event PublicEvent(bytes32 indexed subjectId, address indexed source, string eventType, bytes data, uint64 timestamp)"
+  );
+  const encodedTopics = encodeEventTopics({
+    abi: [publicEventAbi],
+    eventName: "PublicEvent",
+    args: {
+      subjectId: ("0x" + "66".repeat(32)) as `0x${string}`,
+      source: "0x0000000000000000000000000000000000000001",
+    },
+  });
+  const encodedData = encodeAbiParameters(
+    [
+      { name: "eventType", type: "string" },
+      { name: "data", type: "bytes" },
+      { name: "timestamp", type: "uint64" },
+    ],
+    ["consume", "0x010203", 99n]
+  );
 
   const walletClient = {
     account: "0x0000000000000000000000000000000000000001",
@@ -410,19 +434,16 @@ async function verifyEqtyPublicEventFeeForwarding() {
     waitForTransactionReceipt: async () => ({
       blockNumber: 123n,
       transactionIndex: 4,
-    }),
-    getLogs: async () => [
-      {
-        transactionHash,
-        logIndex: 9,
-        args: {
-          subjectId: "0x" + "66".repeat(32),
-          source: "0x0000000000000000000000000000000000000001",
-          eventType: "consume",
-          data: "0x010203",
+      logs: [
+        {
+          address: verifiedAnchorContractAddress,
+          transactionHash,
+          logIndex: 9,
+          data: encodedData,
+          topics: encodedTopics,
         },
-      },
-    ],
+      ],
+    }),
   };
   const service = new EQTYService(
     "0x0000000000000000000000000000000000000001",
