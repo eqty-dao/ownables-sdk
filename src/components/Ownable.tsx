@@ -21,7 +21,7 @@ interface OwnableProps {
   uniqueMessageHash?: string;
   archived?: boolean;
   isHubAvailable?: boolean;
-  publicEventRefreshToken?: number;
+  publicEventReplay?: ReplayAttemptResult;
   onBack: () => void;
   onArchive: () => void;
   onRestore: () => void;
@@ -36,7 +36,7 @@ interface OwnableProps {
 }
 
 export default function Ownable(props: OwnableProps) {
-  const { chain, packageCid, uniqueMessageHash, publicEventRefreshToken = 0 } = props;
+  const { chain, packageCid, uniqueMessageHash, publicEventReplay } = props;
   const [isSubmittingAttachments, setIsSubmittingAttachments] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function Ownable(props: OwnableProps) {
     pkg,
     props.onError,
     !!props.archived,
-    publicEventRefreshToken,
+    publicEventReplay,
     props.onPublicEventsChanged
   );
 

@@ -29,16 +29,12 @@ function getWidgetEmitEnvelope(msg: unknown): { eventType: string; payload: Type
   return { eventType, payload: payload as TypedDict };
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export function useOwnableState(
   chain: EventChain,
   pkg: TypedPackage | undefined,
   onError: (title: string, message: string) => void,
   archived = false,
-  publicEventRefreshToken = 0,
+  publicEventReplay?: ReplayAttemptResult,
   onPublicEventsChanged?: (
     entryId: string,
     replay: ReplayAttemptResult
@@ -69,6 +65,7 @@ export function useOwnableState(
   const [isApplying, setIsApplying] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const appliedReplayRef = useRef<ReplayAttemptResult | undefined>(undefined);
 
   useEffect(() => {
     if (pkg) setMetadata({ name: pkg.title, description: pkg.description });
@@ -143,6 +140,29 @@ export function useOwnableState(
     },
     [archived, chain.id, metadata, ownables, pkg, stateDump]
   );
+
+  const applyPublicEventReplay = useCallback(
+    async (replay: ReplayAttemptResult): Promise<void> => {
+      if (appliedReplayRef.current === replay) return;
+
+      appliedReplayRef.current = replay;
+      await refresh(replay.stateDump);
+      appliedRef.current = chain.latestHash;
+      setApplied(chain.latestHash);
+      setStateDump(replay.stateDump);
+    },
+    [chain.latestHash, refresh]
+  );
+
+  useEffect(() => {
+    if (!publicEventReplay) return;
+
+    void applyPublicEventReplay(publicEventReplay).catch((e) => {
+      console.error("Error applying public-event replay:", e);
+      setError(ownableErrorMessage(e as Error));
+      onError("Failed to apply public event", ownableErrorMessage(e as Error));
+    });
+  }, [applyPublicEventReplay, onError, publicEventReplay]);
 
   const apply = useCallback(
     async (partialChain: EventChain): Promise<void> => {
@@ -222,68 +242,28 @@ export function useOwnableState(
       }
 
       const { eventType, payload } = getWidgetEmitEnvelope(msg);
-      let completion: Promise<void> | null = null;
-      let keepExecutingUntilCompletion = false;
-
       try {
         setIsExecuting(true);
-        completion = ownables.emitPublicEvent(
+        const replay = await ownables.emitPublicEvent(
           chain,
           eventType,
           payload,
           onProgress as any
-        ).then(async (replay) => {
-          void onPublicEventsChanged?.(chain.id, replay).catch((error) => {
+        );
+        await applyPublicEventReplay(replay);
+        if (onPublicEventsChanged) {
+          void Promise.resolve(onPublicEventsChanged(chain.id, replay)).catch((error) => {
             console.warn("Unable to sync tracked public events after emit", error);
           });
-          await refresh(replay.stateDump);
-          appliedRef.current = chain.latestHash;
-          setApplied(chain.latestHash);
-          setStateDump(replay.stateDump);
-        });
-
-        const outcome = await Promise.race([
-          completion.then(
-            () => ({ type: "completed" as const }),
-            (error) => ({ type: "error" as const, error })
-          ),
-          (async () => {
-            for (let attempt = 0; attempt < 50; attempt += 1) {
-              const tracked = await ownables.listTrackedPublicEvents(chain.id);
-              const hasPending = tracked.some(
-                (record) =>
-                  record.status === "pending" &&
-                  record.event.eventType === eventType &&
-                  record.sources.includes("local")
-              );
-              if (hasPending) {
-                return { type: "pending" as const };
-              }
-              await delay(50);
-            }
-            return { type: "timeout" as const };
-          })(),
-        ]);
-
-        if (outcome.type === "error") {
-          throw outcome.error;
         }
-        keepExecutingUntilCompletion = outcome.type === "pending";
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
         throw e;
       } finally {
-        if (!keepExecutingUntilCompletion || !completion) {
-          setIsExecuting(false);
-          return;
-        }
-
-        void completion.finally(() => {
-          setIsExecuting(false);
-        });
+        setIsExecuting(false);
       }
     },
-    [archived, chain, eventChains, onError, onPublicEventsChanged, ownables, refresh]
+    [applyPublicEventReplay, archived, chain, onError, onPublicEventsChanged, ownables]
   );
 
   const onLoad = useCallback(async (): Promise<void> => {

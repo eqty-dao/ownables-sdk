@@ -156,7 +156,7 @@ describe("widget bridge verification", () => {
     };
 
     const render = renderHook(() =>
-      useOwnableState(chain, pkg, onError, archived, 0, onPublicEventsChanged)
+      useOwnableState(chain, pkg, onError, archived, undefined, onPublicEventsChanged)
     );
     const widgetWindow = {
       postMessage: vi.fn(),
@@ -387,7 +387,7 @@ describe("widget bridge verification", () => {
     );
   });
 
-  it("closes the widget progress once a local pending replay record is visible", async () => {
+  it("keeps widget progress open until a pending emit settles", async () => {
     let resolveEmit!: (value: any) => void;
     const emitPublicEventImpl = vi.fn(
       () =>
@@ -417,8 +417,9 @@ describe("widget bridge verification", () => {
       listTrackedPublicEvents,
     });
 
+    let action!: Promise<void>;
     await act(async () => {
-      await messageHandler({
+      action = messageHandler({
         data: {
           type: "emit",
           ownable_id: chain.id,
@@ -428,22 +429,26 @@ describe("widget bridge verification", () => {
       } as MessageEvent);
     });
 
-    expect(progressClose).toHaveBeenCalledTimes(1);
+    expect(progressClose).not.toHaveBeenCalled();
     expect(onPublicEventsChanged).not.toHaveBeenCalled();
 
-    resolveEmit({
-      stateDump: [],
-      appliedEvents: [],
-      appliedReplayKeys: [],
-      duplicateReplayKeys: [],
-      appliedPublicEvents: [],
-      duplicatePublicEvents: [],
-      complete: true,
-      ignoredPublicEvents: [],
-      pendingPublicEvents: [pendingRecord],
-      confirmedPendingPublicEvents: [],
+    await act(async () => {
+      resolveEmit({
+        stateDump: [],
+        appliedEvents: [],
+        appliedReplayKeys: [],
+        duplicateReplayKeys: [],
+        appliedPublicEvents: [],
+        duplicatePublicEvents: [],
+        complete: true,
+        ignoredPublicEvents: [],
+        pendingPublicEvents: [pendingRecord],
+        confirmedPendingPublicEvents: [],
+      });
+      await action;
     });
 
+    expect(progressClose).toHaveBeenCalledTimes(1);
     await vi.waitFor(() => {
       expect(onPublicEventsChanged).toHaveBeenCalledWith(
         chain.id,
@@ -452,5 +457,42 @@ describe("widget bridge verification", () => {
         })
       );
     });
+  });
+
+  it("keeps widget progress open until a wallet cancellation settles", async () => {
+    let rejectEmit!: (error: Error) => void;
+    const emitPublicEventImpl = vi.fn(
+      () => new Promise((_, reject) => {
+        rejectEmit = reject;
+      })
+    );
+    const { chain, messageHandler, onError, widgetWindow } = setupHook({
+      emitPublicEventImpl,
+    });
+
+    let action!: Promise<void>;
+    await act(async () => {
+      action = messageHandler({
+        data: {
+          type: "emit",
+          ownable_id: chain.id,
+          msg: { drink: { amount: 25 } },
+        },
+        source: widgetWindow,
+      } as MessageEvent);
+    });
+
+    expect(progressClose).not.toHaveBeenCalled();
+    rejectEmit(new Error("User rejected the request"));
+
+    await act(async () => {
+      await action;
+    });
+
+    expect(progressClose).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(
+      "The Ownable returned an error",
+      "User rejected the request"
+    );
   });
 });

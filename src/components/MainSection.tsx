@@ -56,7 +56,7 @@ interface MainSectionProps {
   onForge: (pkg: TypedPackage) => void;
   onCreate: () => void;
   packageRefreshToken?: number;
-  publicEventRefreshTokenById?: Record<string, number>;
+  publicEventReplayById?: Record<string, ReplayAttemptResult | undefined>;
   onOwnablePublicEventsChanged?: (
     entryId: string,
     replay: ReplayAttemptResult
@@ -86,7 +86,7 @@ export default function MainSection({
   onForge,
   onCreate,
   packageRefreshToken = 0,
-  publicEventRefreshTokenById = {},
+  publicEventReplayById = {},
   onOwnablePublicEventsChanged,
 }: MainSectionProps) {
   const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedEntryId);
@@ -119,9 +119,7 @@ export default function MainSection({
           selected={consuming?.chain.id === selectedOwnable.chain.id}
           archived={isArchivedSelected}
           isHubAvailable={isHubAvailable ?? true}
-          publicEventRefreshToken={
-            publicEventRefreshTokenById[selectedOwnable.chain.id] ?? 0
-          }
+          publicEventReplay={publicEventReplayById[selectedOwnable.chain.id]}
           onArchive={() => onArchive(selectedOwnable.chain.id)}
           onRestore={() => onRestore(selectedOwnable.chain.id)}
           onDelete={() => onDelete(selectedOwnable.chain.id, selectedOwnable.package)}

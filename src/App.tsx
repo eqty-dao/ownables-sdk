@@ -53,7 +53,7 @@ export default function App() {
     mainListLoaded,
     importingAvailableOwnableId,
     archivedOwnablesCount,
-    publicEventRefreshTokenById,
+    publicEventReplayById,
     setOwnables,
     forge,
     importAvailableOwnable,
@@ -194,7 +194,7 @@ export default function App() {
           onError={showError}
           onForge={forge}
           onCreate={() => setShowCreateOwnable(true)}
-          publicEventRefreshTokenById={publicEventRefreshTokenById}
+          publicEventReplayById={publicEventReplayById}
           onOwnablePublicEventsChanged={notifyOwnablePublicEventsChanged}
         />
       </Box>

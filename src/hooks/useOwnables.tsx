@@ -83,8 +83,8 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [loaded, setLoaded] = useState(false);
   const [availableLoaded, setAvailableLoaded] = useState(false);
   const [availableLoadedAccount, setAvailableLoadedAccount] = useState<string | null>(null);
-  const [publicEventRefreshTokenById, setPublicEventRefreshTokenById] = useState<
-    Record<string, number>
+  const [publicEventReplayById, setPublicEventReplayById] = useState<
+    Record<string, ReplayAttemptResult | undefined>
   >({});
 
   const ownableService = useService("ownables");
@@ -358,22 +358,15 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     loaded &&
     (!discoveryEnabled || (availableLoaded && availableLoadedAccount === account));
 
-  const bumpPublicEventRefreshToken = useCallback((entryId: string) => {
-    setPublicEventRefreshTokenById((current) => ({
-      ...current,
-      [entryId]: (current[entryId] ?? 0) + 1,
-    }));
-  }, []);
-
   const syncTrackedPublicEvents = useCallback(
     async (entryId: string, replay: ReplayAttemptResult) => {
       if (!ownableService || !replayTouchesTrackedPublicEvents(replay)) {
         return;
       }
 
-      bumpPublicEventRefreshToken(entryId);
+      setPublicEventReplayById((current) => ({ ...current, [entryId]: replay }));
     },
-    [bumpPublicEventRefreshToken, ownableService]
+    [ownableService]
   );
 
   useEffect(() => {
@@ -737,7 +730,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     archivedOwnablesCount,
     mainListEntries,
     mainListLoaded,
-    publicEventRefreshTokenById,
+    publicEventReplayById,
     setOwnables,
     loaded,
     setLoaded,
