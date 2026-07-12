@@ -22,9 +22,13 @@ export function normalizeAnchorProvider<T extends AnchorProviderCompatible>(
   provider: T
 ): T & AnchorProvider {
   const originalVerifyAnchors = provider.verifyAnchors.bind(provider);
+  const originalValidateAnchors =
+    typeof provider.validateAnchors === "function"
+      ? provider.validateAnchors.bind(provider)
+      : null;
 
   async function normalizedVerifyAnchors(...anchors: any[]): Promise<AnchorValidationResult> {
-    const result = (await originalVerifyAnchors(
+    const result = (await (originalValidateAnchors ?? originalVerifyAnchors)(
       ...anchors
     )) as AnchorValidationResult | LegacyAnchorValidationResult;
     if (hasDetails(result)) return result;

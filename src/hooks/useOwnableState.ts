@@ -29,6 +29,10 @@ function getWidgetEmitEnvelope(msg: unknown): { eventType: string; payload: Type
   return { eventType, payload: payload as TypedDict };
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function useOwnableState(
   chain: EventChain,
   pkg: TypedPackage | undefined,
@@ -49,7 +53,6 @@ export function useOwnableState(
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const busyRef = useRef(false);
   const appliedRef = useRef<any>(new EventChain(chain.id).latestHash);
-  const publicEventRefreshRef = useRef(publicEventRefreshToken);
 
   const [initialized, setInitialized] = useState(false);
   const [applied, setApplied] = useState<any>(appliedRef.current);
@@ -219,25 +222,65 @@ export function useOwnableState(
       }
 
       const { eventType, payload } = getWidgetEmitEnvelope(msg);
+      let completion: Promise<void> | null = null;
+      let keepExecutingUntilCompletion = false;
 
       try {
         setIsExecuting(true);
-        const replay = await ownables.emitPublicEvent(
+        completion = ownables.emitPublicEvent(
           chain,
           eventType,
           payload,
           onProgress as any
-        );
-        await onPublicEventsChanged?.(chain.id, replay);
-        await refresh(replay.stateDump);
-        appliedRef.current = chain.latestHash;
-        setApplied(chain.latestHash);
-        setStateDump(replay.stateDump);
+        ).then(async (replay) => {
+          void onPublicEventsChanged?.(chain.id, replay).catch((error) => {
+            console.warn("Unable to sync tracked public events after emit", error);
+          });
+          await refresh(replay.stateDump);
+          appliedRef.current = chain.latestHash;
+          setApplied(chain.latestHash);
+          setStateDump(replay.stateDump);
+        });
+
+        const outcome = await Promise.race([
+          completion.then(
+            () => ({ type: "completed" as const }),
+            (error) => ({ type: "error" as const, error })
+          ),
+          (async () => {
+            for (let attempt = 0; attempt < 50; attempt += 1) {
+              const tracked = await ownables.listTrackedPublicEvents(chain.id);
+              const hasPending = tracked.some(
+                (record) =>
+                  record.status === "pending" &&
+                  record.event.eventType === eventType &&
+                  record.sources.includes("local")
+              );
+              if (hasPending) {
+                return { type: "pending" as const };
+              }
+              await delay(50);
+            }
+            return { type: "timeout" as const };
+          })(),
+        ]);
+
+        if (outcome.type === "error") {
+          throw outcome.error;
+        }
+        keepExecutingUntilCompletion = outcome.type === "pending";
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
         throw e;
       } finally {
-        setIsExecuting(false);
+        if (!keepExecutingUntilCompletion || !completion) {
+          setIsExecuting(false);
+          return;
+        }
+
+        void completion.finally(() => {
+          setIsExecuting(false);
+        });
       }
     },
     [archived, chain, eventChains, onError, onPublicEventsChanged, ownables, refresh]
@@ -291,15 +334,17 @@ export function useOwnableState(
           steps.push({ id: "anchor", label: "Anchor the event" });
         }
 
-        const [ctrl, onProgress] = progress.open({ title: "Processing action", steps });
+        const [, onProgress] = progress.open({ title: "Processing action", steps });
         if (isEmit) {
           await emit(event.data.msg, onProgress);
         } else {
           await execute(event.data.msg, onProgress);
         }
-        ctrl.close();
       } catch (e) {
         console.error("Widget action failed", e);
+        onError("Widget action failed", ownableErrorMessage(e));
+      } finally {
+        progress.close();
       }
     },
     [archived, chain.id, emit, execute, progress, ownables, onError]
@@ -325,36 +370,6 @@ export function useOwnableState(
       ownables.setWidgetWindow(chain.id, iframeRef.current?.contentWindow ?? null);
     }
   }, [archived, chain.id, initialized, ownables]);
-
-  useEffect(() => {
-    if (publicEventRefreshToken === publicEventRefreshRef.current) {
-      return;
-    }
-
-    publicEventRefreshRef.current = publicEventRefreshToken;
-
-    if (!initialized || !eventChains) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const sync = async () => {
-      const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
-      if (!nextStateDump || cancelled) {
-        return;
-      }
-
-      setStateDump(nextStateDump);
-      await refresh(nextStateDump);
-    };
-
-    void sync();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chain.id, chain.state.hex, eventChains, initialized, publicEventRefreshToken, refresh]);
 
   // Apply pending chain events and refresh
   const chainEventCount = chain.events.length;

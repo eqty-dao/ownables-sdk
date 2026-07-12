@@ -11,6 +11,7 @@ import { Fingerprint, Info as InfoOutlined } from "lucide-react";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { Dialog } from "@/components/ui";
 import { EventChain } from "eqty-core";
+import type { AnchorValidationResult } from "@ownables/core";
 import EventCard from "./EventCard";
 import shortId from "@/utils/shortId";
 import Tooltip from "./Tooltip";
@@ -29,7 +30,39 @@ interface HubOwnableVerificationResponse {
     verified: boolean;
     anchors: Record<string, string | undefined>;
     map: Record<string, string | undefined>;
+    details?: AnchorValidationResult["details"];
   };
+}
+
+function deriveAnchorRows(
+  chain: EventChain,
+  anchorVerification: Pick<AnchorValidationResult, "anchors" | "details" | "map">
+) {
+  return chain.anchorMap.map(({ key, value }) => {
+    const detail = anchorVerification.details[key.hex];
+    return {
+      tx: detail?.transactionHash ?? anchorVerification.anchors[key.hex],
+      verified:
+        detail?.verified ??
+        anchorVerification.map[key.hex]?.toLowerCase() === value.hex.toLowerCase(),
+    };
+  });
+}
+
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    return text.trim() || `status ${response.status}`;
+  } catch {
+    return `status ${response.status}`;
+  }
+}
+
+function isUnknownOwnableVerificationFailure(response: Response, message: string): boolean {
+  return (
+    response.status === 400 &&
+    message.toLowerCase().includes("not available on this hub")
+  );
 }
 
 export default function OwnableInfo(props: OwnableInfoProps) {
@@ -41,6 +74,7 @@ export default function OwnableInfo(props: OwnableInfoProps) {
     Array<{ tx: string | undefined; verified: boolean } | null>
   >([]);
   const hub = useService("hub");
+  const eventChains = useService("eventChains");
 
   const verify = useCallback(
     async (chain: EventChain, open: boolean) => {
@@ -49,23 +83,36 @@ export default function OwnableInfo(props: OwnableInfoProps) {
       const response = await fetch(
         `${hub.origin}/ownables/${encodeURIComponent(chain.id)}/verification`
       );
-      if (!response.ok) {
+      if (response.ok) {
+        const body =
+          (await response.json()) as HubOwnableVerificationResponse;
+        const anchorVerification = {
+          verified: body.anchorVerification.verified,
+          anchors: body.anchorVerification.anchors,
+          map: body.anchorVerification.map,
+          details: body.anchorVerification.details ?? {},
+        };
+        setVerificationError(null);
+        setVerified(anchorVerification.verified);
+        setAnchors(deriveAnchorRows(chain, anchorVerification));
+        return;
+      }
+
+      const message = await readErrorMessage(response);
+      if (!isUnknownOwnableVerificationFailure(response, message)) {
         throw new Error(`Hub verification failed with status ${response.status}`);
       }
 
-      const body =
-        (await response.json()) as HubOwnableVerificationResponse;
-      const { verified, anchors, map } = body.anchorVerification;
+      if (!eventChains) {
+        throw new Error("Local verification is unavailable.");
+      }
+
+      const anchorVerification = await eventChains.verify(chain);
       setVerificationError(null);
-      setVerified(verified);
-      setAnchors(
-        chain.anchorMap.map(({ key, value }) => ({
-          tx: anchors[key.hex],
-          verified: map[key.hex]?.toLowerCase() === value.hex.toLowerCase(),
-        }))
-      );
+      setVerified(anchorVerification.verified);
+      setAnchors(deriveAnchorRows(chain, anchorVerification));
     },
-    [hub]
+    [eventChains, hub]
   );
 
   useEffect(() => {

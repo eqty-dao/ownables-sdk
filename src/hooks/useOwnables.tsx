@@ -371,7 +371,6 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         return;
       }
 
-      await ownableService.listTrackedPublicEvents(entryId);
       bumpPublicEventRefreshToken(entryId);
     },
     [bumpPublicEventRefreshToken, ownableService]

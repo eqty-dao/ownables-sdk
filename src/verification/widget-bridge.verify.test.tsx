@@ -25,6 +25,7 @@ vi.mock("@/hooks/useService", () => ({
 vi.mock("@/contexts/Progress.context", () => ({
   useProgress: () => ({
     open: progressOpen,
+    close: progressClose,
   }),
 }));
 
@@ -60,12 +61,16 @@ describe("widget bridge verification", () => {
     staleStateDump,
     emitReplayStateDump = [],
     onPublicEventsChanged,
+    emitPublicEventImpl,
+    listTrackedPublicEvents,
   }: {
     archived?: boolean;
     pkg?: TypedPackage;
     staleStateDump?: any;
     emitReplayStateDump?: any;
     onPublicEventsChanged?: (entryId: string, replay: any) => void | Promise<void>;
+    emitPublicEventImpl?: (...args: any[]) => Promise<any>;
+    listTrackedPublicEvents?: () => Promise<any[]>;
   } = {}) {
     const chain = EventChain.create(
       "0x0000000000000000000000000000000000000abc",
@@ -73,7 +78,7 @@ describe("widget bridge verification", () => {
     );
     const onError = vi.fn();
     const execute = vi.fn().mockResolvedValue([]);
-    const emitPublicEvent = vi.fn().mockResolvedValue({
+    const defaultEmitReplay = {
       stateDump: emitReplayStateDump,
       appliedEvents: [],
       appliedReplayKeys: [],
@@ -96,7 +101,10 @@ describe("widget bridge verification", () => {
         },
       ],
       confirmedPendingPublicEvents: [],
-    });
+    };
+    const emitPublicEvent = emitPublicEventImpl
+      ? vi.fn(emitPublicEventImpl)
+      : vi.fn().mockResolvedValue(defaultEmitReplay);
     const getStateDump = vi.fn().mockResolvedValue(staleStateDump);
     const query = vi.fn(async (msg: Record<string, unknown>, state: any) => {
       if ("get_widget_state" in msg) {
@@ -133,6 +141,7 @@ describe("widget bridge verification", () => {
     serviceMap.ownables = {
       execute,
       emitPublicEvent,
+      listTrackedPublicEvents: listTrackedPublicEvents ?? vi.fn().mockResolvedValue([]),
       isReady: vi.fn().mockReturnValue(true),
       rpc: vi.fn().mockReturnValue(rpc),
       setWidgetWindow: vi.fn(),
@@ -376,5 +385,72 @@ describe("widget bridge verification", () => {
         ],
       })
     );
+  });
+
+  it("closes the widget progress once a local pending replay record is visible", async () => {
+    let resolveEmit!: (value: any) => void;
+    const emitPublicEventImpl = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveEmit = resolve;
+        })
+    );
+    const pendingRecord = {
+      replayKey: "pending:drink:1",
+      event: {
+        eventType: "drink",
+        transactionHash: "0x" + "55".repeat(32),
+        logIndex: 0,
+        blockNumber: 0,
+      },
+      status: "pending",
+      sources: ["local"],
+    };
+    const listTrackedPublicEvents = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([pendingRecord]);
+    const onPublicEventsChanged = vi.fn().mockResolvedValue(undefined);
+    const { chain, messageHandler, widgetWindow } = setupHook({
+      onPublicEventsChanged,
+      emitPublicEventImpl,
+      listTrackedPublicEvents,
+    });
+
+    await act(async () => {
+      await messageHandler({
+        data: {
+          type: "emit",
+          ownable_id: chain.id,
+          msg: { drink: { amount: 25 } },
+        },
+        source: widgetWindow,
+      } as MessageEvent);
+    });
+
+    expect(progressClose).toHaveBeenCalledTimes(1);
+    expect(onPublicEventsChanged).not.toHaveBeenCalled();
+
+    resolveEmit({
+      stateDump: [],
+      appliedEvents: [],
+      appliedReplayKeys: [],
+      duplicateReplayKeys: [],
+      appliedPublicEvents: [],
+      duplicatePublicEvents: [],
+      complete: true,
+      ignoredPublicEvents: [],
+      pendingPublicEvents: [pendingRecord],
+      confirmedPendingPublicEvents: [],
+    });
+
+    await vi.waitFor(() => {
+      expect(onPublicEventsChanged).toHaveBeenCalledWith(
+        chain.id,
+        expect.objectContaining({
+          pendingPublicEvents: [expect.objectContaining({ status: "pending" })],
+        })
+      );
+    });
   });
 });
