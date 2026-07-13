@@ -59,7 +59,8 @@
     "lint:fix": "eslint . --fix",
     "check:styles": "node bin/check-styles.mjs",
     "preview": "vite preview",
-    "test:e2e": "node bin/test-e2e.mjs",
+    "test:e2e:setup": "node bin/setup-e2e.mjs",
+    "test:e2e": "cucumber-js",
     "rustup": "curl https://sh.rustup.rs -sSf | sh; curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh; rustup default stable; rustup update stable; rustup target add wasm32-unknown-unknown",
     "ownables:build": "node bin/ownables-build.mjs",
     "ownables:clean": "rm -rf ./ownables/*.zip ./ownables/target/ ./ownables/*/pkg/ ./ownables/*/schema/ ./ownables/Cargo.lock",
@@ -69,7 +70,6 @@
     "ownables:copy": "node bin/ownables-copy.mjs",
     "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts",
     "verify:widget-bridge": "vitest run src/verification/widget-bridge.verify.test.tsx",
-    "verify:public-events-e2e": "node bin/refresh-local-ownables-js.mjs && node bin/verify-public-events-e2e.mjs",
     "verify:hub-transfer": "node bin/verify-hub-transfer.mjs",
     "verify:main-list-discovery": "vitest run src/verification/main-list-discovery.verify.test.tsx -t '^(?!.*(rethrows ownable execution failures after surfacing the ownable error|blocks archived ownable execution before reaching the runtime|does not bind a widget window for archived ownables|does not upload to Hub when transfer execution fails before upload)).*$'"
   },

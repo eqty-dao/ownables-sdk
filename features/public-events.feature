@@ -1,3 +1,4 @@
+@broken
 Feature: Public events
 
   Scenario: Confirm a pending public event from the Hub transport

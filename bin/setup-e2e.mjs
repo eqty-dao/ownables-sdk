@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -16,6 +23,7 @@ import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
 const HUB_ROOT = join(ROOT, "..", "ownables-hub");
+const CONTRACTS_ROOT = join(ROOT, "..", "eqty-contracts");
 const RPC_URL = "http://127.0.0.1:8545";
 const APP_PORT = "3300";
 const HUB_PORT = "3311";
@@ -32,7 +40,7 @@ const DB_PORT = "54329";
 const DB_NAME = `ownables_hub_sdk_verify_${process.pid}`;
 const DATABASE_URL = `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
-const VERIFY_MODE = process.env.PUBLIC_EVENTS_VERIFY_MODE?.trim() || "cucumber";
+const RUNTIME_ENV_PATH = join(ROOT, ".e2e-runtime.json");
 let cleaningUp = false;
 
 function fail(message) {
@@ -135,7 +143,7 @@ function inspectContractBytecode(contractPath, field) {
     return runSync("forge", [
       "inspect",
       "--root",
-      "/home/arnold/Projects/eqty/eqty-contracts",
+      CONTRACTS_ROOT,
       "--out",
       outDir,
       "--cache-path",
@@ -277,20 +285,6 @@ function spawnProcess(cmd, args, options = {}) {
   return child;
 }
 
-async function runProcess(cmd, args, options = {}) {
-  return await new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, {
-      stdio: "inherit",
-      ...options,
-    });
-
-    child.on("error", reject);
-    child.on("exit", (code, signal) => {
-      resolve({ code, signal });
-    });
-  });
-}
-
 function ensureVerificationDatabase() {
   const env = {
     ...process.env,
@@ -348,6 +342,7 @@ async function main() {
   ensureProofInputs();
   syncOwnableZips();
   mkdirSync(HUB_STORAGE_DIR, { recursive: true });
+  runSync("yarn", ["db:start"], { cwd: HUB_ROOT });
   ensureVerificationDatabase();
 
   const children = [];
@@ -358,6 +353,7 @@ async function main() {
         child.kill("SIGTERM");
       }
     }
+    rmSync(RUNTIME_ENV_PATH, { force: true });
     dropVerificationDatabase();
   };
 
@@ -457,30 +453,26 @@ async function main() {
     return response.ok;
   }, "Vite dev server");
 
-  if (VERIFY_MODE === "stack-only") {
-    console.log(
-      `Real-Hub proof stack ready. app=${APP_URL} hub=${HUB_URL} rpc=${RPC_URL} anchor=${anchorAddress} eqty=${eqtyTokenAddress}`
-    );
-    await new Promise(() => {});
-  }
-
-  const result = await runProcess(
-    "yarn",
-    ["cucumber-js", "features/public-events.feature"],
-    {
-      cwd: ROOT,
-      env: appEnv,
-    }
+  writeFileSync(
+    RUNTIME_ENV_PATH,
+    `${JSON.stringify(
+      {
+        LETSRUNIT_BASE_URL: APP_URL,
+        VITE_E2E: "1",
+        VITE_E2E_RPC_URL: RPC_URL,
+        VITE_BASE_SEPOLIA_RPC_URL: RPC_URL,
+        VITE_BASE_SEPOLIA_ANCHOR_ADDRESS: anchorAddress,
+        VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS: eqtyTokenAddress,
+        VITE_HUB: HUB_URL,
+        VITE_OWNABLE_EXAMPLES_URL: "/ownables",
+      },
+      null,
+      2
+    )}\n`
   );
 
-  await cleanup();
-
-  if (result.signal) {
-    fail(`yarn cucumber-js was terminated by signal ${result.signal}`);
-  }
-  if (result.code !== 0) {
-    process.exit(result.code ?? 1);
-  }
+  console.log(`E2E stack ready: app=${APP_URL} hub=${HUB_URL} rpc=${RPC_URL}`);
+  await new Promise(() => {});
 }
 
 await main();

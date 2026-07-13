@@ -3,7 +3,9 @@ export async function clearBrowserWalletState(page: {
   evaluate: <T>(fn: () => Promise<T> | T) => Promise<T>;
   reload: (options: { waitUntil: 'domcontentloaded' | 'networkidle' }) => Promise<unknown>;
 }) {
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  // Use a same-origin static document so the app does not open IndexedDB before
+  // the test cleanup has a chance to delete it.
+  await page.goto('/favicon.ico', { waitUntil: 'domcontentloaded' });
   await page.evaluate(async () => {
     localStorage.clear();
     sessionStorage.clear();
@@ -32,5 +34,5 @@ export async function clearBrowserWalletState(page: {
     }
   });
 
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
 }

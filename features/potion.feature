@@ -2,7 +2,7 @@ Feature: Potion
 
   Scenario: Drink from a potion
     Given I'm on the homepage
-    When I click link "the examples"
+    When I click button "Issue an Ownable"
     And I click button "Potion Drink a colorful potion"
     And the ownable widget is ready
     And I click button "Drink" within iframe "Ownable widget"
@@ -10,7 +10,7 @@ Feature: Potion
 
   Scenario: Drink too much from a potion
     Given I'm on the homepage
-    When I click link "the examples"
+    When I click button "Issue an Ownable"
     And I click button "Potion Drink a colorful potion"
     And the ownable widget is ready
     And I click button "Drink" within iframe "Ownable widget"

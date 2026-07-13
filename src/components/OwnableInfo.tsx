@@ -34,9 +34,13 @@ interface HubOwnableVerificationResponse {
   };
 }
 
+type AnchorVerificationMap = Record<string, string | undefined>;
+
 function deriveAnchorRows(
   chain: EventChain,
-  anchorVerification: Pick<AnchorValidationResult, "anchors" | "details" | "map">
+  anchorVerification: Pick<AnchorValidationResult, "anchors" | "details"> & {
+    map: AnchorVerificationMap;
+  }
 ) {
   return chain.anchorMap.map(({ key, value }) => {
     const detail = anchorVerification.details[key.hex];

@@ -46,6 +46,8 @@ interface UseOwnablesOptions {
   onSelect: (chainId: string) => void;
 }
 
+const OWNABLE_LOAD_TIMEOUT_MS = 5_000;
+
 function sortAvailableOwnables(entries: AvailableOwnableEntry[]) {
   return [...entries].sort(
     (left, right) =>
@@ -137,37 +139,65 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   useEffect(() => {
     if (!ownableService) return;
     setLoaded(false);
-    ownableService.loadAll().then(async (loadedOwnables) => {
-      const staleOwnables = packageService
-        ? loadedOwnables.filter(
-            ({ package: cid, uniqueMessageHash }) =>
-              !maybePackageInfo(packageService, cid, uniqueMessageHash)
-          )
-        : [];
-      const validOwnables = packageService
-        ? loadedOwnables.filter(
-            ({ package: cid, uniqueMessageHash }) =>
-              !!maybePackageInfo(packageService, cid, uniqueMessageHash)
-          )
-        : loadedOwnables;
+    let cancelled = false;
 
-      if (staleOwnables.length > 0) {
-        console.warn(
-          "Removing ownables with missing packages",
-          staleOwnables.map(({ chain, package: cid }) => ({ chainId: chain.id, packageCid: cid }))
+    const load = async () => {
+      try {
+        const loadedOwnables = await Promise.race([
+          ownableService.loadAll(),
+          new Promise<never>((_, reject) => {
+            window.setTimeout(
+              () => reject(new Error("Timed out loading stored ownables")),
+              OWNABLE_LOAD_TIMEOUT_MS
+            );
+          }),
+        ]);
+        const staleOwnables = packageService
+          ? loadedOwnables.filter(
+              ({ package: cid, uniqueMessageHash }) =>
+                !maybePackageInfo(packageService, cid, uniqueMessageHash)
+            )
+          : [];
+        const validOwnables = packageService
+          ? loadedOwnables.filter(
+              ({ package: cid, uniqueMessageHash }) =>
+                !!maybePackageInfo(packageService, cid, uniqueMessageHash)
+            )
+          : loadedOwnables;
+
+        if (staleOwnables.length > 0) {
+          console.warn(
+            "Removing ownables with missing packages",
+            staleOwnables.map(({ chain, package: cid }) => ({ chainId: chain.id, packageCid: cid }))
+          );
+          await Promise.allSettled(
+            staleOwnables.map(({ chain }) => ownableService.delete(chain.id))
+          );
+        }
+
+        if (cancelled) return;
+        setOwnables(validOwnables);
+        if (validOwnables.length > 0) onSelect(validOwnables[0].chain.id);
+        setLoaded(true);
+
+        // Worker startup is best-effort and must not hold the main list behind a
+        // stalled runtime bootstrap. Actions still report readiness errors later.
+        void Promise.allSettled(
+          validOwnables.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
         );
-        await Promise.allSettled(
-          staleOwnables.map(({ chain }) => ownableService.delete(chain.id))
-        );
+      } catch (error) {
+        console.warn("Unable to load stored ownables", error);
+        if (!cancelled) {
+          setOwnables([]);
+          setLoaded(true);
+        }
       }
+    };
 
-      setOwnables(validOwnables);
-      await Promise.allSettled(
-        validOwnables.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
-      );
-      if (validOwnables.length > 0) onSelect(validOwnables[0].chain.id);
-      setLoaded(true);
-    });
+    void load();
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService, packageService]);
 

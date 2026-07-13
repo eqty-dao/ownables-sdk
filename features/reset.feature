@@ -2,8 +2,7 @@ Feature: Reset
 
   Scenario: Delete all ownables
     Given I'm on the homepage
-    When I click link "the examples"
-    And I click button "Robot An adorable robot companion"
+    When I forge the example ownable "Robot"
     And I click button "menu"
     And I click button "Delete All Ownables"
     Then the page contains button "Delete all"
@@ -12,8 +11,7 @@ Feature: Reset
 
   Scenario: Factory reset an issued wallet
     Given I'm on the homepage
-    When I click link "the examples"
-    And I click button "Robot An adorable robot companion"
+    When I forge the example ownable "Robot"
     And I click button "menu"
     And I click button "Factory Reset"
     Then the page contains button "Delete everything"

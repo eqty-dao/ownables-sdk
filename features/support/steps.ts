@@ -605,6 +605,41 @@ async function trackedPublicEvents(page: any, ownableId: string): Promise<Tracke
   }, { idbName, ownableId });
 }
 
+async function publicEventDiagnostics(page: any, ownableId: string) {
+  const idbName = await resolveOwnablesDatabaseName(page);
+  const storeName = `ownable:${ownableId}.public-event-replays`;
+  const directRecords = await trackedPublicEvents(page, ownableId);
+  const serviceDiagnostics = await page.evaluate(() => {
+    const win = window as typeof window & {
+      __ownablesPublicEventDiagnostics?: {
+        chainId: string;
+        eventType: string;
+        coreArtifact: string;
+        serviceRecords: unknown[];
+        pollAttempt: number;
+      };
+    };
+    return win.__ownablesPublicEventDiagnostics ?? null;
+  });
+
+  const summarize = (records: unknown[]) =>
+    records.map((record: any) => ({
+      replayKey: record?.replayKey,
+      status: record?.status,
+      eventType: record?.event?.eventType,
+      sources: record?.sources,
+    }));
+
+  return {
+      chainId: String(E2E_CHAIN_ID),
+    databaseName: idbName,
+    storeName,
+    coreArtifact: serviceDiagnostics?.coreArtifact ?? 'unknown (runtime provenance not exposed)',
+    serviceRecords: summarize(serviceDiagnostics?.serviceRecords ?? []),
+    directRecords: summarize(directRecords),
+  };
+}
+
 Given('my wallet is empty', async function () {
   await clearBrowserWalletState(this.page);
 });
@@ -743,47 +778,9 @@ When('the ownable widget is ready', async function () {
 When('I forge the example ownable {string}', async function (title: string) {
   await this.page.goto('/');
   await ensureAnchoringEnabled(this.page);
-  const examplesLink = this.page.getByRole('link', { name: 'the examples' });
   const issueButton = this.page.getByRole('button', { name: /Issue an Ownable/ });
-  const isExamplesVisible = async () =>
-    (await examplesLink.count()) > 0 && (await examplesLink.first().isVisible());
-  const isIssueVisible = async () =>
-    (await issueButton.count()) > 0 && (await issueButton.first().isVisible());
-  const backButton = this.page.getByRole('button', { name: 'Back' }).first();
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (await isExamplesVisible()) {
-      break;
-    }
-
-    if (await isIssueVisible()) {
-      await issueButton.first().click();
-      break;
-    }
-
-    if ((await backButton.count()) > 0 && (await backButton.isVisible())) {
-      await backButton.click({ force: true });
-      continue;
-    }
-
-    await this.page.goto('/');
-  }
-
-  if (await isExamplesVisible()) {
-    await examplesLink.click();
-  } else {
-    if (!(await isIssueVisible())) {
-      if ((await backButton.count()) > 0) {
-        await backButton.click({ force: true });
-      }
-    }
-
-    if (await isExamplesVisible()) {
-      await examplesLink.click();
-    } else {
-      await issueButton.click();
-    }
-  }
+  await issueButton.first().waitFor({ state: 'visible' });
+  await issueButton.first().click();
   const button = this.page.locator('button').filter({ hasText: title }).first();
   await button.waitFor();
   await button.click();
@@ -794,9 +791,11 @@ When('I start recording widget action messages', async function () {
     const win = window as typeof window & {
       __ownableWidgetMessages?: Array<unknown>;
       __ownableWidgetMessageHandler?: (event: MessageEvent) => void;
+      __ownablesPublicEventDiagnosticsEnabled?: boolean;
     };
 
     win.__ownableWidgetMessages = [];
+    win.__ownablesPublicEventDiagnosticsEnabled = true;
     if (win.__ownableWidgetMessageHandler) {
       window.removeEventListener('message', win.__ownableWidgetMessageHandler);
     }
@@ -973,24 +972,35 @@ Then(
   'the tracked public-event status for the current ownable becomes {string} for {string}',
   async function (status: 'pending' | 'confirmed', eventType: string) {
     const ownableId = await currentOwnableId(this.page);
-    const record = await waitFor(
-      async () => {
-        const records = await trackedPublicEvents(this.page, ownableId);
-        return (
-          [...records]
-            .reverse()
-            .find(
-              (candidate) =>
-                candidate.status === status && candidate.event.eventType === eventType
-            ) ?? null
-        );
-      },
-      Boolean,
-      `${status} tracked public event ${eventType}`
-    );
+    let record: TrackedPublicEventRecord;
+    try {
+      record = await waitFor(
+        async () => {
+          const records = await trackedPublicEvents(this.page, ownableId);
+          return (
+            [...records]
+              .reverse()
+              .find(
+                (candidate) =>
+                  candidate.status === status && candidate.event.eventType === eventType
+              ) ?? null
+          );
+        },
+        Boolean,
+        `${status} tracked public event ${eventType}`
+      );
+    } catch (error) {
+      const diagnostics = await publicEventDiagnostics(this.page, ownableId);
+      throw new Error(`${String(error)}; diagnostics=${debugString(diagnostics)}`);
+    }
 
     if (!record) {
       throw new Error(`Missing ${status} tracked public event ${eventType}`);
+    }
+    if (status === 'pending') {
+      console.log(
+        `PUBLIC_EVENT_DIAGNOSTICS ${debugString(await publicEventDiagnostics(this.page, ownableId))}`
+      );
     }
   }
 );
