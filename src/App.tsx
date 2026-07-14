@@ -204,7 +204,12 @@ export default function App() {
           <Sidebar
             open={showSidebar}
             onClose={() => setShowSidebar(false)}
-            onReset={() => { setShowSidebar(false); reset(); }}
+            onReset={() => {
+              setShowSidebar(false);
+              setSelectedEntryId(null);
+              setShowDetail(false);
+              reset();
+            }}
             onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
           />
 
