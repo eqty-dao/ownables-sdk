@@ -3,9 +3,12 @@ Feature: Public events
 
   Scenario: Confirm a pending public event from the Hub transport
     Given the Hub transport verifier backend is reset
-    And my wallet is empty
     And I'm on the homepage
-    When I forge the example ownable "Block Stack"
+    When I click button "menu"
+    And I check switch "Anchor events"
+    And I click button "Close settings"
+    And I click button "Issue an Ownable"
+    And I click button "Block Stack Stack seven crooked public blocks"
     And the ownable widget is ready
     And I click button "More information"
     Then the page contains text "Signed by:"
@@ -24,12 +27,16 @@ Feature: Public events
 
   Scenario: Reconnect the public-events stream when the watched ownable set changes
     Given the Hub transport verifier backend is reset
-    And my wallet is empty
     And I'm on the homepage
-    When I forge the example ownable "Potion"
+    When I click button "menu"
+    And I check switch "Anchor events"
+    And I click button "Close settings"
+    And I click button "Issue an Ownable"
+    And I click button "Potion Drink a colorful potion"
     And I remember the current ownable id as "first"
     Then the Hub recorded a public-events stream request for the current ownable set
-    When I forge the example ownable "Block Stack"
+    When I click button "Issue an Ownable Create a new ownable from a package"
+    And I click button "Block Stack Stack seven crooked public blocks"
     And the ownable widget is ready
     And I remember the current ownable id as "second"
     Then the Hub recorded a later public-events stream request for remembered ownables "first,second"
