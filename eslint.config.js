@@ -6,7 +6,6 @@ import tseslint from "typescript-eslint";
 const restrictedImportPatterns = [
   "@ownables/*/dist/*",
   "@ownables/*/src/*",
-  "../ownables-js/*",
 ];
 
 export default tseslint.config(

@@ -10,13 +10,6 @@ export default defineConfig({
         find: /^@\//,
         replacement: `${path.resolve(__dirname, "src")}/`,
       },
-      {
-        find: /^@ownables\/platform-browser$/,
-        replacement: path.resolve(
-          __dirname,
-          "../ownables-js/packages/platform-browser/src/index.ts"
-        ),
-      },
     ],
   },
   server: {

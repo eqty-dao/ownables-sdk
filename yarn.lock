@@ -2291,14 +2291,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.8.1
-  resolution: "@ownables/adapter-viem@file:../ownables-js/packages/adapter-viem#../ownables-js/packages/adapter-viem::hash=2d97e3&locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/adapter-viem@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@ownables/adapter-viem@npm:0.9.0"
   dependencies:
-    "@ownables/core": "workspace:*"
-    eqty-core: "file:../../../eqty-core"
+    "@ownables/core": "npm:0.9.0"
+    eqty-core: "npm:^1.1.1"
     viem: "npm:^2.47.4"
-  checksum: 10c0/1aea279ef9f87974961f70d7725865881a1425f275479ee27f875ec5958f94eb0daa49ba4d5841d41b20c0ca27fa5d7ebe9b1b07f13eb07391a8896d97eaf898
+  checksum: 10c0/2c4f33f65027437fe5ea5600afdcd8e054eb2f67931ba95f28c89d811748ccdbe9eecdd7f17295f3fb7ba0605d25e88f713b7c9b243692f91b1760ef03a86473
   languageName: node
   linkType: hard
 
@@ -2311,32 +2311,45 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/core@file:../ownables-js/packages/core::locator=%40ownables%2Fsdk%40workspace%3A.":
+"@ownables/core@npm:0.8.1":
   version: 0.8.1
-  resolution: "@ownables/core@file:../ownables-js/packages/core#../ownables-js/packages/core::hash=86865a&locator=%40ownables%2Fsdk%40workspace%3A."
+  resolution: "@ownables/core@npm:0.8.1"
   dependencies:
     blockstore-core: "npm:^6.1.2"
     cbor-x: "npm:^1.6.0"
-    eqty-core: "file:../../../eqty-core"
+    eqty-core: "npm:^1.0.2"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
-  checksum: 10c0/106c4d0ae8c3622ae9904460470cf5115cc8f4cd69409618cd07377263a616dd4084ab09efc69914b8fa6ad319a29c9a99a85ff936e7c3d704f3ef7ab42bd98f
+  checksum: 10c0/6862d7837e289f544019f9fecede132dee4d34fc310e5ea513367c6866abf54a34da708a69229af48ac5c9764634f8044a1196e75fd8bde6d9c5ee7443ef8176
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@file:../ownables-js/packages/platform-browser::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.8.1
-  resolution: "@ownables/platform-browser@file:../ownables-js/packages/platform-browser#../ownables-js/packages/platform-browser::hash=484f80&locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/core@npm:0.9.0, @ownables/core@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@ownables/core@npm:0.9.0"
   dependencies:
-    "@ownables/core": "workspace:*"
+    blockstore-core: "npm:^6.1.2"
+    cbor-x: "npm:^1.6.0"
+    eqty-core: "npm:^1.1.1"
+    ipfs-unixfs-importer: "npm:^16.1.4"
+    jszip: "npm:^3.10.1"
+  checksum: 10c0/3071c1791a4f59531304817c76ed974995fd34eef5324d6663c079708ca53208b8bd47277d66f0d99cd3033d7294e951208cde685b97b2906c69fb8f4e603a6b
+  languageName: node
+  linkType: hard
+
+"@ownables/platform-browser@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@ownables/platform-browser@npm:0.9.0"
+  dependencies:
+    "@ownables/core": "npm:0.9.0"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
-    eqty-core: "file:../../../eqty-core"
+    eqty-core: "npm:^1.1.1"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/6792efa75ed23faddb650bccb7795f145edc91ed256b183a98a1125ff07de320a0a61d5ae1256120dc517720fabb50117a98d3b795defb9160f58d8d08b97889
+  checksum: 10c0/3d26f40fcd07ff81997f09de5e102b043b5a2113a7757cd0e09217c0403f802dd72548ae528f73888fd24a73ba33b8521bd52d258a54526b1d4c8d4c69d87946
   languageName: node
   linkType: hard
 
@@ -2354,10 +2367,10 @@ __metadata:
     "@letsrunit/cli": "npm:^0.24.1"
     "@letsrunit/cucumber": "npm:^0.24.1"
     "@letsrunit/mcp-server": "npm:^0.24.1"
-    "@ownables/adapter-viem": "file:../ownables-js/packages/adapter-viem"
+    "@ownables/adapter-viem": "npm:^0.9.0"
     "@ownables/builder": "npm:^0.8.1"
-    "@ownables/core": "file:../ownables-js/packages/core"
-    "@ownables/platform-browser": "file:../ownables-js/packages/platform-browser"
+    "@ownables/core": "npm:^0.9.0"
+    "@ownables/platform-browser": "npm:^0.9.0"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
@@ -2379,7 +2392,7 @@ __metadata:
     cbor-x: "npm:^1.6.0"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
-    eqty-core: "file:../eqty-core"
+    eqty-core: "npm:^1.1.1"
     eslint: "npm:^10.6.0"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-react-hooks: "npm:^7.1.1"
@@ -6403,13 +6416,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eqty-core@file:../eqty-core::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 1.0.0-alpha.2
-  resolution: "eqty-core@file:../eqty-core#../eqty-core::hash=21071f&locator=%40ownables%2Fsdk%40workspace%3A."
+"eqty-core@npm:^1.0.2, eqty-core@npm:^1.1.1":
+  version: 1.1.1
+  resolution: "eqty-core@npm:1.1.1"
   dependencies:
     "@noble/hashes": "npm:^2.2.0"
     "@scure/base": "npm:^2.2.0"
-  checksum: 10c0/5b79e48d7b7a93a4707331d7cfc931b2a694c96e29ea11eb5fa10374781b7568a1527e1157359b6ff9716f99012a0f3bf4127f2ccfa70eccd6518b40748cf40d
+  checksum: 10c0/5c562e2b55aa85d0113b25dca49694846e79698e0f5e65e34a7c6ff0bb0f913aabe430deae2b85cfab5b62a4c1b86200f6d224b93c65af5dbfda4ecccb9f2de6
   languageName: node
   linkType: hard
 
