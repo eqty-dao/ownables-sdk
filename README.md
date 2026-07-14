@@ -39,10 +39,16 @@ The page will reload if you make edits. You will also see any lint errors in the
 
 ### `yarn test:e2e`
 
-Runs the Cucumber-based end-to-end tests.
+Runs all Cucumber-based end-to-end tests against the shared local E2E stack.
+Start that stack in a separate terminal first:
 
-This command is not accepted proof for the Hub receive flow in the
-`feat/hub` workstream because the current suite has no active scenarios.
+```bash
+yarn test:e2e:setup
+```
+
+The setup command starts Anvil, deploys and configures the test contracts,
+starts a PostgreSQL-backed Hub, and starts Vite. All scenarios use this same
+environment. Scenarios tagged `@broken` are skipped by the Cucumber config.
 
 ### `yarn verify:main-list-discovery`
 

@@ -15,7 +15,6 @@ use ownable_std::{
 // version info for migration info
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,

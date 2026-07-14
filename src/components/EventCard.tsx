@@ -2,7 +2,6 @@ import { Event } from "eqty-core";
 import { Box, Card, CardContent, Link } from "@/components/ui";
 import AntSwitch from "./AntSwitch";
 import { useState } from "react";
-import ReactJson from "react-json-view";
 import { CircleX as Cancel, CircleCheck as CheckCircle } from "lucide-react";
 import shortId from "@/utils/shortId";
 import { useChainId } from "wagmi";
@@ -100,12 +99,9 @@ export default function EventCard(props: EventCardProps) {
               <pre className="base64 mb-0">{event.data.base64}</pre>
             )}
             {dataView === DataView.JSON && (
-              <ReactJson
-                style={{ marginTop: 10 }}
-                src={event.parsedData ? event.parsedData : event.data}
-                enableClipboard={false}
-                theme={document.documentElement.classList.contains("dark") ? "summerfruit:inverted" : "rjv-default"}
-              />
+              <pre className="mt-2 mb-0 overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-3 text-[11px] leading-5 text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                {JSON.stringify(event.parsedData ? event.parsedData : event.data, null, 2)}
+              </pre>
             )}
           </div>
           <Box className="truncate pt-2 md:hidden">

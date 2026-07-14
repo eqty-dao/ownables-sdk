@@ -1,8 +1,16 @@
 Feature: Dossier
 
-  Scenario: Add a file from the dossier details screen
+  Background:
     Given I'm on the homepage
-    And I have a Dossier
+    When I click button "Issue an Ownable"
+    And I click button "Ownable Builder"
+    And I set field "Name *" to "Dossier"
+    And I set field "Description" to "A living file dossier"
+    And I click button "Create Ownable"
+    Then heading "Dossier" is visible
+    And the page contains button "Add files"
+
+  Scenario: Add a file from the dossier details screen
     When I upload the file "features/fixtures/passport-v1.pdf" into the "Add files" file input
     Then dialog "Selected files" is visible
     And dialog "Selected files" contains text "passport-v1.pdf"
@@ -13,8 +21,6 @@ Feature: Dossier
     And the page does not contain text "bafkreidlriigempjy6uusqwznuthahrel6jonsrj7tw3r6mwbdbg3c7h4a"
 
   Scenario: Review and rename selected files before submission
-    Given I'm on the homepage
-    And I have a Dossier
     When I upload the file "features/fixtures/passport-v1.pdf" into the "Add files" file input
     Then dialog "Selected files" is visible
     When I set field "attachment-name-bafkreidlriigempjy6uusqwznuthahrel6jonsrj7tw3r6mwbdbg3c7h4a" to "passport.pdf"
@@ -24,8 +30,6 @@ Feature: Dossier
     And text "1 version" is visible
 
   Scenario: Add a newer version of an existing file name
-    Given I'm on the homepage
-    And I have a Dossier
     When I upload the file "features/fixtures/passport-v1.pdf" into the "Add files" file input
     Then dialog "Selected files" is visible
     When I set field "attachment-name-bafkreidlriigempjy6uusqwznuthahrel6jonsrj7tw3r6mwbdbg3c7h4a" to "passport.pdf"
@@ -45,8 +49,6 @@ Feature: Dossier
     And text "bafkreige52bpunsngnyc5bld6fkqsvwokzkmuyq5cl2r5u27v5viljnzdi" is visible
 
   Scenario: Close a dossier
-    Given I'm on the homepage
-    And I have a Dossier
     When I click button "More options"
     And I click menuitem "Close"
     Then dialog "Close ownable" is visible

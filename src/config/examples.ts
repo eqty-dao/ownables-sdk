@@ -17,6 +17,12 @@ export const PACKAGE_EXAMPLES: TypedPackageStub[] = PACKAGE_EXAMPLE_URL
         stub: true,
       },
       {
+        title: "Block Stack",
+        name: "ownable-block-stack",
+        description: "Stack seven crooked public blocks",
+        stub: true,
+      },
+      {
         title: "Car",
         name: "ownable-car",
         description: "Ride for HODLers",

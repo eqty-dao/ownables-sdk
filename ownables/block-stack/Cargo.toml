@@ -1,9 +1,8 @@
 [package]
-name = "ownable-potion"
-version = "0.2.1"
-description = "Drink a colorful potion"
-license = "MIT"
-authors = ["bekauz <bekauz@protonmail.com>", "Arnold Daniels <arnold@jasny.net>"]
+name = "ownable-block-stack"
+description = "Stack seven crooked public blocks"
+version = "0.1.0"
+authors = ["EQTY <info@eqty.me>"]
 edition = "2024"
 
 exclude = ["contract.wasm", "hash.txt"]
@@ -38,5 +37,4 @@ ownable-std-macros = { workspace = true }
 alloy-sol-types = { workspace = true }
 
 [dev-dependencies]
-cw-multi-test = { workspace = true }
 cosmwasm-schema = { workspace = true }

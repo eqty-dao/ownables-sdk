@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EventChain } from "eqty-core";
 import GetStarted from "@/components/GetStarted";
@@ -22,11 +22,21 @@ const {
 } = PlatformBrowser as any as {
   HubService: new (
     url?: string,
-    fetchFn?: (input: string, init?: RequestInit) => Promise<Response>
+    fetchFn?: (input: string, init?: RequestInit) => Promise<Response>,
+    eventSourceFactory?: (url: string) => {
+      addEventListener(type: string, listener: (event: { data?: string }) => void): void;
+      removeEventListener(type: string, listener: (event: { data?: string }) => void): void;
+      close(): void;
+      onerror: ((event: unknown) => void) | null;
+    }
   ) => {
     parseHubDownloadUrl(url: string): URL;
-    getPackageDownloadUrl(cid: string): string;
+    getOwnableBundleUrl(id: string): string;
     listAvailableOwnables(ownerAccount: string): Promise<unknown>;
+    watchAvailableOwnables(
+      ownerAccount: string,
+      handlers: { onEvent(message: { owner: string; entry: unknown }): void }
+    ): { close(): void };
   };
   AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE: string;
 };
@@ -83,6 +93,10 @@ vi.mock("@/services/E2EWallet", () => ({
 
 vi.mock("wagmi", () => ({
   useAccount: () => accountState,
+  useBalance: () => ({
+    data: undefined,
+    isLoading: false,
+  }),
   useChainId: () => 84532,
   useDisconnect: () => ({
     disconnect: disconnectMock,
@@ -131,6 +145,27 @@ function createStorage(initialState: Record<string, any> = {}) {
     remove: vi.fn((key: string) => {
       delete values[key];
     }),
+  };
+}
+
+function createMockStream<T>() {
+  let closed = false;
+  let handler: ((payload: T) => void) | null = null;
+
+  return {
+    subscription: {
+      close: vi.fn(() => {
+        closed = true;
+      }),
+    },
+    attach(nextHandler: (payload: T) => void) {
+      handler = nextHandler;
+    },
+    emit(payload: T) {
+      if (!closed) {
+        handler?.(payload);
+      }
+    },
   };
 }
 
@@ -254,6 +289,10 @@ const AVAILABLE_ENTRY_B = {
 };
 
 function configureBaseServices(storage = createStorage()) {
+  const discoveryStream = createMockStream<{
+    owner: string;
+    entry: typeof AVAILABLE_ENTRY;
+  }>();
   const importedPackage = {
     cid: "bafy",
     title: "Potion",
@@ -284,6 +323,21 @@ function configureBaseServices(storage = createStorage()) {
     loadAll: vi.fn().mockResolvedValue([]),
     initWorker: vi.fn().mockResolvedValue(undefined),
     init: vi.fn().mockResolvedValue(undefined),
+    listTrackedPublicEvents: vi.fn().mockResolvedValue([]),
+    applyIndexedPublicEventSnapshot: vi.fn().mockResolvedValue({
+      appliedPublicEvents: [],
+      duplicatePublicEvents: [],
+      pendingPublicEvents: [],
+      confirmedPendingPublicEvents: [],
+      ignoredPublicEvents: [],
+    }),
+    applyIndexedPublicEventStream: vi.fn().mockResolvedValue({
+      appliedPublicEvents: [],
+      duplicatePublicEvents: [],
+      pendingPublicEvents: [],
+      confirmedPendingPublicEvents: [],
+      ignoredPublicEvents: [],
+    }),
     delete: vi.fn(),
     deleteAll: vi.fn(),
     clearRpc: vi.fn(),
@@ -295,13 +349,31 @@ function configureBaseServices(storage = createStorage()) {
       owner: ACCOUNT,
       entries: [AVAILABLE_ENTRY],
     }),
+    watchAvailableOwnables: vi.fn(
+      (
+        _owner: string,
+        handlers: {
+          onEvent(message: { owner: string; entry: typeof AVAILABLE_ENTRY }): void;
+        }
+      ) => {
+        discoveryStream.attach(handlers.onEvent);
+        return discoveryStream.subscription;
+      }
+    ),
+    loadOwnablePublicEvents: vi.fn().mockResolvedValue({
+      ownableId: AVAILABLE_ENTRY.id,
+      publicEvents: [],
+    }),
+    watchOwnablePublicEvents: vi.fn(() => ({
+      close: vi.fn(),
+    })),
     importFromHub: vi.fn().mockResolvedValue({
       packageFile: new File(["zip"], "ownable.zip"),
       chainJson: { id: AVAILABLE_ENTRY.id },
     }),
   };
 
-  return { importedPackage, storage };
+  return { discoveryStream, importedPackage, storage };
 }
 
 describe("main-list discovery verifier", () => {
@@ -317,6 +389,10 @@ describe("main-list discovery verifier", () => {
     e2eState.enabled = false;
     e2eState.address = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
     progressOpen.mockReturnValue([{ close: progressClose }, vi.fn()]);
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("renders available Hub rows in the main list and suppresses the empty state", async () => {
@@ -544,12 +620,34 @@ describe("main-list discovery verifier", () => {
       [`ownables:archived:${ACCOUNT}`]: [AVAILABLE_ENTRY.id],
     });
 
+    const streamA = createMockStream<{
+      owner: string;
+      entry: typeof AVAILABLE_ENTRY;
+    }>();
+    const streamB = createMockStream<{
+      owner: string;
+      entry: typeof AVAILABLE_ENTRY_B;
+    }>();
+
     configureBaseServices(storage);
     serviceMap.hub.listAvailableOwnables = vi
       .fn()
       .mockImplementation((owner: string) => {
         if (owner === ACCOUNT) return walletA.promise;
         if (owner === ACCOUNT_B) return walletB.promise;
+        throw new Error(`Unexpected owner ${owner}`);
+      });
+    serviceMap.hub.watchAvailableOwnables = vi
+      .fn()
+      .mockImplementation((owner: string, handlers: { onEvent(message: any): void }) => {
+        if (owner === ACCOUNT) {
+          streamA.attach(handlers.onEvent);
+          return streamA.subscription;
+        }
+        if (owner === ACCOUNT_B) {
+          streamB.attach(handlers.onEvent);
+          return streamB.subscription;
+        }
         throw new Error(`Unexpected owner ${owner}`);
       });
 
@@ -573,6 +671,7 @@ describe("main-list discovery verifier", () => {
     walletB.resolve({ owner: ACCOUNT_B, entries: [AVAILABLE_ENTRY_B] });
     expect(await screen.findByText("Elixir")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Archived/ })).toBeNull();
+    expect(streamA.subscription.close).toHaveBeenCalledTimes(1);
   });
 
   it("uses the E2E account for Hub discovery even when wagmi is not connected yet", async () => {
@@ -594,18 +693,34 @@ describe("main-list discovery verifier", () => {
     );
   });
 
-  it("refreshes Hub-available ownables when the tab regains focus", async () => {
-    configureBaseServices();
-    serviceMap.hub.listAvailableOwnables = vi
-      .fn()
-      .mockResolvedValueOnce({
+  it("applies live discovery updates from the wallet-scoped SSE stream", async () => {
+    const { discoveryStream } = configureBaseServices();
+
+    render(<MainListHarness />);
+
+    expect(await screen.findByText("Potion")).toBeTruthy();
+    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      discoveryStream.emit({
         owner: ACCOUNT,
-        entries: [AVAILABLE_ENTRY],
-      })
-      .mockResolvedValue({
-        owner: ACCOUNT,
-        entries: [AVAILABLE_ENTRY, AVAILABLE_ENTRY_B],
+        entry: AVAILABLE_ENTRY_B,
       });
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText("Elixir")).toBeTruthy();
+    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledTimes(1);
+    expect(serviceMap.hub.watchAvailableOwnables).toHaveBeenCalledWith(
+      ACCOUNT,
+      expect.objectContaining({
+        onEvent: expect.any(Function),
+      })
+    );
+  });
+
+  it("does not refresh discovery on focus or visibility changes once the stream is connected", async () => {
+    configureBaseServices();
 
     render(<MainListHarness />);
 
@@ -614,11 +729,11 @@ describe("main-list discovery verifier", () => {
 
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
       await Promise.resolve();
     });
 
-    expect(await screen.findByText("Elixir")).toBeTruthy();
-    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledTimes(2);
+    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledTimes(1);
   });
 
   it("imports through the Hub path, selects the imported ownable, and does not touch Relay receive helpers", async () => {
@@ -674,10 +789,35 @@ describe("main-list discovery verifier", () => {
     );
   });
 
+  it("uses the wallet-scoped discovery SSE route", async () => {
+    const streams: string[] = [];
+    const hub = new HubService(
+      "https://hub.example",
+      vi.fn(),
+      (url: string) => {
+        streams.push(url);
+        return {
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          close: vi.fn(),
+          onerror: null,
+        };
+      }
+    );
+
+    hub.watchAvailableOwnables(ACCOUNT, {
+      onEvent: vi.fn(),
+    });
+
+    expect(streams).toEqual([
+      `https://hub.example/ownables/available/stream?owner=${encodeURIComponent(ACCOUNT)}`,
+    ]);
+  });
+
   it("guards Hub imports to the configured origin", async () => {
     const hub = new HubService("https://hub.example");
 
-    expect(() => hub.parseHubDownloadUrl(hub.getPackageDownloadUrl(AVAILABLE_ENTRY.package.cid))).not.toThrow();
+    expect(() => hub.parseHubDownloadUrl(hub.getOwnableBundleUrl(AVAILABLE_ENTRY.id))).not.toThrow();
     expect(() =>
       hub.parseHubDownloadUrl("https://evil.example/ownables/bafy/download")
     ).toThrow("Hub download URL must use the configured Hub origin");
@@ -778,6 +918,7 @@ describe("main-list discovery verifier", () => {
 
     serviceMap.ownables = {
       init,
+      isReady: vi.fn().mockReturnValue(false),
       setWidgetWindow,
     };
 

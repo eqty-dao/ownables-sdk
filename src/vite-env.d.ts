@@ -14,6 +14,10 @@ interface ImportMetaEnv {
   readonly VITE_BASE_MAINNET_RPC_URL?: string;
   readonly VITE_BASE_SEPOLIA_EXPLORER_URL?: string;
   readonly VITE_BASE_MAINNET_EXPLORER_URL?: string;
+  readonly VITE_BASE_SEPOLIA_ANCHOR_ADDRESS?: `0x${string}`;
+  readonly VITE_BASE_MAINNET_ANCHOR_ADDRESS?: `0x${string}`;
+  readonly VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS?: `0x${string}`;
+  readonly VITE_BASE_MAINNET_EQTY_TOKEN_ADDRESS?: `0x${string}`;
 }
 
 interface ImportMeta {

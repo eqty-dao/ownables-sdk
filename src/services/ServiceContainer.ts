@@ -10,14 +10,23 @@ import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "./E2EWallet";
 import { EQTYService } from "@ownables/adapter-viem";
 import { EventChainService, PollingService } from "@ownables/core";
-import type { KVStore } from "@ownables/core";
+import type { AnchorProvider, KVStore } from "@ownables/core";
 import BuilderService from "./Builder.service";
 import { OwnableService } from "@ownables/core";
+import { normalizeAnchorProvider } from "./normalizeAnchorProvider";
+import { normalizeBrowserEqty } from "./normalizeBrowserEqty";
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
+const anchorAddresses: Record<number, `0x${string}` | undefined> = {
+  8453: import.meta.env.VITE_BASE_MAINNET_ANCHOR_ADDRESS as `0x${string}` | undefined,
+  84532: import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS as `0x${string}` | undefined,
+};
 
 export interface ServiceMap {
   relay: RelayService;
   localStorage: LocalStorageService;
-  eqty: EQTYService;
+  eqty: EQTYService & AnchorProvider;
   idb: IDBService;
   eventChains: EventChainService;
   packages: PackageService;
@@ -31,10 +40,15 @@ export type ServiceKey = keyof ServiceMap;
 
 type ServiceFactory<T = any> = (container: ServiceContainer) => Promise<T> | T;
 const relayUrl = import.meta.env.VITE_RELAY || import.meta.env.VITE_LOCAL || "";
+const hubUrl = import.meta.env.VITE_HUB || "";
 
 export default class ServiceContainer {
   private readonly cache = new Map<ServiceKey, Promise<any>>();
   private readonly factories = new Map<ServiceKey, ServiceFactory>();
+
+  private getAnchorContractAddress(): `0x${string}` {
+    return anchorAddresses[this.chainId] ?? ZERO_ADDRESS;
+  }
 
   constructor(
     public readonly address: string,
@@ -49,10 +63,26 @@ export default class ServiceContainer {
           const { address, walletClient, publicClient } = createE2EViemClients(
             c.chainId!
           );
-          return new EQTYService(address, c.chainId!, walletClient, publicClient);
+          return normalizeAnchorProvider(
+            normalizeBrowserEqty(
+              new EQTYService(address, c.chainId!, walletClient, publicClient, undefined, {
+                anchor: {
+                  contractAddress: c.getAnchorContractAddress(),
+                },
+              })
+            )
+          );
         }
 
-        return new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient);
+        return normalizeAnchorProvider(
+          normalizeBrowserEqty(
+            new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient, undefined, {
+              anchor: {
+                contractAddress: c.getAnchorContractAddress(),
+              },
+            })
+          )
+        );
       }
     );
 
@@ -70,7 +100,7 @@ export default class ServiceContainer {
       async (c) => new RelayService(await c.get("eqty"), { relayUrl })
     );
 
-    this.register("hub", () => new HubService());
+    this.register("hub", () => new HubService(hubUrl));
 
     this.register(
       "eventChains",

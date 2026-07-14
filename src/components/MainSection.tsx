@@ -1,4 +1,5 @@
 import { EventChain } from "eqty-core";
+import type { ReplayAttemptResult } from "@ownables/core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { cva } from "class-variance-authority";
@@ -55,6 +56,11 @@ interface MainSectionProps {
   onForge: (pkg: TypedPackage) => void;
   onCreate: () => void;
   packageRefreshToken?: number;
+  publicEventReplayById?: Record<string, ReplayAttemptResult | undefined>;
+  onOwnablePublicEventsChanged?: (
+    entryId: string,
+    replay: ReplayAttemptResult
+  ) => void | Promise<void>;
 }
 
 export default function MainSection({
@@ -80,6 +86,8 @@ export default function MainSection({
   onForge,
   onCreate,
   packageRefreshToken = 0,
+  publicEventReplayById = {},
+  onOwnablePublicEventsChanged,
 }: MainSectionProps) {
   const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedEntryId);
   const selectedAvailableOwnable =
@@ -111,6 +119,7 @@ export default function MainSection({
           selected={consuming?.chain.id === selectedOwnable.chain.id}
           archived={isArchivedSelected}
           isHubAvailable={isHubAvailable ?? true}
+          publicEventReplay={publicEventReplayById[selectedOwnable.chain.id]}
           onArchive={() => onArchive(selectedOwnable.chain.id)}
           onRestore={() => onRestore(selectedOwnable.chain.id)}
           onDelete={() => onDelete(selectedOwnable.chain.id, selectedOwnable.package)}
@@ -119,6 +128,7 @@ export default function MainSection({
             onArchive(selectedOwnable.chain.id);
           }}
           onError={onError}
+          onPublicEventsChanged={onOwnablePublicEventsChanged}
           onBack={onBack}
         />
       )}

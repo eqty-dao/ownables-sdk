@@ -7,6 +7,8 @@ import {
   OwnableService,
   WorkerRPC,
 } from "@ownables/core";
+import ServiceContainer from "@/services/ServiceContainer";
+import { encodeAbiParameters, encodeEventTopics, parseAbiItem } from "viem";
 
 type StoreMap = Map<string, any>;
 
@@ -52,6 +54,10 @@ class MemoryIDB {
       }
     }
   }
+
+  async delete(store: string, key: string): Promise<void> {
+    this.stores.get(store)?.delete(key);
+  }
 }
 
 class MockEventChains {
@@ -75,7 +81,7 @@ class MockEqty {
   address = "0x0000000000000000000000000000000000000001";
   chainId = 84532;
   signed: Event[] = [];
-  emitted: Array<{ chainId: string; eventType: string; data: Uint8Array }> = [];
+  emitted: Array<{ subjectId: string; eventType: string; data: Uint8Array }> = [];
   private signer = {
     getAddress: async () => this.address,
     signTypedData: async () =>
@@ -87,9 +93,10 @@ class MockEqty {
     this.signed.push(event);
   }
 
-  async emitPublicEvent(chainId: string, eventType: string, data: Uint8Array) {
-    this.emitted.push({ chainId, eventType, data });
+  async emitPublicEvent(subjectId: string, eventType: string, data: Uint8Array) {
+    this.emitted.push({ subjectId, eventType, data });
     return {
+      subjectId,
       source: this.address,
       transactionHash: "0x" + "44".repeat(32),
       blockNumber: 1,
@@ -345,26 +352,62 @@ async function verifyEmitPublicEventFlow() {
   service._rpc.set(chain.id, rpc);
   eventChains.setStateDump(chain.id, chain.state.hex, []);
 
-  await service.emitPublicEvent(chain, "consume", { amount: "10" });
+  const replay = await service.emitPublicEvent(chain, "consume", { amount: "10" });
 
   assert.equal(rpc.calls.encodePublicEvent.length, 1, "emit flow must encode the public event");
   assert.equal(eqty.emitted.length, 1, "emit flow must publish through EQTY");
-  assert.equal(rpc.calls.register.length, 1, "emitted public event must be registered locally");
+  assert.equal(
+    rpc.calls.register.length,
+    0,
+    "emit flow must not register the public event until Hub confirmation arrives"
+  );
   assert.deepEqual(
     Array.from(eqty.emitted[0].data),
     Array.from(rpc.calls.encodePublicEvent[0].payload),
     "published data must be the worker-encoded payload"
   );
-  assert.equal(
-    eqty.signed[0].parsedData["@context"],
-    "register_msg.json",
-    "emit flow must persist a register replay event"
+  assert.deepEqual(
+    replay.appliedReplayKeys,
+    [],
+    "emit flow must not report immediate replay application"
+  );
+  assert.equal(replay.pendingPublicEvents.length, 1, "emit flow must create one pending replay record");
+  assert.equal(replay.pendingPublicEvents[0].status, "pending");
+  assert.deepEqual(replay.pendingPublicEvents[0].sources, ["local"]);
+  assert.deepEqual(
+    await service.listTrackedPublicEvents(chain.id),
+    replay.pendingPublicEvents,
+    "pending local public events must be stored in the replay store"
   );
 }
 
 async function verifyEqtyPublicEventFeeForwarding() {
   const transactionHash = "0x" + "55".repeat(32);
   let writeContractInput: any;
+  const anchorContractAddress = import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS;
+  if (!anchorContractAddress) {
+    throw new Error("VITE_BASE_SEPOLIA_ANCHOR_ADDRESS must be configured for runtime verification");
+  }
+  const verifiedAnchorContractAddress: `0x${string}` = anchorContractAddress;
+  const publicEventAbi = parseAbiItem(
+    "event PublicEvent(bytes32 indexed subjectId, address indexed source, string eventType, bytes data, uint64 timestamp)"
+  );
+  const encodedTopics = encodeEventTopics({
+    abi: [publicEventAbi],
+    eventName: "PublicEvent",
+    args: {
+      subjectId: ("0x" + "66".repeat(32)) as `0x${string}`,
+      source: "0x0000000000000000000000000000000000000001",
+    },
+  });
+  const encodedData = encodeAbiParameters(
+    [
+      { name: "eventType", type: "string" },
+      { name: "data", type: "bytes" },
+      { name: "timestamp", type: "uint64" },
+    ],
+    ["consume", "0x010203", 99n]
+  );
 
   const walletClient = {
     account: "0x0000000000000000000000000000000000000001",
@@ -391,25 +434,28 @@ async function verifyEqtyPublicEventFeeForwarding() {
     waitForTransactionReceipt: async () => ({
       blockNumber: 123n,
       transactionIndex: 4,
-    }),
-    getLogs: async () => [
-      {
-        transactionHash,
-        logIndex: 9,
-        args: {
-          subjectId: "0x" + "66".repeat(32),
-          source: "0x0000000000000000000000000000000000000001",
-          eventType: "consume",
-          data: "0x010203",
+      logs: [
+        {
+          address: verifiedAnchorContractAddress,
+          transactionHash,
+          logIndex: 9,
+          data: encodedData,
+          topics: encodedTopics,
         },
-      },
-    ],
+      ],
+    }),
   };
   const service = new EQTYService(
     "0x0000000000000000000000000000000000000001",
     84532,
     walletClient as any,
-    publicClient as any
+    publicClient as any,
+    undefined,
+    {
+      anchor: {
+        contractAddress: verifiedAnchorContractAddress,
+      },
+    }
   );
 
   const event = await service.emitPublicEvent(
@@ -425,6 +471,124 @@ async function verifyEqtyPublicEventFeeForwarding() {
   assert.equal(event.data, "0x010203");
 }
 
+async function verifyServiceContainerInjectsAnchorConfig() {
+  const walletClient = {
+    account: "0x0000000000000000000000000000000000000001",
+  };
+  const publicClient = {
+    readContract: async ({ functionName }: { functionName: string }) => {
+      switch (functionName) {
+        case "quoteEqtyCost":
+        case "quoteEthCost":
+          return 0n;
+        case "eqtyToken":
+          return "0x0000000000000000000000000000000000000000";
+        default:
+          throw new Error(`unexpected readContract ${functionName}`);
+      }
+    },
+  };
+
+  const container = new ServiceContainer(
+    "0x0000000000000000000000000000000000000001",
+    84532,
+    walletClient as any,
+    publicClient as any
+  );
+
+  try {
+    const eqty = (await container.get("eqty")) as any;
+    assert.equal(
+      eqty.anchorContractAddress,
+      import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS,
+      "ServiceContainer must inject the SDK-owned Anchor address into EQTYService"
+    );
+  } finally {
+    await container.dispose();
+  }
+}
+
+async function verifyServiceContainerInjectsHubConfig() {
+  const container = new ServiceContainer(
+    "0x0000000000000000000000000000000000000001",
+    84532
+  );
+
+  try {
+    const hub = (await container.get("hub")) as any;
+    assert.equal(
+      hub.isConfigured,
+      Boolean(import.meta.env.VITE_HUB),
+      "ServiceContainer must inject the SDK-owned Hub URL into HubService"
+    );
+    if (import.meta.env.VITE_HUB) {
+      assert.equal(
+        hub.origin,
+        new URL(import.meta.env.VITE_HUB).origin,
+        "HubService must derive its origin from the configured VITE_HUB"
+      );
+    }
+  } finally {
+    await container.dispose();
+  }
+}
+
+async function verifyEqtyAllowanceManagement() {
+  let approveInput: any;
+  const anchorContractAddress = import.meta.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS;
+  if (!anchorContractAddress) {
+    throw new Error("VITE_BASE_SEPOLIA_ANCHOR_ADDRESS must be configured for runtime verification");
+  }
+  const verifiedAnchorContractAddress: `0x${string}` = anchorContractAddress;
+
+  const walletClient = {
+    account: "0x0000000000000000000000000000000000000001",
+    writeContract: async (input: any) => {
+      approveInput = input;
+      return "0x" + "77".repeat(32);
+    },
+  };
+
+  const publicClient = {
+    readContract: async ({ functionName, args }: { functionName: string; args?: unknown[] }) => {
+      switch (functionName) {
+        case "eqtyToken":
+          return "0x1111111111111111111111111111111111111111";
+        case "allowance":
+          assert.deepEqual(
+            args,
+            ["0x0000000000000000000000000000000000000001", verifiedAnchorContractAddress],
+            "allowance reads must target the signer and configured Anchor contract"
+          );
+          return 27n;
+        default:
+          throw new Error(`unexpected readContract ${functionName}`);
+      }
+    },
+  };
+
+  const service = new EQTYService(
+    "0x0000000000000000000000000000000000000001",
+    84532,
+    walletClient as any,
+    publicClient as any,
+    undefined,
+    {
+      anchor: {
+        contractAddress: verifiedAnchorContractAddress,
+      },
+    }
+  );
+
+  const allowance = await service.getAnchorEqtyAllowance();
+  const approvalTxHash = await service.setAnchorEqtyAllowance(42n);
+
+  assert.equal(allowance, 27n);
+  assert.equal(approvalTxHash, "0x" + "77".repeat(32));
+  assert.equal(approveInput.functionName, "approve");
+  assert.deepEqual(approveInput.args, [verifiedAnchorContractAddress, 42n]);
+}
+
 async function main() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
@@ -432,6 +596,9 @@ async function main() {
   await verifyEncodePublicEventBridge();
   await verifyEmitPublicEventFlow();
   await verifyEqtyPublicEventFeeForwarding();
+  await verifyServiceContainerInjectsAnchorConfig();
+  await verifyServiceContainerInjectsHubConfig();
+  await verifyEqtyAllowanceManagement();
   console.log("external-events runtime verification passed");
 }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import type { StateDump } from "@ownables/core";
+import type { ReplayAttemptResult, StateDump } from "@ownables/core";
 import type { TypedAttachment } from "@/interfaces/TypedAttachment";
 import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
@@ -11,11 +11,34 @@ import { useService } from "./useService";
 import { useAccount } from "wagmi";
 import { useProgress, LogProgress } from "@/contexts/Progress.context";
 
+function getWidgetEmitEnvelope(msg: unknown): { eventType: string; payload: TypedDict } {
+  if (!isObject(msg)) {
+    throw new Error("Widget emit msg must be an object");
+  }
+
+  const entries = Object.entries(msg as Record<string, unknown>);
+  if (entries.length !== 1) {
+    throw new Error("Widget emit msg must contain exactly one event key");
+  }
+
+  const [eventType, payload] = entries[0] as [string, unknown];
+  if (!isObject(payload)) {
+    throw new Error("Widget emit payload must be an object");
+  }
+
+  return { eventType, payload: payload as TypedDict };
+}
+
 export function useOwnableState(
   chain: EventChain,
   pkg: TypedPackage | undefined,
   onError: (title: string, message: string) => void,
-  archived = false
+  archived = false,
+  publicEventReplay?: ReplayAttemptResult,
+  onPublicEventsChanged?: (
+    entryId: string,
+    replay: ReplayAttemptResult
+  ) => void | Promise<void>
 ) {
   const ownables = useService("ownables");
   const eventChains = useService("eventChains");
@@ -42,6 +65,7 @@ export function useOwnableState(
   const [isApplying, setIsApplying] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const appliedReplayRef = useRef<ReplayAttemptResult | undefined>(undefined);
 
   useEffect(() => {
     if (pkg) setMetadata({ name: pkg.title, description: pkg.description });
@@ -63,7 +87,19 @@ export function useOwnableState(
       if (!ownables || !pkg || !ownables.isReady(chain.id)) return;
       const effective = sd ?? stateDump;
 
-      if (pkg.hasWidgetState) await ownables.rpc(chain.id).refresh(effective);
+      if (pkg.hasWidgetState) {
+        ownables.setWidgetWindow(
+          chain.id,
+          archived ? null : iframeRef.current?.contentWindow ?? null
+        );
+        const widgetState = await ownables
+          .rpc(chain.id)
+          .query({ get_widget_state: {} }, effective);
+        iframeRef.current?.contentWindow?.postMessage(
+          { ownable_id: chain.id, state: widgetState },
+          "*"
+        );
+      }
 
       const infoResp = (await ownables
         .rpc(chain.id)
@@ -102,8 +138,31 @@ export function useOwnableState(
       setIsClosed(closed);
       setIsLocked(locked);
     },
-    [chain.id, metadata, ownables, pkg, stateDump]
+    [archived, chain.id, metadata, ownables, pkg, stateDump]
   );
+
+  const applyPublicEventReplay = useCallback(
+    async (replay: ReplayAttemptResult): Promise<void> => {
+      if (appliedReplayRef.current === replay) return;
+
+      appliedReplayRef.current = replay;
+      await refresh(replay.stateDump);
+      appliedRef.current = chain.latestHash;
+      setApplied(chain.latestHash);
+      setStateDump(replay.stateDump);
+    },
+    [chain.latestHash, refresh]
+  );
+
+  useEffect(() => {
+    if (!publicEventReplay) return;
+
+    void applyPublicEventReplay(publicEventReplay).catch((e) => {
+      console.error("Error applying public-event replay:", e);
+      setError(ownableErrorMessage(e as Error));
+      onError("Failed to apply public event", ownableErrorMessage(e as Error));
+    });
+  }, [applyPublicEventReplay, onError, publicEventReplay]);
 
   const apply = useCallback(
     async (partialChain: EventChain): Promise<void> => {
@@ -156,17 +215,10 @@ export function useOwnableState(
           eventAttachments
         );
         if (submitAnchors) await ownables.submitAnchors(onProgress as any);
-
-        const persistedStateDump = await eventChains?.getStateDump(
-          chain.id,
-          chain.state.hex
-        );
-        const nextStateDump = persistedStateDump ?? sd;
-
-        await refresh(nextStateDump);
+        await refresh(sd);
         appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
-        setStateDump(nextStateDump);
+        setStateDump(sd);
       } catch (e) {
         onError("The Ownable returned an error", ownableErrorMessage(e));
         throw e;
@@ -175,6 +227,43 @@ export function useOwnableState(
       }
     },
     [archived, chain, eventChains, ownables, onError, refresh, stateDump]
+  );
+
+  const emit = useCallback(
+    async (
+      msg: TypedDict,
+      onProgress?: LogProgress
+    ): Promise<void> => {
+      if (!ownables) return;
+      if (archived) {
+        const message = "Archived ownables are read-only";
+        onError("Interaction unavailable", message);
+        throw new Error(message);
+      }
+
+      const { eventType, payload } = getWidgetEmitEnvelope(msg);
+      try {
+        setIsExecuting(true);
+        const replay = await ownables.emitPublicEvent(
+          chain,
+          eventType,
+          payload,
+          onProgress as any
+        );
+        await applyPublicEventReplay(replay);
+        if (onPublicEventsChanged) {
+          void Promise.resolve(onPublicEventsChanged(chain.id, replay)).catch((error) => {
+            console.warn("Unable to sync tracked public events after emit", error);
+          });
+        }
+      } catch (e) {
+        onError("The Ownable returned an error", ownableErrorMessage(e));
+        throw e;
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [applyPublicEventReplay, archived, chain, onError, onPublicEventsChanged, ownables]
   );
 
   const onLoad = useCallback(async (): Promise<void> => {
@@ -203,7 +292,7 @@ export function useOwnableState(
     }
   }, [archived, chain, eventChains, initialized, ownables, pkg, onError, refresh]);
 
-  // Window message handler for widget-triggered execute calls
+  // Window message handler for widget-triggered actions
   const windowMessageHandler = useCallback(
     async (event: MessageEvent) => {
       if (!isObject(event.data) || !("ownable_id" in event.data) || event.data.ownable_id !== chain.id) return;
@@ -214,18 +303,31 @@ export function useOwnableState(
         return;
       }
 
-      const steps = [{ id: "signEvent", label: "Sign the event" }];
-      if (ownables?.anchoring) steps.push({ id: "anchor", label: "Anchor the event" });
-
       try {
-        const [ctrl, onProgress] = progress.open({ title: "Processing action", steps });
-        await execute(event.data.msg, onProgress);
-        ctrl.close();
+        const isEmit = event.data.type === "emit";
+        if (!isEmit && event.data.type !== "execute") return;
+
+        const steps = isEmit
+          ? [{ id: "emitPublicEvent", label: "Emit the public event" }]
+          : [{ id: "signEvent", label: "Sign the event" }];
+        if (!isEmit && ownables?.anchoring) {
+          steps.push({ id: "anchor", label: "Anchor the event" });
+        }
+
+        const [, onProgress] = progress.open({ title: "Processing action", steps });
+        if (isEmit) {
+          await emit(event.data.msg, onProgress);
+        } else {
+          await execute(event.data.msg, onProgress);
+        }
       } catch (e) {
         console.error("Widget action failed", e);
+        onError("Widget action failed", ownableErrorMessage(e));
+      } finally {
+        progress.close();
       }
     },
-    [archived, chain.id, execute, progress, ownables, onError]
+    [archived, chain.id, emit, execute, progress, ownables, onError]
   );
 
   useEffect(() => {

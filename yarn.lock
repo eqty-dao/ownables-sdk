@@ -2248,6 +2248,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/hashes@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "@noble/hashes@npm:2.2.0"
+  checksum: 10c0/cad8630c504d6b9271984f685cd0af9101b40988fc2dfbe17ccdf068a9941f95cc5c9957d89e9ca4b7ca94c15cb35f93510c5d53a09fbcc83ee503b93d0a1034
+  languageName: node
+  linkType: hard
+
 "@npmcli/agent@npm:^4.0.0":
   version: 4.0.0
   resolution: "@npmcli/agent@npm:4.0.0"
@@ -2284,14 +2291,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@npm:^0.8.1":
-  version: 0.8.1
-  resolution: "@ownables/adapter-viem@npm:0.8.1"
+"@ownables/adapter-viem@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@ownables/adapter-viem@npm:0.9.0"
   dependencies:
-    "@ownables/core": "npm:0.8.1"
-    eqty-core: "npm:^1.0.2"
+    "@ownables/core": "npm:0.9.0"
+    eqty-core: "npm:^1.1.1"
     viem: "npm:^2.47.4"
-  checksum: 10c0/d8d7505781ddbe64bb7b2d7a2f5d67ac7357d5bb094388b2a0c633cdebc7f07ea2b001478fada3531e888977ff702fb6a137b0cf289a0487bcfa03e28ca5e187
+  checksum: 10c0/2c4f33f65027437fe5ea5600afdcd8e054eb2f67931ba95f28c89d811748ccdbe9eecdd7f17295f3fb7ba0605d25e88f713b7c9b243692f91b1760ef03a86473
   languageName: node
   linkType: hard
 
@@ -2304,7 +2311,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/core@npm:0.8.1, @ownables/core@npm:^0.8.1":
+"@ownables/core@npm:0.8.1":
   version: 0.8.1
   resolution: "@ownables/core@npm:0.8.1"
   dependencies:
@@ -2317,19 +2324,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@npm:^0.8.1":
-  version: 0.8.1
-  resolution: "@ownables/platform-browser@npm:0.8.1"
+"@ownables/core@npm:0.9.0, @ownables/core@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@ownables/core@npm:0.9.0"
   dependencies:
-    "@ownables/core": "npm:0.8.1"
+    blockstore-core: "npm:^6.1.2"
+    cbor-x: "npm:^1.6.0"
+    eqty-core: "npm:^1.1.1"
+    ipfs-unixfs-importer: "npm:^16.1.4"
+    jszip: "npm:^3.10.1"
+  checksum: 10c0/3071c1791a4f59531304817c76ed974995fd34eef5324d6663c079708ca53208b8bd47277d66f0d99cd3033d7294e951208cde685b97b2906c69fb8f4e603a6b
+  languageName: node
+  linkType: hard
+
+"@ownables/platform-browser@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "@ownables/platform-browser@npm:0.9.0"
+  dependencies:
+    "@ownables/core": "npm:0.9.0"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
-    eqty-core: "npm:^1.0.2"
+    eqty-core: "npm:^1.1.1"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/95b93e22c0566445d13372c3501e9414b446d63076ce7917036e238b99bd2596747876d2b235da619327abf45c7a1ef30cf28077357179d247b41d2e46f72f47
+  checksum: 10c0/3d26f40fcd07ff81997f09de5e102b043b5a2113a7757cd0e09217c0403f802dd72548ae528f73888fd24a73ba33b8521bd52d258a54526b1d4c8d4c69d87946
   languageName: node
   linkType: hard
 
@@ -2347,10 +2367,10 @@ __metadata:
     "@letsrunit/cli": "npm:^0.24.1"
     "@letsrunit/cucumber": "npm:^0.24.1"
     "@letsrunit/mcp-server": "npm:^0.24.1"
-    "@ownables/adapter-viem": "npm:^0.8.1"
+    "@ownables/adapter-viem": "npm:^0.9.0"
     "@ownables/builder": "npm:^0.8.1"
-    "@ownables/core": "npm:^0.8.1"
-    "@ownables/platform-browser": "npm:^0.8.1"
+    "@ownables/core": "npm:^0.9.0"
+    "@ownables/platform-browser": "npm:^0.9.0"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
@@ -2372,7 +2392,7 @@ __metadata:
     cbor-x: "npm:^1.6.0"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
-    eqty-core: "npm:^1.0.2"
+    eqty-core: "npm:^1.1.1"
     eslint: "npm:^10.6.0"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-react-hooks: "npm:^7.1.1"
@@ -2850,10 +2870,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@scure/base@npm:^1.1.3, @scure/base@npm:^1.2.6, @scure/base@npm:~1.2.2, @scure/base@npm:~1.2.4, @scure/base@npm:~1.2.5":
+"@scure/base@npm:^1.1.3, @scure/base@npm:~1.2.2, @scure/base@npm:~1.2.4, @scure/base@npm:~1.2.5":
   version: 1.2.6
   resolution: "@scure/base@npm:1.2.6"
   checksum: 10c0/49bd5293371c4e062cb6ba689c8fe3ea3981b7bb9c000400dc4eafa29f56814cdcdd27c04311c2fec34de26bc373c593a1d6ca6d754398a488d587943b7c128a
+  languageName: node
+  linkType: hard
+
+"@scure/base@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "@scure/base@npm:2.2.0"
+  checksum: 10c0/30158ccf5da86b0f06928f1cfe24a29fbea22824adf6f8895222910cade1ad4fe7593958aacf563287e6b4c55746f47395178e7a4763b059c22d6ee8e6f76387
   languageName: node
   linkType: hard
 
@@ -6389,13 +6416,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eqty-core@npm:^1.0.2":
-  version: 1.0.2
-  resolution: "eqty-core@npm:1.0.2"
+"eqty-core@npm:^1.0.2, eqty-core@npm:^1.1.1":
+  version: 1.1.1
+  resolution: "eqty-core@npm:1.1.1"
   dependencies:
-    "@noble/hashes": "npm:^1.4.0"
-    "@scure/base": "npm:^1.2.6"
-  checksum: 10c0/3134c21891b714a7414f3297563c5d1e1efa176185caa34301860ea78cd692968074b50058a566c73d0fcb043c8dc38520d52b2356670744e3fce0049d4b1525
+    "@noble/hashes": "npm:^2.2.0"
+    "@scure/base": "npm:^2.2.0"
+  checksum: 10c0/5c562e2b55aa85d0113b25dca49694846e79698e0f5e65e34a7c6ff0bb0f913aabe430deae2b85cfab5b62a4c1b86200f6d224b93c65af5dbfda4ecccb9f2de6
   languageName: node
   linkType: hard
 

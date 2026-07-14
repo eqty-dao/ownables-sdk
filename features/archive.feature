@@ -2,7 +2,7 @@ Feature: Archive
 
   Scenario: Archive and restore an ownable
     Given I'm on the homepage
-    When I click link "the examples"
+    When I click button "Issue an Ownable"
     And I click button "Robot An adorable robot companion"
     And I click `main button:nth-of-type(2)`
     And I click menuitem "Archive"
@@ -17,7 +17,7 @@ Feature: Archive
 
   Scenario: Delete an archived ownable
     Given I'm on the homepage
-    When I click link "the examples"
+    When I click button "Issue an Ownable"
     And I click button "Robot An adorable robot companion"
     And I click `main button:nth-of-type(2)`
     And I click menuitem "Archive"

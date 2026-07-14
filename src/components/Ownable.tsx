@@ -1,5 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
+import type { ReplayAttemptResult } from "@ownables/core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "@/hooks/useService";
@@ -20,6 +21,7 @@ interface OwnableProps {
   uniqueMessageHash?: string;
   archived?: boolean;
   isHubAvailable?: boolean;
+  publicEventReplay?: ReplayAttemptResult;
   onBack: () => void;
   onArchive: () => void;
   onRestore: () => void;
@@ -27,10 +29,14 @@ interface OwnableProps {
   onConsume: (info: TypedOwnableInfo) => void;
   onTransferred: () => void;
   onError: (title: string, message: string) => void;
+  onPublicEventsChanged?: (
+    entryId: string,
+    replay: ReplayAttemptResult
+  ) => void | Promise<void>;
 }
 
 export default function Ownable(props: OwnableProps) {
-  const { chain, packageCid, uniqueMessageHash } = props;
+  const { chain, packageCid, uniqueMessageHash, publicEventReplay } = props;
   const [isSubmittingAttachments, setIsSubmittingAttachments] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -55,7 +61,14 @@ export default function Ownable(props: OwnableProps) {
     isTransferred,
     execute,
     onLoad,
-  } = useOwnableState(chain, pkg, props.onError, !!props.archived);
+  } = useOwnableState(
+    chain,
+    pkg,
+    props.onError,
+    !!props.archived,
+    publicEventReplay,
+    props.onPublicEventsChanged
+  );
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
   const { showConfirm } = useDialogs();

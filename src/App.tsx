@@ -53,11 +53,13 @@ export default function App() {
     mainListLoaded,
     importingAvailableOwnableId,
     archivedOwnablesCount,
+    publicEventReplayById,
     setOwnables,
     forge,
     importAvailableOwnable,
     archiveOwnable,
     restoreArchivedOwnable,
+    notifyOwnablePublicEventsChanged,
     permanentlyDeleteArchivedOwnable,
     updateOwnable,
     reset,
@@ -192,6 +194,8 @@ export default function App() {
           onError={showError}
           onForge={forge}
           onCreate={() => setShowCreateOwnable(true)}
+          publicEventReplayById={publicEventReplayById}
+          onOwnablePublicEventsChanged={notifyOwnablePublicEventsChanged}
         />
       </Box>
 
@@ -200,7 +204,12 @@ export default function App() {
           <Sidebar
             open={showSidebar}
             onClose={() => setShowSidebar(false)}
-            onReset={() => { setShowSidebar(false); reset(); }}
+            onReset={() => {
+              setShowSidebar(false);
+              setSelectedEntryId(null);
+              setShowDetail(false);
+              reset();
+            }}
             onFactoryReset={() => { setShowSidebar(false); factoryReset(); }}
           />
 

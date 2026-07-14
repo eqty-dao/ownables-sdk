@@ -19,6 +19,9 @@ export default defineConfig({
         path.resolve(__dirname),
       ],
       deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.letsrunit/**']
+    },
+    watch: {
+      ignored: ["**/.letsrunit/**"],
     }
   },
   test: {

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
+import type { ReplayAttemptResult } from "@ownables/core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
@@ -10,10 +11,7 @@ import { LocalStorageService } from "@ownables/platform-browser";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import { Button } from "@/components/ui";
-import useInterval from "@/hooks/useInterval";
 import useEffectiveWallet from "@/hooks/useEffectiveWallet";
-
-const AVAILABLE_OWNABLES_REFRESH_MS = 5000;
 
 export interface OwnableEntry {
   chain: EventChain;
@@ -48,6 +46,35 @@ interface UseOwnablesOptions {
   onSelect: (chainId: string) => void;
 }
 
+const OWNABLE_LOAD_TIMEOUT_MS = 5_000;
+
+function sortAvailableOwnables(entries: AvailableOwnableEntry[]) {
+  return [...entries].sort(
+    (left, right) =>
+      new Date(right.availableAt).getTime() - new Date(left.availableAt).getTime()
+  );
+}
+
+function mergeAvailableOwnable(
+  entries: AvailableOwnableEntry[],
+  nextEntry: AvailableOwnableEntry
+) {
+  return sortAvailableOwnables([
+    ...entries.filter((entry) => entry.id !== nextEntry.id),
+    nextEntry,
+  ]);
+}
+
+function replayTouchesTrackedPublicEvents(replay: ReplayAttemptResult) {
+  return (
+    replay.appliedPublicEvents.length > 0 ||
+    replay.duplicatePublicEvents.length > 0 ||
+    replay.pendingPublicEvents.length > 0 ||
+    replay.confirmedPendingPublicEvents.length > 0 ||
+    replay.ignoredPublicEvents.length > 0
+  );
+}
+
 export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [ownables, setOwnables] = useState<OwnableEntry[]>([]);
   const [availableOwnables, setAvailableOwnables] = useState<AvailableOwnableEntry[]>([]);
@@ -58,6 +85,9 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [loaded, setLoaded] = useState(false);
   const [availableLoaded, setAvailableLoaded] = useState(false);
   const [availableLoadedAccount, setAvailableLoadedAccount] = useState<string | null>(null);
+  const [publicEventReplayById, setPublicEventReplayById] = useState<
+    Record<string, ReplayAttemptResult | undefined>
+  >({});
 
   const ownableService = useService("ownables");
   const packageService = useService("packages");
@@ -74,6 +104,22 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const legacyArchivedStorageKey = account ? `hub-available:dismissed:${account}` : null;
   const deletedAvailableStorageKey = account ? `hub-available:deleted:${account}` : null;
   const discoveryEnabled = !!hub?.isConfigured && !!account && isConnected;
+  const availableStreamRef = useRef<{ close(): void } | null>(null);
+  const publicEventsStreamRef = useRef<{ close(): void } | null>(null);
+  const ownablesRef = useRef(ownables);
+  const accountRef = useRef(account);
+  const ownableIdsKey = useMemo(
+    () => ownables.map((entry) => entry.chain.id).sort().join("|"),
+    [ownables]
+  );
+
+  useEffect(() => {
+    ownablesRef.current = ownables;
+  }, [ownables]);
+
+  useEffect(() => {
+    accountRef.current = account;
+  }, [account]);
 
   const persistStoredIds = useCallback(
     (storageKey: string | null, ids: string[]) => {
@@ -93,37 +139,65 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   useEffect(() => {
     if (!ownableService) return;
     setLoaded(false);
-    ownableService.loadAll().then(async (loadedOwnables) => {
-      const staleOwnables = packageService
-        ? loadedOwnables.filter(
-            ({ package: cid, uniqueMessageHash }) =>
-              !maybePackageInfo(packageService, cid, uniqueMessageHash)
-          )
-        : [];
-      const validOwnables = packageService
-        ? loadedOwnables.filter(
-            ({ package: cid, uniqueMessageHash }) =>
-              !!maybePackageInfo(packageService, cid, uniqueMessageHash)
-          )
-        : loadedOwnables;
+    let cancelled = false;
 
-      if (staleOwnables.length > 0) {
-        console.warn(
-          "Removing ownables with missing packages",
-          staleOwnables.map(({ chain, package: cid }) => ({ chainId: chain.id, packageCid: cid }))
+    const load = async () => {
+      try {
+        const loadedOwnables = await Promise.race([
+          ownableService.loadAll(),
+          new Promise<never>((_, reject) => {
+            window.setTimeout(
+              () => reject(new Error("Timed out loading stored ownables")),
+              OWNABLE_LOAD_TIMEOUT_MS
+            );
+          }),
+        ]);
+        const staleOwnables = packageService
+          ? loadedOwnables.filter(
+              ({ package: cid, uniqueMessageHash }) =>
+                !maybePackageInfo(packageService, cid, uniqueMessageHash)
+            )
+          : [];
+        const validOwnables = packageService
+          ? loadedOwnables.filter(
+              ({ package: cid, uniqueMessageHash }) =>
+                !!maybePackageInfo(packageService, cid, uniqueMessageHash)
+            )
+          : loadedOwnables;
+
+        if (staleOwnables.length > 0) {
+          console.warn(
+            "Removing ownables with missing packages",
+            staleOwnables.map(({ chain, package: cid }) => ({ chainId: chain.id, packageCid: cid }))
+          );
+          await Promise.allSettled(
+            staleOwnables.map(({ chain }) => ownableService.delete(chain.id))
+          );
+        }
+
+        if (cancelled) return;
+        setOwnables(validOwnables);
+        if (validOwnables.length > 0) onSelect(validOwnables[0].chain.id);
+        setLoaded(true);
+
+        // Worker startup is best-effort and must not hold the main list behind a
+        // stalled runtime bootstrap. Actions still report readiness errors later.
+        void Promise.allSettled(
+          validOwnables.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
         );
-        await Promise.allSettled(
-          staleOwnables.map(({ chain }) => ownableService.delete(chain.id))
-        );
+      } catch (error) {
+        console.warn("Unable to load stored ownables", error);
+        if (!cancelled) {
+          setOwnables([]);
+          setLoaded(true);
+        }
       }
+    };
 
-      setOwnables(validOwnables);
-      await Promise.allSettled(
-        validOwnables.map(({ chain, package: cid }) => ownableService.initWorker(chain.id, cid))
-      );
-      if (validOwnables.length > 0) onSelect(validOwnables[0].chain.id);
-      setLoaded(true);
-    });
+    void load();
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService, packageService]);
 
@@ -163,69 +237,76 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     setDeletedAvailableOwnableIds(Array.isArray(stored) ? stored : []);
   }, [deletedAvailableStorageKey, localStorage]);
 
-  const refreshAvailableOwnables = useCallback(async () => {
-    if (!discoveryEnabled || !hub || !account) {
-      setAvailableOwnables([]);
-      setAvailableOwnablesAccount(account);
-      setAvailableLoaded(true);
-      setAvailableLoadedAccount(account);
-      return;
-    }
-
-    try {
-      const response = await hub.listAvailableOwnables(account);
-      const entries = [...response.entries].sort(
-        (left, right) =>
-          new Date(right.availableAt).getTime() - new Date(left.availableAt).getTime()
-      );
-      setAvailableOwnables(entries);
-      setAvailableOwnablesAccount(account);
-      setAvailableLoaded(true);
-      setAvailableLoadedAccount(account);
-    } catch (error) {
-      console.warn("Unable to load Hub available ownables", error);
-      setAvailableOwnables([]);
-      setAvailableOwnablesAccount(account);
-      setAvailableLoaded(true);
-      setAvailableLoadedAccount(account);
-    }
-  }, [account, discoveryEnabled, hub]);
-
   useEffect(() => {
+    availableStreamRef.current?.close();
+    availableStreamRef.current = null;
     setAvailableLoaded(false);
     setAvailableLoadedAccount(null);
     setAvailableOwnables([]);
     setAvailableOwnablesAccount(account);
-    void refreshAvailableOwnables();
-  }, [account, refreshAvailableOwnables]);
 
-  useInterval(() => {
-    void refreshAvailableOwnables();
-  }, discoveryEnabled ? AVAILABLE_OWNABLES_REFRESH_MS : null);
-
-  useEffect(() => {
-    if (!discoveryEnabled) {
+    if (!discoveryEnabled || !hub || !account) {
+      setAvailableLoaded(true);
+      setAvailableLoadedAccount(account);
       return;
     }
 
-    const refreshOnFocus = () => {
-      void refreshAvailableOwnables();
-    };
+    let cancelled = false;
 
-    const refreshOnVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void refreshAvailableOwnables();
+    const connect = async () => {
+      try {
+        const response = await hub.listAvailableOwnables(account);
+        if (cancelled) {
+          return;
+        }
+
+        setAvailableOwnables(sortAvailableOwnables(response.entries));
+      } catch (error) {
+        console.warn("Unable to load Hub available ownables", error);
+        if (!cancelled) {
+          setAvailableOwnables([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setAvailableOwnablesAccount(account);
+          setAvailableLoaded(true);
+          setAvailableLoadedAccount(account);
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        availableStreamRef.current = hub.watchAvailableOwnables(account, {
+          onEvent: ({ owner, entry }) => {
+            if (owner !== accountRef.current) {
+              return;
+            }
+
+            setAvailableOwnables((current) => mergeAvailableOwnable(current, entry));
+            setAvailableOwnablesAccount(owner);
+            setAvailableLoaded(true);
+            setAvailableLoadedAccount(owner);
+          },
+          onError: (error) => {
+            console.warn("Hub available-ownables stream failed", error);
+          },
+        });
+      } catch (error) {
+        console.warn("Unable to connect Hub available-ownables stream", error);
       }
     };
 
-    window.addEventListener("focus", refreshOnFocus);
-    document.addEventListener("visibilitychange", refreshOnVisibility);
+    void connect();
 
     return () => {
-      window.removeEventListener("focus", refreshOnFocus);
-      document.removeEventListener("visibilitychange", refreshOnVisibility);
+      cancelled = true;
+      availableStreamRef.current?.close();
+      availableStreamRef.current = null;
     };
-  }, [discoveryEnabled, refreshAvailableOwnables]);
+  }, [account, discoveryEnabled, hub]);
 
   const visibleImportedOwnables = useMemo(() => {
     const archivedIds = new Set(archivedOwnableIds);
@@ -307,6 +388,111 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     loaded &&
     (!discoveryEnabled || (availableLoaded && availableLoadedAccount === account));
 
+  const syncTrackedPublicEvents = useCallback(
+    async (entryId: string, replay: ReplayAttemptResult) => {
+      if (!ownableService || !replayTouchesTrackedPublicEvents(replay)) {
+        return;
+      }
+
+      setPublicEventReplayById((current) => ({ ...current, [entryId]: replay }));
+    },
+    [ownableService]
+  );
+
+  useEffect(() => {
+    publicEventsStreamRef.current?.close();
+    publicEventsStreamRef.current = null;
+
+    if (!hub?.isConfigured || !ownableService || ownables.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const connect = async () => {
+      const latestBlocks: number[] = [];
+      const watchedOwnableIds = ownables.map((entry) => entry.chain.id);
+
+      for (const entry of ownables) {
+        try {
+          const snapshot = await hub.loadOwnablePublicEvents(entry.chain.id);
+          if (cancelled) {
+            return;
+          }
+
+          const replay = await ownableService.applyIndexedPublicEventSnapshot(
+            entry.chain,
+            snapshot.publicEvents
+          );
+          await syncTrackedPublicEvents(entry.chain.id, replay);
+
+          latestBlocks.push(
+            snapshot.publicEvents.reduce(
+              (max, event) => Math.max(max, Number(event.blockNumber ?? 0)),
+              0
+            )
+          );
+        } catch (error) {
+          console.warn(
+            `Unable to load or apply Hub public-events snapshot for ${entry.chain.id}`,
+            error
+          );
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        if (cancelled) {
+          return;
+        }
+
+        publicEventsStreamRef.current = hub.watchOwnablePublicEvents(
+          watchedOwnableIds,
+          {
+            onEvent: async ({ ownableId, publicEvent }) => {
+              const entry = ownablesRef.current.find(
+                (candidate) => candidate.chain.id === ownableId
+              );
+              if (!entry) {
+                return;
+              }
+
+              try {
+                const replay = await ownableService.applyIndexedPublicEventStream(
+                  entry.chain,
+                  [publicEvent]
+                );
+                await syncTrackedPublicEvents(ownableId, replay);
+              } catch (error) {
+                console.warn("Unable to apply Hub public-event stream update", error);
+              }
+            },
+            onError: (error) => {
+              console.warn("Hub public-events stream failed", error);
+            },
+          },
+          {
+            fromBlock:
+              latestBlocks.length > 0 ? Math.min(...latestBlocks) : 0,
+          }
+        );
+      } catch (error) {
+        console.warn("Unable to connect Hub public-events transport", error);
+      }
+    };
+
+    void connect();
+
+    return () => {
+      cancelled = true;
+      publicEventsStreamRef.current?.close();
+      publicEventsStreamRef.current = null;
+    };
+  }, [hub, ownableIdsKey, ownables, ownableService, syncTrackedPublicEvents]);
+
   const getExplorerUrl = (txHash: string, currentChainId: number) => {
     switch (currentChainId) {
       case 84532:
@@ -325,6 +511,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       if (ownableService.anchoring) steps.push({ id: "anchorEvent", label: "Anchor the event" });
       const [ctrl, onProgress] = progress.open({ title: `Forging ${pkg.title}`, steps });
       const result = await ownableService.create(pkg, onProgress as any);
+      await ownableService.init(result.chain, pkg.cid, pkg.uniqueMessageHash);
       setOwnables((prev) => [...prev, { chain: result.chain, package: pkg.cid }]);
       onSelect(result.chain.id);
       ctrl.close();
@@ -555,6 +742,13 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     });
   }, [idb, showConfirm]);
 
+  const notifyOwnablePublicEventsChanged = useCallback(
+    async (entryId: string, replay: ReplayAttemptResult) => {
+      await syncTrackedPublicEvents(entryId, replay);
+    },
+    [syncTrackedPublicEvents]
+  );
+
   return {
     ownables,
     availableOwnables: visibleAvailableOwnables,
@@ -566,6 +760,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     archivedOwnablesCount,
     mainListEntries,
     mainListLoaded,
+    publicEventReplayById,
     setOwnables,
     loaded,
     setLoaded,
@@ -576,6 +771,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     archiveOwnable,
     restoreArchivedOwnable,
     permanentlyDeleteArchivedOwnable,
+    notifyOwnablePublicEventsChanged,
     updateOwnable,
     reset,
     factoryReset,
