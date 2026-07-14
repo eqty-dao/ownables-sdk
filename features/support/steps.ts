@@ -1,6 +1,7 @@
 import { Given, Then, When } from '@letsrunit/bdd';
 import { uploadFile } from './utils/file-upload.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
+import { expectWalletEmpty } from './utils/wallet.ts';
 import {
   confirmLatestPendingPublicEvent,
   expectHubSnapshotRequest,
@@ -89,3 +90,7 @@ When(
     await uploadFile(this.page, filePath, placeholder);
   }
 );
+
+Then('the wallet is empty', async function () {
+  await expectWalletEmpty(this.page);
+});
