@@ -112,7 +112,7 @@ describe("ServiceContainer lifecycle", () => {
     await container.dispose();
 
     expect(clearWalletAuth).toHaveBeenCalledOnce();
-    expect(clearWalletAuth).toHaveBeenCalledWith("0xabc", 84532);
+    expect(clearWalletAuth).toHaveBeenCalledWith("0xabc", 84532, localStorage);
     expect(closeStream).not.toHaveBeenCalled();
   });
 
