@@ -6,8 +6,8 @@ import {
   type StateDump,
   OwnableService,
   PublicEventReplayService,
-  WorkerRPC,
 } from "@ownables/core";
+import { BrowserRuntimeRpcProvider } from "@ownables/platform-browser";
 import ServiceContainer from "@/services/ServiceContainer";
 import { encodeAbiParameters, encodeEventTopics, parseAbiItem } from "viem";
 
@@ -320,7 +320,7 @@ async function verifyRegisterPublicEventFlow() {
 }
 
 async function verifyEncodePublicEventBridge() {
-  const rpc = new WorkerRPC("bridge-test") as any;
+  const rpc = new BrowserRuntimeRpcProvider().create("bridge-test") as any;
   const worker = new FakeWorker();
   rpc.worker = worker;
 
