@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+const { clearWalletAuth } = vi.hoisted(() => ({
+  clearWalletAuth: vi.fn(),
+}));
 vi.mock("@ownables/adapter-viem", () => ({ EQTYService: class {} }));
 vi.mock("@ownables/builder", () => ({ BuilderService: class {} }));
 vi.mock("@ownables/core", () => ({
@@ -18,7 +21,7 @@ vi.mock("@ownables/platform-browser", () => ({
   LocalStorageService: class {},
   PackageService: class {},
   RelayService: class {
-    static clearWalletAuth() {}
+    static clearWalletAuth = clearWalletAuth;
   },
 }));
 import ServiceContainer from "./ServiceContainer";
@@ -40,7 +43,10 @@ function testContainer() {
 }
 
 describe("ServiceContainer lifecycle", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    clearWalletAuth.mockClear();
+  });
 
   it("constructs lazily once and evicts a failed resolution", async () => {
     const container = testContainer();
@@ -91,5 +97,18 @@ describe("ServiceContainer lifecycle", () => {
 
     await expect(container.dispose()).rejects.toThrow("Failed to dispose");
     expect(finalClose).toHaveBeenCalledOnce();
+  });
+
+  it("retires relay authentication through disposal without closing caller-owned streams", async () => {
+    const container = testContainer();
+    const closeStream = vi.fn();
+    container.factories.set("hub", () => ({ close: closeStream }));
+    await container.get("hub");
+
+    await container.dispose();
+
+    expect(clearWalletAuth).toHaveBeenCalledOnce();
+    expect(clearWalletAuth).toHaveBeenCalledWith("0xabc", 84532);
+    expect(closeStream).not.toHaveBeenCalled();
   });
 });

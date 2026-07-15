@@ -696,7 +696,7 @@ describe("main-list discovery verifier", () => {
   it("applies live discovery updates from the wallet-scoped SSE stream", async () => {
     const { discoveryStream } = configureBaseServices();
 
-    render(<MainListHarness />);
+    const view = render(<MainListHarness />);
 
     expect(await screen.findByText("Potion")).toBeTruthy();
     expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledTimes(1);
@@ -717,6 +717,32 @@ describe("main-list discovery verifier", () => {
         onEvent: expect.any(Function),
       })
     );
+
+    view.unmount();
+    expect(discoveryStream.subscription.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the caller-owned public-event SSE stream exactly once on unmount", async () => {
+    configureBaseServices();
+    const publicEventsStream = { close: vi.fn() };
+    const chain = new EventChain(CHAIN_ID);
+    serviceMap.ownables.loadAll = vi.fn().mockResolvedValue([
+      { chain, package: "bafy" },
+    ]);
+    serviceMap.hub.loadOwnablePublicEvents = vi.fn().mockResolvedValue({
+      ownableId: chain.id,
+      publicEvents: [],
+    });
+    serviceMap.hub.watchOwnablePublicEvents = vi.fn(() => publicEventsStream);
+
+    const view = render(<MainListHarness />);
+
+    await waitFor(() => {
+      expect(serviceMap.hub.watchOwnablePublicEvents).toHaveBeenCalledOnce();
+    });
+    view.unmount();
+
+    expect(publicEventsStream.close).toHaveBeenCalledTimes(1);
   });
 
   it("does not refresh discovery on focus or visibility changes once the stream is connected", async () => {
