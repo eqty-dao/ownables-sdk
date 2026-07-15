@@ -2,6 +2,23 @@ import { Given, Then, When } from '@letsrunit/bdd';
 import { uploadFile } from './utils/file-upload.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 import { expectWalletEmpty } from './utils/wallet.ts';
+import { mnemonicToAccount } from 'viem/accounts';
+
+const E2E_ADDRESS_INDEX_KEY = 'ownables:e2e:address-index';
+const DEFAULT_E2E_MNEMONIC = 'test test test test test test test test test test test junk';
+
+Given('I switch the controlled E2E wallet to address index {int}', async function (addressIndex: number) {
+  if (!Number.isInteger(addressIndex) || addressIndex < 0) {
+    throw new Error(`Invalid controlled E2E address index: ${addressIndex}`);
+  }
+  const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
+  mnemonicToAccount(mnemonic, { addressIndex });
+  await this.page.evaluate(
+    ({ key, value }: { key: string; value: string }) => localStorage.setItem(key, value),
+    { key: E2E_ADDRESS_INDEX_KEY, value: String(addressIndex) }
+  );
+  await this.page.reload({ waitUntil: 'domcontentloaded' });
+});
 import {
   confirmLatestPendingPublicEvent,
   expectHubSnapshotRequest,

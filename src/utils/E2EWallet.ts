@@ -2,8 +2,9 @@ import { mnemonicToAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
 import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient } from "viem";
 
-const DEFAULT_E2E_MNEMONIC =
+export const DEFAULT_E2E_MNEMONIC =
   "test test test test test test test test test test test junk";
+export const E2E_ADDRESS_INDEX_KEY = "ownables:e2e:address-index";
 
 function getChainById(chainId: number) {
   switch (chainId) {
@@ -18,7 +19,11 @@ function getChainById(chainId: number) {
 
 export function getE2EAccount() {
   const mnemonic = import.meta.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
-  const indexRaw = import.meta.env.VITE_E2E_ACCOUNT_INDEX;
+  const storedIndex =
+    import.meta.env.VITE_E2E !== "1" || typeof localStorage === "undefined"
+      ? undefined
+      : localStorage.getItem(E2E_ADDRESS_INDEX_KEY) ?? undefined;
+  const indexRaw = storedIndex ?? import.meta.env.VITE_E2E_ADDRESS_INDEX;
   const addressIndex = Number.isFinite(Number(indexRaw)) ? Number(indexRaw) : 0;
   return mnemonicToAccount(mnemonic, { addressIndex });
 }

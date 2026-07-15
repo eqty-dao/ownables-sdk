@@ -8,6 +8,7 @@ export async function clearBrowserWalletState(page: {
   await page.goto('/favicon.ico', { waitUntil: 'domcontentloaded' });
   await page.evaluate(async () => {
     localStorage.clear();
+    localStorage.removeItem('ownables:e2e:address-index');
     sessionStorage.clear();
 
     if (typeof indexedDB.databases === 'function') {

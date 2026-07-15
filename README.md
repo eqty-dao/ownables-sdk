@@ -155,7 +155,7 @@ Create a .env file in the project root (or use your existing one) and ensure the
 
 - VITE_E2E
 - VITE_E2E_MNEMONIC
-- VITE_E2E_ACCOUNT_INDEX
+- VITE_E2E_ADDRESS_INDEX
 - VITE_E2E_RPC_URL
 - VITE_HUB
 - VITE_RELAY
