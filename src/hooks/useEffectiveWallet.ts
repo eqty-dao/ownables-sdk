@@ -1,5 +1,5 @@
 import { useAccount } from "wagmi";
-import { getE2EAccount } from "@/services/E2EWallet";
+import { getE2EAccount } from "@/utils/E2EWallet";
 import { isE2E } from "@/utils/isE2E";
 
 export default function useEffectiveWallet() {

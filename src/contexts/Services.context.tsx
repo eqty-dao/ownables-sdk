@@ -5,7 +5,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { RelayService } from "@ownables/platform-browser";
 import ServiceContainer from "@/services/ServiceContainer";
 import {
   useAccount,
@@ -13,7 +12,7 @@ import {
   useWalletClient,
   usePublicClient,
 } from "wagmi";
-import { getE2EAccount } from "@/services/E2EWallet";
+import { getE2EAccount } from "@/utils/E2EWallet";
 import { isE2E } from "@/utils/isE2E";
 
 type Ctx = { container: ServiceContainer | null };
@@ -56,10 +55,6 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Replace previous
       if (container) {
-        const [oldAddress, oldChainId] = container.key.split(":");
-        if (oldAddress && oldChainId) {
-          RelayService.clearWalletAuth(oldAddress, parseInt(oldChainId));
-        }
         await container.dispose().catch(() => {});
       }
 

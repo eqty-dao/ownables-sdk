@@ -85,7 +85,7 @@ vi.mock("@/utils/isE2E", () => ({
   },
 }));
 
-vi.mock("@/services/E2EWallet", () => ({
+vi.mock("@/utils/E2EWallet", () => ({
   getE2EAccount: () => ({
     address: e2eState.address,
   }),

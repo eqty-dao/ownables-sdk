@@ -1,5 +1,7 @@
 import { isE2E } from "@/utils/isE2E";
 import {
+  BrowserRuntimeRpcProvider,
+  BrowserRuntimeSourceProvider,
   HubService,
   IDBService,
   LocalStorageService,
@@ -7,14 +9,11 @@ import {
   RelayService,
 } from "@ownables/platform-browser";
 import type { PublicClient, WalletClient } from "viem";
-import { createE2EViemClients } from "./E2EWallet";
+import { createE2EViemClients } from "@/utils/E2EWallet";
 import { EQTYService } from "@ownables/adapter-viem";
-import { EventChainService, PollingService } from "@ownables/core";
+import { AnchorValidationService, EventChainService, OwnablePackageCidService, OwnableService, PollingService, PublicEventReplayService } from "@ownables/core";
 import type { AnchorProvider, KVStore } from "@ownables/core";
-import BuilderService from "./Builder.service";
-import { OwnableService } from "@ownables/core";
-import { normalizeAnchorProvider } from "./normalizeAnchorProvider";
-import { normalizeBrowserEqty } from "./normalizeBrowserEqty";
+import { BuilderService } from "@ownables/builder";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
@@ -27,6 +26,11 @@ export interface ServiceMap {
   relay: RelayService;
   localStorage: LocalStorageService;
   eqty: EQTYService & AnchorProvider;
+  anchorValidation: AnchorValidationService;
+  replay: PublicEventReplayService;
+  packageCid: OwnablePackageCidService;
+  runtimeSource: BrowserRuntimeSourceProvider;
+  runtimeRpc: BrowserRuntimeRpcProvider;
   idb: IDBService;
   eventChains: EventChainService;
   packages: PackageService;
@@ -45,6 +49,9 @@ const hubUrl = import.meta.env.VITE_HUB || "";
 export default class ServiceContainer {
   private readonly cache = new Map<ServiceKey, Promise<any>>();
   private readonly factories = new Map<ServiceKey, ServiceFactory>();
+  private readonly resources: Array<{ close(): void | Promise<void> }> = [];
+  private disposePromise?: Promise<void>;
+  private disposalStarted = false;
 
   private getAnchorContractAddress(): `0x${string}` {
     return anchorAddresses[this.chainId] ?? ZERO_ADDRESS;
@@ -63,32 +70,23 @@ export default class ServiceContainer {
           const { address, walletClient, publicClient } = createE2EViemClients(
             c.chainId!
           );
-          return normalizeAnchorProvider(
-            normalizeBrowserEqty(
-              new EQTYService(address, c.chainId!, walletClient, publicClient, undefined, {
-                anchor: {
-                  contractAddress: c.getAnchorContractAddress(),
-                },
-              })
-            )
-          );
+          return new EQTYService(address, c.chainId!, walletClient, publicClient, undefined, {
+            anchor: { contractAddress: c.getAnchorContractAddress() },
+          });
         }
 
-        return normalizeAnchorProvider(
-          normalizeBrowserEqty(
-            new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient, undefined, {
-              anchor: {
-                contractAddress: c.getAnchorContractAddress(),
-              },
-            })
-          )
-        );
+        return new EQTYService(c.address!, c.chainId!, c.walletClient, c.publicClient, undefined, {
+          anchor: { contractAddress: c.getAnchorContractAddress() },
+        });
       }
     );
 
-    this.register("idb", async (c) =>
-      IDBService.open(`${c.chainId}:${c.address}`)
-    );
+    this.register("anchorValidation", async (c) => new AnchorValidationService(await c.get("eqty")));
+    this.register("replay", () => new PublicEventReplayService());
+    this.register("packageCid", () => new OwnablePackageCidService());
+    this.register("runtimeSource", () => new BrowserRuntimeSourceProvider());
+    this.register("runtimeRpc", () => new BrowserRuntimeRpcProvider());
+    this.register("idb", async (c) => c.ownResource(await IDBService.open(`${c.chainId}:${c.address}`)));
 
     this.register(
       "localStorage",
@@ -108,30 +106,27 @@ export default class ServiceContainer {
         new EventChainService(
           await c.get("idb"),
           await c.get("eqty"),
+          await c.get("anchorValidation"),
           new LocalStorageService() as unknown as KVStore
         )
     );
 
     this.register("packages", async (c) => {
       // Packages are stored globally and not per account
-      const idb = await IDBService.packages();
-      const legacyIdb = await IDBService.main();
+      const idb = c.ownResource(await IDBService.packages());
+      const legacyIdb = c.ownResource(await IDBService.main());
       const storage = new LocalStorageService();
       return new PackageService(idb, await c.get("relay"), storage, {
         exampleUrl: import.meta.env.VITE_OWNABLE_EXAMPLES_URL,
         legacyIdb,
+        cidService: await c.get("packageCid"),
       });
     });
 
     this.register(
       "ownables",
       async (c) =>
-        new OwnableService(
-          await c.get("idb"),
-          await c.get("eventChains"),
-          await c.get("eqty"),
-          await c.get("packages")
-        )
+        new OwnableService({ stateStore: await c.get("idb"), eventChains: await c.get("eventChains"), anchorProvider: await c.get("eqty"), packages: await c.get("packages"), runtimeSource: await c.get("runtimeSource"), runtimeRpc: await c.get("runtimeRpc"), replay: await c.get("replay") })
     );
 
     this.register(
@@ -142,7 +137,7 @@ export default class ServiceContainer {
 
     this.register(
       "builder",
-      async (c) => new BuilderService(await c.get("packages"))
+      async (c) => new BuilderService({ packageService: await c.get("packages") })
     );
   }
 
@@ -162,6 +157,7 @@ export default class ServiceContainer {
   }
 
   async get<K extends ServiceKey>(key: K): Promise<ServiceMap[K]> {
+    if (this.disposalStarted) throw new Error("Service container is disposing or disposed");
     if (!this.factories.has(key))
       throw new Error(`No service factory registered for key: ${key}`);
     if (this.cache.has(key)) return this.cache.get(key)!;
@@ -177,9 +173,22 @@ export default class ServiceContainer {
     return await promise;
   }
 
+  private ownResource<T extends { close(): void | Promise<void> }>(resource: T): T {
+    this.resources.push(resource);
+    return resource;
+  }
+
   async dispose(): Promise<void> {
-    if (this.cache.has("idb")) {
-      (await this.cache.get("idb")).close();
-    }
+    if (this.disposePromise) return this.disposePromise;
+    this.disposalStarted = true;
+    RelayService.clearWalletAuth(this.address, this.chainId);
+    this.disposePromise = (async () => {
+      await Promise.allSettled(this.cache.values());
+      const resources = [...this.resources].reverse();
+      this.resources.length = 0;
+      for (const resource of resources) await resource.close();
+      this.cache.clear();
+    })();
+    return this.disposePromise;
   }
 }
