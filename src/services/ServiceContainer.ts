@@ -182,7 +182,9 @@ export default class ServiceContainer {
   async dispose(): Promise<void> {
     if (this.disposePromise) return this.disposePromise;
     this.disposalStarted = true;
-    RelayService.clearWalletAuth(this.address, this.chainId);
+    if (typeof localStorage !== "undefined") {
+      RelayService.clearWalletAuth(this.address, this.chainId, localStorage);
+    }
     this.disposePromise = (async () => {
       await Promise.allSettled(this.cache.values());
       const resources = [...this.resources].reverse();

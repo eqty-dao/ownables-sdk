@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { clearWalletAuth } = vi.hoisted(() => ({
   clearWalletAuth: vi.fn(),
 }));
@@ -46,6 +46,10 @@ describe("ServiceContainer lifecycle", () => {
   beforeEach(() => {
     localStorage.clear();
     clearWalletAuth.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("constructs lazily once and evicts a failed resolution", async () => {
@@ -110,5 +114,17 @@ describe("ServiceContainer lifecycle", () => {
     expect(clearWalletAuth).toHaveBeenCalledOnce();
     expect(clearWalletAuth).toHaveBeenCalledWith("0xabc", 84532);
     expect(closeStream).not.toHaveBeenCalled();
+  });
+
+  it("disposes resources without browser storage", async () => {
+    const container = testContainer();
+    const close = vi.fn();
+    container.ownResource({ close });
+    vi.stubGlobal("localStorage", undefined);
+
+    await container.dispose();
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(clearWalletAuth).not.toHaveBeenCalled();
   });
 });
