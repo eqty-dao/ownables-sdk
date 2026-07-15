@@ -14,6 +14,7 @@ import { EventChain } from "eqty-core";
 import type { AnchorValidationResult } from "@ownables/core";
 import EventCard from "./EventCard";
 import shortId from "@/utils/shortId";
+import { cn } from "@/utils/cn";
 import Tooltip from "./Tooltip";
 import { Alert } from "@/components/ui/alert";
 import { useService } from "@/hooks/useService";
@@ -177,14 +178,14 @@ export default function OwnableInfo(props: OwnableInfoProps) {
           </div>
           <DialogClose
             aria-label="Close"
-            className="ml-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
+            className={cn("ml-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]")}
           />
         </div>
 
         {/* Events */}
         <DialogContent>
           {verificationError ? (
-            <Alert severity="error" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200">
+            <Alert severity="error" className={cn("rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200")}>
               Failed to load verification details: {verificationError}
             </Alert>
           ) : chain.events.length === 0 ? (

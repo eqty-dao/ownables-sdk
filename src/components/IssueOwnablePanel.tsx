@@ -161,7 +161,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
       </div>
 
       <Box className="lg:mx-auto lg:max-w-2xl lg:px-8 py-5">
-        <Box className="p-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
+        <Box className={cn("p-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]")}>
           {/* Heading — desktop only */}
           <h2 className="mb-6 hidden text-2xl font-bold text-slate-900 dark:text-white lg:block">
             Issue an Ownable
@@ -220,7 +220,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                 >
                   {/* Icon + chevron row — desktop only */}
                   <div className="hidden w-full items-center justify-between lg:flex">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
+                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30")}>
                       <Package size={20} className="text-indigo-500 dark:text-indigo-400" />
                     </div>
                     <ChevronRight size={20} className="text-slate-300 dark:text-slate-600" />
@@ -232,7 +232,7 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
                         {pkg.title}
                       </p>
                       {version && (
-                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700/40 dark:text-slate-300">
+                        <span className={cn("shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-700/40 dark:text-slate-300")}>
                           v{version}
                         </span>
                       )}

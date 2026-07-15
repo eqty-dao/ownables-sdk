@@ -3,6 +3,8 @@ import type { TypedAttachment } from "@/interfaces/TypedAttachment";
 import { IconButton } from "@/components/ui";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 
+const attachmentChevronClass = "h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400";
+
 interface OwnableAttachmentListProps {
   attachments: TypedAttachment[];
   onDownloadAttachment: (name: string, cid: string) => void;
@@ -64,9 +66,9 @@ export default function OwnableAttachmentList(props: OwnableAttachmentListProps)
                 aria-expanded={isExpanded}
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                  <ChevronDown className={attachmentChevronClass} />
                 ) : (
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                  <ChevronRight className={attachmentChevronClass} />
                 )}
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">

@@ -37,6 +37,9 @@ const itemCard = cva(
   }
 );
 
+const itemTileClass = "flex-shrink-0 overflow-hidden rounded-[14px] border-transparent";
+const fallbackIconClass = "h-8 w-8 text-indigo-400 dark:text-indigo-300";
+
 interface ImportedOwnableListItemProps {
   kind: "imported";
   chain: EventChain;
@@ -127,8 +130,8 @@ export default function OwnableListItem(props: OwnableListItemProps) {
           <Tile
             size="lg"
             variant="brand"
-            className="flex-shrink-0 overflow-hidden rounded-[14px] border-transparent"
-            icon={<BoxIcon aria-label="No image" className="h-8 w-8 text-indigo-400 dark:text-indigo-300" />}
+            className={itemTileClass}
+            icon={<BoxIcon aria-label="No image" className={fallbackIconClass} />}
           >
             {thumbnailUrl ? (
               <img src={thumbnailUrl} alt={props.title} className="h-full w-full object-cover" />
@@ -198,8 +201,8 @@ export default function OwnableListItem(props: OwnableListItemProps) {
         <Tile
           size="lg"
           variant="brand"
-          className="flex-shrink-0 overflow-hidden rounded-[14px] border-transparent"
-          icon={<BoxIcon aria-label="No image" className="h-8 w-8 text-indigo-400 dark:text-indigo-300" />}
+          className={itemTileClass}
+          icon={<BoxIcon aria-label="No image" className={fallbackIconClass} />}
         >
           {thumbnailUrl ? (
             <img src={thumbnailUrl} alt={metadata.name} className="h-full w-full object-cover" />
