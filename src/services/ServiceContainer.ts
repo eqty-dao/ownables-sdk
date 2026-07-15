@@ -163,8 +163,9 @@ export default class ServiceContainer {
     if (this.cache.has(key)) return this.cache.get(key)!;
 
     const promise = Promise.resolve(this.factories.get(key)!(this)).catch(
-      (error) => {
+      async (error) => {
         this.cache.delete(key);
+        if (this.resources.length > 0) await this.dispose();
         throw error;
       }
     );
@@ -186,8 +187,19 @@ export default class ServiceContainer {
       await Promise.allSettled(this.cache.values());
       const resources = [...this.resources].reverse();
       this.resources.length = 0;
-      for (const resource of resources) await resource.close();
+      const results = await Promise.allSettled(
+        resources.map((resource) => resource.close())
+      );
       this.cache.clear();
+      const failures = results.filter(
+        (result): result is PromiseRejectedResult => result.status === "rejected"
+      );
+      if (failures.length > 0) {
+        throw new AggregateError(
+          failures.map((failure) => failure.reason),
+          "Failed to dispose one or more SDK resources"
+        );
+      }
     })();
     return this.disposePromise;
   }
