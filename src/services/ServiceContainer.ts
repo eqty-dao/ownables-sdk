@@ -11,7 +11,7 @@ import {
 import type { PublicClient, WalletClient } from "viem";
 import { createE2EViemClients } from "@/utils/E2EWallet";
 import { EQTYService } from "@ownables/adapter-viem";
-import { AnchorValidationService, EventChainService, OwnablePackageCidService, OwnableService, PollingService, PublicEventReplayService } from "@ownables/core";
+import { AnchorValidationService, EventChainService, OwnableService, PollingService, PublicEventReplayService } from "@ownables/core";
 import type { AnchorProvider, KVStore } from "@ownables/core";
 import { BuilderService } from "@ownables/builder";
 
@@ -28,7 +28,6 @@ export interface ServiceMap {
   eqty: EQTYService & AnchorProvider;
   anchorValidation: AnchorValidationService;
   replay: PublicEventReplayService;
-  packageCid: OwnablePackageCidService;
   runtimeSource: BrowserRuntimeSourceProvider;
   runtimeRpc: BrowserRuntimeRpcProvider;
   idb: IDBService;
@@ -83,7 +82,6 @@ export default class ServiceContainer {
 
     this.register("anchorValidation", async (c) => new AnchorValidationService(await c.get("eqty")));
     this.register("replay", () => new PublicEventReplayService());
-    this.register("packageCid", () => new OwnablePackageCidService());
     this.register("runtimeSource", () => new BrowserRuntimeSourceProvider());
     this.register("runtimeRpc", () => new BrowserRuntimeRpcProvider());
     this.register("idb", async (c) => c.ownResource(await IDBService.open(`${c.chainId}:${c.address}`)));
@@ -119,7 +117,6 @@ export default class ServiceContainer {
       return new PackageService(idb, await c.get("relay"), storage, {
         exampleUrl: import.meta.env.VITE_OWNABLE_EXAMPLES_URL,
         legacyIdb,
-        cidService: await c.get("packageCid"),
       });
     });
 

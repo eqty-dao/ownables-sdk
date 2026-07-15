@@ -8,7 +8,6 @@ vi.mock("@ownables/builder", () => ({ BuilderService: class {} }));
 vi.mock("@ownables/core", () => ({
   AnchorValidationService: class {},
   EventChainService: class {},
-  OwnablePackageCidService: class {},
   OwnableService: class {},
   PollingService: class {},
   PublicEventReplayService: class {},
@@ -17,14 +16,22 @@ vi.mock("@ownables/platform-browser", () => ({
   BrowserRuntimeRpcProvider: class {},
   BrowserRuntimeSourceProvider: class {},
   HubService: class {},
-  IDBService: class {},
+  IDBService: class {
+    static async packages() {
+      return { close() {} };
+    }
+    static async main() {
+      return { close() {} };
+    }
+  },
   LocalStorageService: class {},
   PackageService: class {},
   RelayService: class {
     static clearWalletAuth = clearWalletAuth;
   },
 }));
-import ServiceContainer from "./ServiceContainer";
+import ServiceContainer, { type ServiceKey } from "./ServiceContainer";
+import { PackageService } from "@ownables/platform-browser";
 
 type MutableContainer = {
   cache: Map<string, Promise<unknown>>;
@@ -50,6 +57,15 @@ describe("ServiceContainer lifecycle", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("resolves packages without a package CID service entry", async () => {
+    const container = new ServiceContainer("0xabc", 84532);
+
+    expect(container.has("packageCid" as ServiceKey)).toBe(false);
+    await expect(container.get("packages")).resolves.toBeInstanceOf(
+      PackageService
+    );
   });
 
   it("constructs lazily once and evicts a failed resolution", async () => {
