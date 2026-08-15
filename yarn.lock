@@ -2291,44 +2291,44 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-adapter-viem-0.9.0.tgz::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.9.0
-  resolution: "@ownables/adapter-viem@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-adapter-viem-0.9.0.tgz#/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-adapter-viem-0.9.0.tgz::hash=394c37&locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/adapter-viem@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@ownables/adapter-viem@npm:0.10.0"
   dependencies:
-    "@ownables/core": "npm:0.9.0"
+    "@ownables/core": "npm:0.10.0"
     eqty-core: "npm:^1.1.1"
     viem: "npm:^2.47.4"
-  checksum: 10c0/3a2f38a85d49745760452e3247a975ecad7886c8e305e27ca94dc7cf360e6e670a3d6b242615a48521002ea1e7e09458969f18b1219ce072a4a0202d4c72ec7c
+  checksum: 10c0/cb86fd3f74dfb6adc1636a9743b5222f6b5f29460cad472d11e8ce9621b212adb5b31e7c0d70116e0d0f8ceffec02b0a1a0663fd88b65b19bb632a8a8070b2ca
   languageName: node
   linkType: hard
 
-"@ownables/builder@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-builder-0.9.0.tgz::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.9.0
-  resolution: "@ownables/builder@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-builder-0.9.0.tgz#/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-builder-0.9.0.tgz::hash=a578e7&locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/builder@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@ownables/builder@npm:0.10.0"
   dependencies:
-    "@ownables/core": "npm:0.9.0"
-  checksum: 10c0/206df871a7cd59565041b37c4f961f8d76060ed8e0a6195ed15e26f4e728b8eb5fba6511884916f36666e384739ef9ee6ebbc5152d6439b8f5ab6327b6bc56ad
+    "@ownables/core": "npm:0.10.0"
+  checksum: 10c0/7f49b9306ac0eb019ca8add71d6bfda903dc963560a63185ec4d5ca95713168445991b9880b0850889221a3811afae90f3453a771afac18f95b0b52ad2b9a409
   languageName: node
   linkType: hard
 
-"@ownables/core@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-core-0.9.0.tgz::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.9.0
-  resolution: "@ownables/core@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-core-0.9.0.tgz#/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-core-0.9.0.tgz::hash=56526e&locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/core@npm:0.10.0, @ownables/core@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@ownables/core@npm:0.10.0"
   dependencies:
     blockstore-core: "npm:^6.1.2"
     cbor-x: "npm:^1.6.0"
     eqty-core: "npm:^1.1.1"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
-  checksum: 10c0/1b2ec3a81650ec6e59f24c8531f047819d25ff4a6a3086fa98ff1ddeed931b19595be68282b352dd733de4c1d49443b798e0404fd5e3b8975c97cf6d153de031
+  checksum: 10c0/bf03cd28f2aad42ec222fc628dd231d2baade1d543f8ad1a90da59554e0df3a7a85876748ddf8bafae5464eb211232ff27511c03d2339f68c219ad97d5688ad8
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-platform-browser-0.9.0.tgz::locator=%40ownables%2Fsdk%40workspace%3A.":
-  version: 0.9.0
-  resolution: "@ownables/platform-browser@file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-platform-browser-0.9.0.tgz#/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-platform-browser-0.9.0.tgz::hash=b87a31&locator=%40ownables%2Fsdk%40workspace%3A."
+"@ownables/platform-browser@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@ownables/platform-browser@npm:0.10.0"
   dependencies:
-    "@ownables/core": "npm:0.9.0"
+    "@ownables/core": "npm:0.10.0"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
@@ -2336,7 +2336,7 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/fb442685116f7c21951fe124c2367ea7bc057de043895070e7c2574e1e890a25c123dbb6ef12f7fb27859824b6ba0f470e9870b688f21df4963d07087103c755
+  checksum: 10c0/1832d327f8e8a0ed54386ccb8faf03e31a4fc8d84c1aa2f17ce6bb16d9ac070987ecb2c60e1ec567df3966b59af8646899ef2ca5290c9ca164bb8c89ea82e3db
   languageName: node
   linkType: hard
 
@@ -2354,10 +2354,10 @@ __metadata:
     "@letsrunit/cli": "npm:^0.24.1"
     "@letsrunit/cucumber": "npm:^0.24.1"
     "@letsrunit/mcp-server": "npm:^0.24.1"
-    "@ownables/adapter-viem": "file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-adapter-viem-0.9.0.tgz"
-    "@ownables/builder": "file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-builder-0.9.0.tgz"
-    "@ownables/core": "file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-core-0.9.0.tgz"
-    "@ownables/platform-browser": "file:/tmp/eqty-class-based-service-boundaries/ownables-js-843e957/ownables-platform-browser-0.9.0.tgz"
+    "@ownables/adapter-viem": "npm:^0.10.0"
+    "@ownables/builder": "npm:^0.10.0"
+    "@ownables/core": "npm:^0.10.0"
+    "@ownables/platform-browser": "npm:^0.10.0"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
