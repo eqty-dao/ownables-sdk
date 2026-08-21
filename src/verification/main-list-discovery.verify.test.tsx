@@ -212,12 +212,14 @@ function TransferHarness({
   chain,
   pkg,
   execute,
+  onTransferred,
 }: {
   chain: EventChain;
   pkg: { uniqueMessageHash?: string } | undefined;
   execute: (msg: any, onProgress?: any, submitAnchors?: boolean) => Promise<void>;
+  onTransferred?: () => void;
 }) {
-  const { transfer } = useOwnableTransfer(chain, pkg as any, execute);
+  const { transfer } = useOwnableTransfer(chain, pkg as any, execute, onTransferred);
 
   return (
     <button type="button" onClick={() => void transfer("0xdef")}>
@@ -971,6 +973,133 @@ describe("main-list discovery verifier", () => {
     expect(setWidgetWindow).not.toHaveBeenCalledWith(chain.id, expect.anything());
   });
 
+  it("submits transfer anchors before creating and uploading the bundle", async () => {
+    const user = userEvent.setup();
+    const chain = new EventChain(CHAIN_ID);
+    const anchorSubmission = deferred<void>();
+    const calls: string[] = [];
+    const onTransferred = vi.fn(() => calls.push("onTransferred"));
+    const generateAsync = vi.fn(async () => {
+      calls.push("generateAsync");
+      return new Uint8Array([1, 2, 3]);
+    });
+    const zip = vi.fn(async () => {
+      calls.push("zip");
+      return { generateAsync };
+    });
+    const execute = vi.fn(async () => {
+      calls.push("execute");
+    });
+    const submitAnchors = vi.fn(() => {
+      calls.push("submitAnchors");
+      return anchorSubmission.promise;
+    });
+    const uploadOwnable = vi.fn(async () => {
+      calls.push("uploadOwnable");
+    });
+    enqueueSnackbar.mockImplementation((message) => {
+      if (message === "Ownable transferred through Hub") {
+        calls.push("success notification");
+      }
+    });
+
+    serviceMap.ownables = {
+      anchoring: true,
+      zip,
+      submitAnchors,
+    };
+    serviceMap.hub = {
+      isAvailable: vi.fn().mockResolvedValue(true),
+      uploadOwnable,
+    };
+
+    render(
+      <TransferHarness
+        chain={chain}
+        pkg={{ uniqueMessageHash: "message-hash" }}
+        execute={execute}
+        onTransferred={onTransferred}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Transfer" }));
+
+    await waitFor(() => {
+      expect(submitAnchors).toHaveBeenCalledWith(expect.any(Function));
+    });
+    expect(calls).toEqual(["execute", "submitAnchors"]);
+    expect(zip).not.toHaveBeenCalled();
+    expect(uploadOwnable).not.toHaveBeenCalled();
+    expect(onTransferred).not.toHaveBeenCalled();
+
+    await act(async () => {
+      anchorSubmission.resolve(undefined);
+    });
+
+    await waitFor(() => {
+      expect(calls).toEqual([
+        "execute",
+        "submitAnchors",
+        "zip",
+        "generateAsync",
+        "uploadOwnable",
+        "onTransferred",
+        "success notification",
+      ]);
+    });
+    expect(progressOpen).toHaveBeenCalledWith({
+      title: "Transferring Ownable",
+      steps: [
+        { id: "signEvent", label: "Sign the event" },
+        { id: "anchor", label: "Anchor the event" },
+        { id: "hubUpload", label: "Upload to Hub" },
+      ],
+    });
+  });
+
+  it("does not create or upload a bundle when transfer anchor submission fails", async () => {
+    const user = userEvent.setup();
+    const chain = new EventChain(CHAIN_ID);
+    const anchorError = new Error("anchor failed");
+    const onTransferred = vi.fn();
+    const generateAsync = vi.fn();
+    const zip = vi.fn(() => ({ generateAsync }));
+
+    serviceMap.ownables = {
+      anchoring: true,
+      zip,
+      submitAnchors: vi.fn().mockRejectedValue(anchorError),
+    };
+    serviceMap.hub = {
+      isAvailable: vi.fn().mockResolvedValue(true),
+      uploadOwnable: vi.fn(),
+    };
+
+    render(
+      <TransferHarness
+        chain={chain}
+        pkg={{ uniqueMessageHash: "message-hash" }}
+        execute={vi.fn().mockResolvedValue(undefined)}
+        onTransferred={onTransferred}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Transfer" }));
+
+    await waitFor(() => {
+      expect(enqueueSnackbar).toHaveBeenCalledWith("Transfer failed: anchor failed", {
+        variant: "error",
+      });
+    });
+    expect(zip).not.toHaveBeenCalled();
+    expect(generateAsync).not.toHaveBeenCalled();
+    expect(serviceMap.hub.uploadOwnable).not.toHaveBeenCalled();
+    expect(onTransferred).not.toHaveBeenCalled();
+    expect(enqueueSnackbar).not.toHaveBeenCalledWith("Ownable transferred through Hub", {
+      variant: "success",
+    });
+  });
+
   it("does not upload to Hub when transfer execution fails before upload", async () => {
     const user = userEvent.setup();
     const chain = new EventChain(CHAIN_ID);
@@ -1009,8 +1138,8 @@ describe("main-list discovery verifier", () => {
       title: "Transferring Ownable",
       steps: [
         { id: "signEvent", label: "Sign the event" },
-        { id: "hubUpload", label: "Upload to Hub" },
         { id: "anchor", label: "Anchor the event" },
+        { id: "hubUpload", label: "Upload to Hub" },
       ],
     });
     expect(serviceMap.ownables.zip).not.toHaveBeenCalled();
