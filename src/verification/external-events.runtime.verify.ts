@@ -5,8 +5,9 @@ import { EQTYService } from "@ownables/adapter-viem";
 import {
   type StateDump,
   OwnableService,
-  WorkerRPC,
+  PublicEventReplayService,
 } from "@ownables/core";
+import { BrowserRuntimeRpcProvider } from "@ownables/platform-browser";
 import ServiceContainer from "@/services/ServiceContainer";
 import { encodeAbiParameters, encodeEventTopics, parseAbiItem } from "viem";
 
@@ -114,6 +115,22 @@ class MockEqty {
   }
 }
 
+function createOwnableService(
+  idb: MemoryIDB,
+  eventChains: MockEventChains,
+  eqty: MockEqty
+) {
+  return new OwnableService({
+    stateStore: idb as any,
+    eventChains: eventChains as any,
+    anchorProvider: eqty as any,
+    packages: {} as any,
+    runtimeSource: {} as any,
+    runtimeRpc: {} as any,
+    replay: new PublicEventReplayService(),
+  }) as any;
+}
+
 function createRpcMock(chainId: string) {
   const calls = {
     register: [] as any[],
@@ -191,12 +208,7 @@ async function verifyReplayContexts() {
   const idb = new MemoryIDB();
   const eventChains = new MockEventChains();
   const eqty = new MockEqty();
-  const service = new OwnableService(
-    idb as any,
-    eventChains as any,
-    eqty as any,
-    {} as any
-  ) as any;
+  const service = createOwnableService(idb, eventChains, eqty);
 
   const registerChain = EventChain.create(eqty.address, eqty.chainId);
   const registerRpc = createRpcMock(registerChain.id);
@@ -241,12 +253,7 @@ async function verifyConsumeFlow() {
   const idb = new MemoryIDB();
   const eventChains = new MockEventChains();
   const eqty = new MockEqty();
-  const service = new OwnableService(
-    idb as any,
-    eventChains as any,
-    eqty as any,
-    {} as any
-  ) as any;
+  const service = createOwnableService(idb, eventChains, eqty);
 
   const consumable = EventChain.create(eqty.address, eqty.chainId);
   const consumer = EventChain.create(eqty.address, eqty.chainId);
@@ -282,12 +289,7 @@ async function verifyRegisterPublicEventFlow() {
   const idb = new MemoryIDB();
   const eventChains = new MockEventChains();
   const eqty = new MockEqty();
-  const service = new OwnableService(
-    idb as any,
-    eventChains as any,
-    eqty as any,
-    {} as any
-  ) as any;
+  const service = createOwnableService(idb, eventChains, eqty);
 
   const chain = EventChain.create(eqty.address, eqty.chainId);
   const rpc = createRpcMock(chain.id);
@@ -318,7 +320,7 @@ async function verifyRegisterPublicEventFlow() {
 }
 
 async function verifyEncodePublicEventBridge() {
-  const rpc = new WorkerRPC("bridge-test") as any;
+  const rpc = new BrowserRuntimeRpcProvider().create("bridge-test") as any;
   const worker = new FakeWorker();
   rpc.worker = worker;
 
@@ -340,12 +342,7 @@ async function verifyEmitPublicEventFlow() {
   const idb = new MemoryIDB();
   const eventChains = new MockEventChains();
   const eqty = new MockEqty();
-  const service = new OwnableService(
-    idb as any,
-    eventChains as any,
-    eqty as any,
-    {} as any
-  ) as any;
+  const service = createOwnableService(idb, eventChains, eqty);
 
   const chain = EventChain.create(eqty.address, eqty.chainId);
   const rpc = createRpcMock(chain.id);

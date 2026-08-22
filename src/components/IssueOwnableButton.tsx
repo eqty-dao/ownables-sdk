@@ -34,7 +34,7 @@ export default function IssueOwnableButton({ selected, disabled, onClick }: Issu
       disabled={disabled}
       className={cn(issueOwnableButton({ selected, dimmed: disabled }))}
     >
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[14px] bg-linear-to-br from-indigo-100 to-purple-100 transition-all hover:from-indigo-200 hover:to-purple-200 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-800/40 dark:hover:to-purple-800/40">
+      <div className={cn("flex h-16 w-16 shrink-0 items-center justify-center rounded-[14px] bg-linear-to-br from-indigo-100 to-purple-100 transition-all hover:from-indigo-200 hover:to-purple-200 dark:from-indigo-900/30 dark:to-purple-900/30 dark:hover:from-indigo-800/40 dark:hover:to-purple-800/40")}>
         <Plus className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
       </div>
       <div className="min-w-0 flex-1">

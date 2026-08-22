@@ -27,6 +27,7 @@ const warningStrip = cva(
 );
 
 const toolbarIconButton = cva("relative text-white hover:bg-white/20");
+const toolbarTagClass = "hidden px-3 py-1.5 font-semibold lg:inline-flex";
 
 export default function AppToolbar({
   onMenuClick,
@@ -55,14 +56,18 @@ export default function AppToolbar({
             alt="Ownables Logo"
           />
           <div className="flex items-center gap-2">
-            {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
-            {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && <Tag color="warning" value="Testnet" className="hidden px-3 py-1.5 font-semibold lg:inline-flex"/>}
+            {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && (
+              <Tag color="warning" value="Testnet" className={toolbarTagClass} />
+            )}
+            {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && (
+              <Tag color="warning" value="Testnet" className={toolbarTagClass} />
+            )}
             {isHubAvailable === false && (
               <Tag
                 color="danger"
                 icon={<WarningIcon className="h-3.5 w-3.5" />}
                 value="Hub unavailable"
-                className="hidden px-3 py-1.5 font-semibold lg:inline-flex"
+                className={toolbarTagClass}
               />
             )}
 

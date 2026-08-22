@@ -83,7 +83,7 @@ let exampleZipPathByPackageCidPromise: Promise<Map<string, string>> | null = nul
 
 function resolveE2EAddress() {
   const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
-  const indexRaw = process.env.VITE_E2E_ACCOUNT_INDEX;
+  const indexRaw = process.env.VITE_E2E_ADDRESS_INDEX;
   const addressIndex = Number.isFinite(Number(indexRaw)) ? Number(indexRaw) : 0;
   return mnemonicToAccount(mnemonic, { addressIndex }).address.toLowerCase();
 }

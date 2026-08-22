@@ -21,6 +21,9 @@ interface CreateOwnableDialogProps {
   onSuccess?: (pkg: TypedPackage) => void | Promise<void>;
 }
 
+const normalizeMultiline = (value: string): string =>
+  value.replace(/\r\n/g, "\n").trim();
+
 export default function CreateOwnableDialog({
   open,
   onClose,
@@ -66,11 +69,12 @@ export default function CreateOwnableDialog({
       setError(null);
       enqueueSnackbar("Building dossier package...", { variant: "info" });
 
-      const pkg = await builderService.createOwnable({
-        name,
-        description,
+      const prepared = await builderService.prepareDossier({
+        name: normalizeMultiline(name),
+        description: normalizeMultiline(description),
         ...(thumbnail ? { thumbnail } : {}),
       });
+      const pkg = prepared.pkg as TypedPackage;
 
       enqueueSnackbar(`${pkg.title} is ready to issue`, { variant: "success" });
       resetState();

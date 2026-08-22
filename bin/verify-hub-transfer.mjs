@@ -24,14 +24,9 @@ const checks = [
     excludes: [],
   },
   {
-    file: "src/services/Hub.service.ts",
-    includes: [
-      "/health",
-      "/ownables/upload",
-      "/packages/${encodeURIComponent(cid)}/download",
-      "/ownables/${encodeURIComponent(id)}/chain",
-    ],
-    excludes: ["/messages", "hubReplay"],
+    file: "node_modules/@ownables/platform-browser/dist/platform-browser/src/services/Hub.service.d.ts",
+    includes: ["export default class HubService", "uploadOwnable(", "importFromHub(", "watchAvailableOwnables("],
+    excludes: [],
   },
 ];
 

@@ -27,13 +27,9 @@ export default {
   tags: 'not @broken',
   format,
   failFast,
-  plugin: ['@letsrunit/cucumber/store'],
-  pluginOptions: {
-    letsrunitStore: {
-      directory: '.letsrunit',
-      enabled: process.env.CI !== 'true',
-    },
-  },
+  // Disabled while LetsRunIt investigates its recorder locking a new SQLite
+  // database in agent environments. CI already runs without this plugin.
+  plugin: [],
   worldParameters,
   letsrunit: {
     ignore: ['features/support/world.ts'],

@@ -159,6 +159,10 @@ function inspectContractBytecode(contractPath, field) {
 function createDeploymentClients() {
   const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
   const account = mnemonicToAccount(mnemonic);
+  const recipient = mnemonicToAccount(mnemonic, { addressIndex: 1 });
+  if (recipient.address !== "0x70997970C51812dc3A010C7d01b50e0d17dc79C8") {
+    throw new Error(`Controlled recipient derivation mismatch: ${recipient.address}`);
+  }
   const walletClient = createWalletClient({
     account,
     chain: {
@@ -401,7 +405,11 @@ async function main() {
     MAINNET_ANCHOR_START_BLOCK: "999999999",
   };
 
-  const hub = spawnProcess("yarn", ["start:dev"], {
+  // Build once and own the actual Hub process directly. The development watcher
+  // spawns a grandchild that can outlive this setup process and keep port 3311
+  // bound to a dropped database, producing a false-empty discovery response.
+  runSync("yarn", ["build"], { cwd: HUB_ROOT, env: hubEnv });
+  const hub = spawnProcess("node", ["--preserve-symlinks", "--env-file=.env", "dist/main.js"], {
     cwd: HUB_ROOT,
     env: hubEnv,
   });

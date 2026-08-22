@@ -3,9 +3,9 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { RelayService } from "@ownables/platform-browser";
 import ServiceContainer from "@/services/ServiceContainer";
 import {
   useAccount,
@@ -13,7 +13,7 @@ import {
   useWalletClient,
   usePublicClient,
 } from "wagmi";
-import { getE2EAccount } from "@/services/E2EWallet";
+import { getE2EAccount } from "@/utils/E2EWallet";
 import { isE2E } from "@/utils/isE2E";
 
 type Ctx = { container: ServiceContainer | null };
@@ -35,33 +35,26 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
       : null;
 
   const [container, setContainer] = useState<ServiceContainer | null>(null);
+  const containerRef = useRef<ServiceContainer | null>(null);
+  const generationRef = useRef(0);
 
   useEffect(() => {
+    const generation = ++generationRef.current;
     let cancelled = false;
 
     (async () => {
-      // No identity yet, clear any existing container
-      if (!key) {
-        if (container) {
-          await container.dispose().catch(() => {});
-        }
-        if (!cancelled) setContainer(null);
+      const current = containerRef.current;
+      if (key && current?.key === key) {
         return;
       }
 
-      // Same key, keep current container
-      if (container?.key === key) {
-        return;
+      containerRef.current = null;
+      setContainer(null);
+      if (current) {
+        await current.dispose().catch(() => {});
       }
 
-      // Replace previous
-      if (container) {
-        const [oldAddress, oldChainId] = container.key.split(":");
-        if (oldAddress && oldChainId) {
-          RelayService.clearWalletAuth(oldAddress, parseInt(oldChainId));
-        }
-        await container.dispose().catch(() => {});
-      }
+      if (!key || cancelled || generationRef.current !== generation) return;
 
       const instance = new ServiceContainer(
         address!,
@@ -69,7 +62,8 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
         walletClient.data || undefined,
         publicClient || undefined
       );
-      if (!cancelled) {
+      if (!cancelled && generationRef.current === generation) {
+        containerRef.current = instance;
         setContainer(instance);
       } else {
         await instance.dispose().catch(() => {});
@@ -79,15 +73,16 @@ export const ServicesProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, address, chainId, isWalletReady, publicClient]);
+  }, [key, address, chainId, walletClient.data, publicClient]);
 
   // Dispose on unmount
   useEffect(() => {
     return () => {
-      container?.dispose().catch(() => {});
+      const current = containerRef.current;
+      containerRef.current = null;
+      current?.dispose().catch(() => {});
     };
-  }, [container]);
+  }, []);
 
   const ctx = useMemo<Ctx>(() => ({ container }), [container]);
 

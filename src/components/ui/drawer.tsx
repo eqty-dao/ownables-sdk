@@ -38,7 +38,7 @@ export function DrawerHeader({ title, closeAriaLabel = "Close" }: DrawerHeaderPr
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
       <DrawerClose
         aria-label={closeAriaLabel}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]"
+        className={cn("inline-flex h-9 w-9 items-center justify-center rounded-xl bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#2a2a2a]")}
       >
         <X className="h-5 w-5" />
       </DrawerClose>
@@ -51,7 +51,7 @@ export function Drawer({ anchor = "left", hideBackdrop, onClose, open, className
     <BaseDrawer.Root open={open} onOpenChange={(next: boolean) => !next && onClose?.()}>
       <BaseDrawer.Portal>
         {!hideBackdrop ? (
-          <BaseDrawer.Backdrop className="fixed inset-0 z-[1300] bg-slate-900/30 backdrop-blur-sm transition-opacity duration-300 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
+          <BaseDrawer.Backdrop className={cn("fixed inset-0 z-[1300] bg-slate-900/30 backdrop-blur-sm transition-opacity duration-300 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0")} />
         ) : null}
         <BaseDrawer.Popup className={cn(popupClass(anchor), className)} {...rest}>
           {children}

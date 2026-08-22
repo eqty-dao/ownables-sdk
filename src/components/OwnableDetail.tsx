@@ -24,6 +24,9 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import { normalizeMetadataBackgroundColor } from "@/utils/metadataBackgroundColor";
 
+const actionPanelClass = "mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125";
+const sectionHeadingClass = "text-caption mb-2 uppercase tracking-wide";
+
 interface OwnableDetailProps {
   chain: EventChain;
   pkg: TypedPackage;
@@ -109,8 +112,8 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-5">
-      <Box className="lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]">
-        <Box className="flex items-center gap-3 border-b border-slate-200 p-4 dark:border-[#2a2a2a] lg:mx-auto lg:mb-6 lg:max-w-125 lg:items-start lg:gap-4 lg:border-b-0 lg:p-0">
+      <Box className={cn("lg:mb-6 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:p-8 lg:shadow-sm dark:lg:border-[#2a2a2a] dark:lg:bg-[#1a1a1a]")}>
+        <Box className={cn("flex items-center gap-3 border-b border-slate-200 p-4 dark:border-[#2a2a2a] lg:mx-auto lg:mb-6 lg:max-w-125 lg:items-start lg:gap-4 lg:border-b-0 lg:p-0")}>
           <IconButton aria-label="Back" onClick={onBack} className="shrink-0 lg:hidden">
             <ArrowLeft className="h-5 w-5" />
           </IconButton>
@@ -182,7 +185,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         ) : null}
 
         {!archived && isConsumable && !isTransferred && !isConsumed ? (
-          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
+          <Box className={actionPanelClass}>
             <Button
               aria-label="Use Item"
               className={cn(consumeButton())}
@@ -193,7 +196,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           </Box>
         ) : null}
         {!archived && isLocked && !isConsumed && !isTransferred ? (
-          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
+          <Box className={actionPanelClass}>
             <Button
               aria-label="Unlock"
               className={cn(unlockButton())}
@@ -205,7 +208,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           </Box>
         ) : null}
         {showAddFilesAction ? (
-          <Box className="mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125">
+          <Box className={actionPanelClass}>
             <Button
               variant="primary"
               className={cn(primaryPanelButton())}
@@ -220,7 +223,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
       <Box className="px-4 pb-8 lg:px-2 lg:pb-0">
         {pkg.hasAttachments ? (
           <section aria-label="Attached files">
-            <h3 className="text-caption mb-2 uppercase tracking-wide">
+            <h3 className={sectionHeadingClass}>
               Attached files
             </h3>
             <OwnableAttachmentList
@@ -231,7 +234,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
         ) : null}
 
         <section className={pkg.hasAttachments ? "mt-6" : undefined}>
-          <h2 className="text-caption mb-2 uppercase tracking-wide">About</h2>
+          <h2 className={sectionHeadingClass}>About</h2>
           {metadata.description ? (
             <p className="text-body mb-3">{metadata.description}</p>
           ) : null}

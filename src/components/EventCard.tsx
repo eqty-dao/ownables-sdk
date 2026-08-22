@@ -48,7 +48,7 @@ export default function EventCard(props: EventCardProps) {
           <strong>Previous: </strong> {shortId(event.previous?.hex ?? "", 30)}
         </div>
       )}
-      <Card key={event.hash.base58} className="mb-3 overflow-x-scroll rounded-br-lg rounded-tl-lg border border-slate-200 shadow-sm dark:border-slate-700 dark:bg-slate-900 md:mb-0">
+      <Card key={event.hash.base58} className={cn("mb-3 overflow-x-scroll rounded-br-lg rounded-tl-lg border border-slate-200 shadow-sm dark:border-slate-700 dark:bg-slate-900 md:mb-0")}>
         <CardContent className="space-y-2 p-4 pb-0 text-xs text-slate-800 dark:text-slate-200">
           <div>
             <strong>Timestamp: </strong>
@@ -99,7 +99,7 @@ export default function EventCard(props: EventCardProps) {
               <pre className="base64 mb-0">{event.data.base64}</pre>
             )}
             {dataView === DataView.JSON && (
-              <pre className="mt-2 mb-0 overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-3 text-[11px] leading-5 text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+              <pre className={cn("mt-2 mb-0 overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-3 text-[11px] leading-5 text-slate-700 dark:bg-slate-950 dark:text-slate-200")}>
                 {JSON.stringify(event.parsedData ? event.parsedData : event.data, null, 2)}
               </pre>
             )}
