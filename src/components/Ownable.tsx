@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import type { ReplayAttemptResult } from "@ownables/core";
+import type { ReconciledPublicEvent, ReplayAttemptResult } from "@ownables/core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "@/hooks/useService";
@@ -22,6 +22,7 @@ interface OwnableProps {
   archived?: boolean;
   isHubAvailable?: boolean;
   publicEventReplay?: ReplayAttemptResult;
+  trackedPublicEvents?: ReconciledPublicEvent[];
   onBack: () => void;
   onArchive: () => void;
   onRestore: () => void;

@@ -64,7 +64,7 @@
     "ownables:cid": "node bin/package-cid.mjs",
     "typecheck": "tsc --noEmit",
     "ownables:copy": "node bin/ownables-copy.mjs",
-    "verify:external-events-runtime": "bun run ./src/verification/external-events.runtime.verify.ts",
+    "verify:external-events-runtime": "vitest run src/verification/external-events.runtime.verify.test.ts",
     "verify:widget-bridge": "vitest run src/verification/widget-bridge.verify.test.tsx",
     "verify:hub-transfer": "node bin/verify-hub-transfer.mjs",
     "verify:main-list-discovery": "vitest run src/verification/main-list-discovery.verify.test.tsx -t '^(?!.*(rethrows ownable execution failures after surfacing the ownable error|blocks archived ownable execution before reaching the runtime|does not bind a widget window for archived ownables|does not upload to Hub when transfer execution fails before upload)).*$'"
