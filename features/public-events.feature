@@ -40,4 +40,4 @@ Feature: Public events
     And the ownable widget is ready
     And I remember the current ownable id as "second"
     Then the Hub recorded a later public-events stream request for remembered ownables "first,second"
-    And the latest Hub public-events stream request uses only repeated "id" params plus "from"
+    And the latest Hub public-events stream request uses only repeated "ownableId" params and optional "fromBlock"

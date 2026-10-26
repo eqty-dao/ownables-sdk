@@ -40,7 +40,7 @@ interface PublicEventSnapshotRequest {
 
 interface PublicEventStreamRequest {
   ids: string[];
-  from: number;
+  fromBlock?: number;
   queryEntries: Array<[string, string]>;
   queryKeys: string[];
 }
@@ -162,10 +162,12 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
         return;
       }
 
-      if (url.pathname === '/ownables/public-events/stream') {
+      if (url.pathname === '/public-events') {
         world.__hubRequests.publicEventStreams.push({
-          ids: url.searchParams.getAll('id').sort(),
-          from: Number(url.searchParams.get('from') ?? '0'),
+          ids: url.searchParams.getAll('ownableId').sort(),
+          fromBlock: url.searchParams.has('fromBlock')
+            ? Number(url.searchParams.get('fromBlock'))
+            : undefined,
           queryEntries: [...url.searchParams.entries()],
           queryKeys: [...url.searchParams.keys()],
         });
@@ -747,16 +749,14 @@ export function expectLatestHubStreamQuery(
   if (!request) throw new Error('No public-events stream request has been recorded');
 
   const uniqueKeys = [...new Set(request.queryKeys)];
+  const allowedKeys = [idParamName, fromParamName];
   if (
-    JSON.stringify(uniqueKeys.sort()) !==
-    JSON.stringify([fromParamName, idParamName].sort())
+    uniqueKeys.some((key) => !allowedKeys.includes(key)) ||
+    !uniqueKeys.includes(idParamName)
   ) {
     throw new Error(
-      `Expected only ${idParamName} and ${fromParamName} query keys but received ${JSON.stringify(uniqueKeys)}`
+      `Expected repeated ${idParamName} and optional ${fromParamName} query keys but received ${JSON.stringify(uniqueKeys)}`
     );
-  }
-  if (!request.queryEntries.some(([key]) => key === fromParamName)) {
-    throw new Error(`Expected a ${fromParamName} query parameter`);
   }
   if (!request.queryEntries.some(([key]) => key === idParamName)) {
     throw new Error(`Expected at least one repeated ${idParamName} query parameter`);
