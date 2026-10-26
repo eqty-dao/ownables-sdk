@@ -515,9 +515,18 @@ export async function expectCapturedPublicEventView(
 
 export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
   const initialRequestCount = world.__hubRequests?.publicEventStreams.length ?? 0;
-  await world.page.context().setOffline(true);
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  await world.page.context().setOffline(false);
+  const session = await world.page.context().newCDPSession(world.page);
+  try {
+    // Toggling the browser context offline does not terminate an already-open
+    // EventSource connection. Disabling CDP Network closes that connection while
+    // preserving the document, so the app's real EventSource reconnects and the
+    // Hub replays the indexed events through its normal SSE endpoint.
+    await session.send('Network.disable');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await session.send('Network.enable');
+  } finally {
+    await session.detach();
+  }
 
   await waitFor(
     async () => {
@@ -525,7 +534,8 @@ export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsW
       return requests.length > initialRequestCount ? requests.at(-1) ?? null : null;
     },
     Boolean,
-    'reconnected public-events stream request'
+    'reconnected public-events stream request',
+    20_000
   );
 }
 
