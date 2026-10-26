@@ -1009,7 +1009,10 @@ describe("main-list discovery verifier", () => {
       expect(execute).toHaveBeenCalledWith(
         { transfer: { to: "0xdef" } },
         expect.any(Function),
-        false
+        false,
+        [],
+        false,
+        expect.any(Function)
       );
     });
 
