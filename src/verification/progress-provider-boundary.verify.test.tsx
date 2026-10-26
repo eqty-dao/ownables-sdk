@@ -283,7 +283,7 @@ describe("provider boundary progress verification", () => {
     const topics = encodeEventTopics({
       abi: [publicEventAbi],
       eventName: "PublicEvent",
-      args: { subjectId: Binary.fromHex(chain.id).hash().hex, source: ADDRESS },
+      args: { subjectId: Binary.fromHex(chain.id).hash().hex as `0x${string}`, source: ADDRESS },
     });
     const data = encodeAbiParameters(
       [
