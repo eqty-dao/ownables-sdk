@@ -110,7 +110,7 @@ function WidgetHarness({ actionChain, onSynced }: { actionChain: EventChain; onS
   const ownable = useOwnableState(actionChain, undefined, onError, false, undefined, onSynced);
 
   useEffect(() => {
-    ownable.iframeRef.current = { contentWindow: window } as HTMLIFrameElement;
+    ownable.iframeRef.current = { contentWindow: window } as unknown as HTMLIFrameElement;
   }, [ownable.iframeRef]);
 
   return null;
