@@ -6,7 +6,11 @@ import { TypedMetadata, TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import TypedDict from "@/interfaces/TypedDict";
 import isObject from "@/utils/isObject";
-import ownableErrorMessage from "@/utils/ownableErrorMessage";
+import {
+  isWalletRejection,
+  WALLET_REJECTION_MESSAGE,
+  default as ownableErrorMessage,
+} from "@/utils/ownableErrorMessage";
 import { useService } from "./useService";
 import { useAccount } from "wagmi";
 import { type ProgressController, useProgress, LogProgress } from "@/contexts/Progress.context";
@@ -237,7 +241,11 @@ export function useOwnableState(
         setStateDump(sd);
       } catch (e) {
         if (reportError && shouldUpdate()) {
-          onError("The Ownable returned an error", ownableErrorMessage(e));
+          const cancelled = isWalletRejection(e);
+          onError(
+            cancelled ? "Action cancelled" : "The Ownable returned an error",
+            cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(e)
+          );
         }
         throw e;
       } finally {
@@ -281,7 +289,11 @@ export function useOwnableState(
         }
       } catch (e) {
         if (reportError && shouldUpdate()) {
-          onError("The Ownable returned an error", ownableErrorMessage(e));
+          const cancelled = isWalletRejection(e);
+          onError(
+            cancelled ? "Action cancelled" : "The Ownable returned an error",
+            cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(e)
+          );
         }
         throw e;
       } finally {
@@ -330,6 +342,7 @@ export function useOwnableState(
 
       let controller: ProgressController | null = null;
       let isCurrentAction = () => false;
+      let activeStepIndex = 0;
       try {
         const isEmit = event.data.type === "emit";
         if (!isEmit && event.data.type !== "execute") return;
@@ -345,15 +358,30 @@ export function useOwnableState(
         controller = nextController;
         activeProgressRef.current = controller;
         isCurrentAction = () => activeProgressRef.current === controller;
+        const trackedProgress: LogProgress = (stepId, meta) => {
+          const completedIndex = steps.findIndex((step) => step.id === stepId);
+          if (completedIndex >= 0) {
+            activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
+          }
+          onProgress(stepId, meta);
+        };
         if (isEmit) {
-          await emit(event.data.msg, onProgress, false, isCurrentAction);
+          await emit(event.data.msg, trackedProgress, false, isCurrentAction);
         } else {
-          await execute(event.data.msg, onProgress, true, [], false, isCurrentAction);
+          await execute(event.data.msg, trackedProgress, true, [], false, isCurrentAction);
         }
       } catch (e) {
         if (mountedRef.current && isCurrentAction()) {
+          const cancelled = isWalletRejection(e);
+          controller?.setError(
+            activeStepIndex,
+            cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(e)
+          );
           console.error("Widget action failed", e);
-          onError("Widget action failed", ownableErrorMessage(e));
+          onError(
+            cancelled ? "Action cancelled" : "Widget action failed",
+            cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(e)
+          );
         }
       } finally {
         controller?.close();

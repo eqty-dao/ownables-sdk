@@ -7,7 +7,11 @@ import { useDialogs } from "@/contexts/Dialogs.context";
 import { useOverlay } from "@/contexts/Overlay.context";
 import { useBreakpoint } from "./useBreakpoint";
 import { enqueueSnackbar } from "notistack";
-import ownableErrorMessage from "@/utils/ownableErrorMessage";
+import {
+  isWalletRejection,
+  WALLET_REJECTION_MESSAGE,
+  default as ownableErrorMessage,
+} from "@/utils/ownableErrorMessage";
 import { OwnableEntry } from "./useOwnables";
 
 interface ConsumingState {
@@ -80,9 +84,20 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
     if (ownableService.anchoring) steps.push({ id: "anchor", label: "Anchor both events" });
     const [ctrl, onProgress] = progress.open({ title: "Consuming Ownable", steps });
     activeProgressRef.current = ctrl;
+    let activeStepIndex = 0;
     const isCurrentAction = () => mountedRef.current && activeProgressRef.current === ctrl;
     try {
-      await ownableService.consume(consumer, consumable, onProgress as any);
+      await ownableService.consume(
+        consumer,
+        consumable,
+        ((stepId: string, meta?: unknown) => {
+          const completedIndex = steps.findIndex((step) => step.id === stepId);
+          if (completedIndex >= 0) {
+            activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
+          }
+          onProgress(stepId, meta);
+        }) as any
+      );
       if (!isCurrentAction()) return;
       setConsuming(null);
       overlay.hide();
@@ -91,8 +106,17 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
       ctrl.close();
     } catch (error) {
       if (!isCurrentAction()) return;
+      const cancelled = isWalletRejection(error);
+      ctrl.setError(
+        activeStepIndex,
+        cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(error)
+      );
       ctrl.close();
-      showError("Consume failed", ownableErrorMessage(error));
+      if (cancelled) {
+        enqueueSnackbar("Consume cancelled", { variant: "info" });
+      } else {
+        showError("Consume failed", ownableErrorMessage(error));
+      }
     } finally {
       if (activeProgressRef.current === ctrl) activeProgressRef.current = null;
     }

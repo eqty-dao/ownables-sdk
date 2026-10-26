@@ -483,7 +483,7 @@ describe("widget bridge verification", () => {
     });
 
     expect(progressClose).not.toHaveBeenCalled();
-    rejectEmit(new Error("User rejected the request"));
+    rejectEmit(Object.assign(new Error("User rejected the request"), { code: 4001 }));
 
     await act(async () => {
       await action;
@@ -491,8 +491,8 @@ describe("widget bridge verification", () => {
 
     expect(progressClose).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith(
-      "Widget action failed",
-      "User rejected the request"
+      "Action cancelled",
+      "Wallet request cancelled"
     );
   });
 
