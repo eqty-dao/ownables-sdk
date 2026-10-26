@@ -553,7 +553,7 @@ describe("widget bridge verification", () => {
     expect(secondClose).toHaveBeenCalledTimes(1);
     resolveFirst(pendingReplay);
     await act(async () => { await first; });
-    expect(firstClose).toHaveBeenCalledTimes(1);
+    expect(firstClose).not.toHaveBeenCalled();
     expect(secondClose).toHaveBeenCalledTimes(1);
   });
 
