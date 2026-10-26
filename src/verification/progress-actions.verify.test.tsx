@@ -168,6 +168,7 @@ describe("provider-mediated progress actions", () => {
     serviceMap.ownables = {
       anchoring: false,
       isReady: vi.fn().mockReturnValue(true),
+      setWidgetWindow: vi.fn(),
       emitPublicEvent: async () => {
         await provider.request({ method: "eth_signTypedData_v4" });
         return publicReplay();
@@ -204,6 +205,7 @@ describe("provider-mediated progress actions", () => {
     serviceMap.ownables = {
       anchoring: true,
       isReady: vi.fn().mockReturnValue(true),
+      setWidgetWindow: vi.fn(),
       execute: async (_chain: EventChain, _msg: unknown, _state: unknown, onProgress: any) => {
         await provider.request({ method: "eth_signTypedData_v4" });
         onProgress("signEvent", { signature: "0xsigned" });
@@ -226,9 +228,11 @@ describe("provider-mediated progress actions", () => {
     expect(stepStatus("anchor")).toBe("pending");
 
     await act(async () => signature.resolve("0xsigned"));
-    await provider.next("eth_sendTransaction");
+    const anchor = await provider.next("eth_sendTransaction");
     expect(stepStatus("signEvent")).toBe("done");
     expect(stepStatus("anchor")).toBe("active");
+    await act(async () => anchor.resolve("0xanchor"));
+    await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
   });
 
   it("drives forge, consume, and transfer through their real action hooks", async () => {
@@ -237,6 +241,7 @@ describe("provider-mediated progress actions", () => {
     serviceMap.ownables = {
       anchoring: true,
       loadAll: vi.fn().mockResolvedValue([]),
+      setWidgetWindow: vi.fn(),
       create: async (_pkg: unknown, onProgress: any) => {
         await provider.request({ method: "eth_signTypedData_v4" });
         onProgress("signEvent", {});
@@ -350,6 +355,7 @@ describe("provider-mediated progress actions", () => {
           serviceMap.ownables = {
             anchoring: false,
             isReady: vi.fn().mockReturnValue(true),
+            setWidgetWindow: vi.fn(),
             execute: () => provider.request({ method: "eth_signTypedData_v4" }),
             zip: vi.fn(),
           };
@@ -385,6 +391,7 @@ describe("provider-mediated progress actions", () => {
     serviceMap.ownables = {
       anchoring: false,
       isReady: vi.fn().mockReturnValue(true),
+      setWidgetWindow: vi.fn(),
       execute: async (_chain: EventChain, _msg: unknown, _state: unknown, onProgress: any) => {
         await provider.request({ method: "eth_signTypedData_v4" });
         onProgress("signEvent", {});
@@ -415,6 +422,7 @@ describe("provider-mediated progress actions", () => {
     serviceMap.ownables = {
       anchoring: false,
       isReady: vi.fn().mockReturnValue(true),
+      setWidgetWindow: vi.fn(),
       emitPublicEvent: async () => {
         await provider.request({ method: "eth_signTypedData_v4" });
         return publicReplay();
