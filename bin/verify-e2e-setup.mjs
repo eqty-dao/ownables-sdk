@@ -19,5 +19,7 @@ test("resolves the EQTY sibling repositories from this linked worktree", () => {
   assert.deepEqual(JSON.parse(result.stdout), {
     HUB_ROOT: join(eqtyRoot, "ownables-hub"),
     CONTRACTS_ROOT: join(eqtyRoot, "eqty-contracts"),
+    DB_CONTAINER: process.env.HUB_DB_CONTAINER || "ownables-hub-postgres",
+    databaseStrategy: "docker-exec",
   });
 });
