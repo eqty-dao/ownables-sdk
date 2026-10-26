@@ -1,4 +1,5 @@
 import { Given, Then, When } from '@letsrunit/bdd';
+import { After } from '@cucumber/cucumber';
 import { uploadFile } from './utils/file-upload.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 import { expectWalletEmpty } from './utils/wallet.ts';
@@ -35,8 +36,13 @@ import {
   repeatCurrentOwnablePublicEventStream,
   resetHubTransport,
   startRecordingWidgetActionMessages,
+  stopReplacementHub,
   type PublicEventsWorld,
 } from './utils/public-events-harness.ts';
+
+After(function () {
+  stopReplacementHub(this as PublicEventsWorld);
+});
 
 Given('the Hub transport verifier backend is reset', function () {
   resetHubTransport(this as PublicEventsWorld);

@@ -550,7 +550,7 @@ async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
   }
 
   try {
-    process.kill(processId, 'SIGTERM');
+    process.kill(processId, 'SIGKILL');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
       throw error;
@@ -580,14 +580,22 @@ async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
     }
   );
   world.replacementHub = hub;
+  hub.unref();
 
-  const stopReplacement = () => {
-    if (!hub.killed) {
-      hub.kill('SIGTERM');
-    }
-  };
-  process.once('exit', stopReplacement);
+  process.once('exit', () => stopReplacementHub(world));
   await waitForHubHealth();
+}
+
+export function stopReplacementHub(world: PublicEventsWorld) {
+  const hub = world.replacementHub;
+  if (!hub) {
+    return;
+  }
+
+  world.replacementHub = undefined;
+  if (!hub.killed) {
+    hub.kill('SIGTERM');
+  }
 }
 
 export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
