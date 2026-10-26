@@ -61,6 +61,22 @@ const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process
 const RUNTIME_ENV_PATH = join(ROOT, ".e2e-runtime.json");
 let cleaningUp = false;
 
+function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
+  return {
+    DATABASE_URL,
+    HUB_NETWORK_PROFILE: "testnet",
+    TESTNET_CHAIN_ID: "84532",
+    TESTNET_RPC_URL: RPC_URL,
+    TESTNET_BASE_RPC_URL: RPC_URL,
+    TESTNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
+    TESTNET_ANCHOR_START_BLOCK: String(anchorStartBlock),
+    MAINNET_CHAIN_ID: "84532",
+    MAINNET_RPC_URL: RPC_URL,
+    MAINNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
+    MAINNET_ANCHOR_START_BLOCK: "999999999",
+  };
+}
+
 function fail(message) {
   console.error(message);
   process.exit(1);
@@ -413,26 +429,17 @@ async function main() {
 
   await waitFor(async () => (await rpc("eth_chainId")) === "0x14a34", "anvil RPC");
   const { anchorAddress, eqtyTokenAddress, anchorStartBlock } = await bootstrapContracts();
+  const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock });
 
   const hubEnv = {
     ...process.env,
-    DATABASE_URL,
+    ...indexerRuntimeEnv,
     OWNABLES_STORAGE: `file://${HUB_STORAGE_DIR}`,
     CORS_ORIGINS: APP_URL,
     PORT: HUB_PORT,
     PUBLIC_BASE_URL: HUB_URL,
     LOCAL_DEV_RECIPIENT_DISCOVERY_ENABLED: "true",
     SIGNER_MNEMONIC: DEFAULT_E2E_MNEMONIC,
-    HUB_NETWORK_PROFILE: "testnet",
-    TESTNET_CHAIN_ID: "84532",
-    TESTNET_RPC_URL: RPC_URL,
-    TESTNET_BASE_RPC_URL: RPC_URL,
-    TESTNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
-    TESTNET_ANCHOR_START_BLOCK: String(anchorStartBlock),
-    MAINNET_CHAIN_ID: "84532",
-    MAINNET_RPC_URL: RPC_URL,
-    MAINNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
-    MAINNET_ANCHOR_START_BLOCK: "999999999",
   };
 
   // Build once and own the actual Hub process directly. The development watcher
@@ -503,6 +510,7 @@ async function main() {
         VITE_BASE_SEPOLIA_EQTY_TOKEN_ADDRESS: eqtyTokenAddress,
         VITE_HUB: HUB_URL,
         VITE_OWNABLE_EXAMPLES_URL: "/ownables",
+        E2E_HUB_INDEXER_ENV_JSON: JSON.stringify(indexerRuntimeEnv),
       },
       null,
       2

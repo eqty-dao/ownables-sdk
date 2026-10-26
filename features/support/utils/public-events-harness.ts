@@ -225,9 +225,31 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
 }
 
 function runHubIndexer(): HubIndexerRunResult {
+  const encodedRuntimeEnv = process.env.E2E_HUB_INDEXER_ENV_JSON;
+  if (!encodedRuntimeEnv) {
+    throw new Error('E2E_HUB_INDEXER_ENV_JSON is required for the real-Hub proof lane');
+  }
+
+  let runtimeEnv: Record<string, string>;
+  try {
+    const parsed = JSON.parse(encodedRuntimeEnv) as unknown;
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      Object.values(parsed).some((value) => typeof value !== 'string')
+    ) {
+      throw new Error('must be an object containing only string values');
+    }
+    runtimeEnv = parsed as Record<string, string>;
+  } catch (error) {
+    throw new Error(
+      `Invalid E2E_HUB_INDEXER_ENV_JSON: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
   const result = spawnSync('yarn', ['indexer:run'], {
     cwd: HUB_PROJECT_ROOT,
-    env: process.env,
+    env: { ...process.env, ...runtimeEnv },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
