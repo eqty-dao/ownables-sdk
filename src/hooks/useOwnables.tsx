@@ -3,12 +3,16 @@ import { EventChain } from "eqty-core";
 import type { ReplayAttemptResult } from "@ownables/core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
-import { useProgress } from "@/contexts/Progress.context";
+import { type LogProgress, type ProgressController, useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
 import { LocalStorageService } from "@ownables/platform-browser";
-import ownableErrorMessage from "@/utils/ownableErrorMessage";
+import {
+  isWalletRejection,
+  WALLET_REJECTION_MESSAGE,
+  default as ownableErrorMessage,
+} from "@/utils/ownableErrorMessage";
 import { maybePackageInfo } from "@/utils/maybePackageInfo";
 import { Button } from "@/components/ui";
 import useEffectiveWallet from "@/hooks/useEffectiveWallet";
@@ -106,6 +110,8 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const discoveryEnabled = !!hub?.isConfigured && !!account && isConnected;
   const availableStreamRef = useRef<{ close(): void } | null>(null);
   const publicEventsStreamRef = useRef<{ close(): void } | null>(null);
+  const mountedRef = useRef(true);
+  const activeProgressRef = useRef<ProgressController | null>(null);
   const ownablesRef = useRef(ownables);
   const accountRef = useRef(account);
   const ownableIdsKey = useMemo(
@@ -120,6 +126,15 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   useEffect(() => {
     accountRef.current = account;
   }, [account]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activeProgressRef.current?.close();
+      activeProgressRef.current = null;
+    };
+  }, []);
 
   const persistStoredIds = useCallback(
     (storageKey: string | null, ids: string[]) => {
@@ -506,15 +521,25 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
   const forge = useCallback(async (pkg: TypedPackage) => {
     if (!ownableService) throw new Error("Ownable service not ready");
+    let controller: ProgressController | null = null;
+    let activeStepIndex = 0;
     try {
       const steps = [{ id: "signEvent", label: "Sign the event" }];
       if (ownableService.anchoring) steps.push({ id: "anchorEvent", label: "Anchor the event" });
       const [ctrl, onProgress] = progress.open({ title: `Forging ${pkg.title}`, steps });
-      const result = await ownableService.create(pkg, onProgress as any);
+      controller = ctrl;
+      activeProgressRef.current = ctrl;
+      const isCurrentAction = () => mountedRef.current && activeProgressRef.current === ctrl;
+      const trackedProgress: LogProgress = (stepId, meta) => {
+        const completedIndex = steps.findIndex((step) => step.id === stepId);
+        if (completedIndex >= 0) activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
+        onProgress(stepId, meta);
+      };
+      const result = await ownableService.create(pkg, trackedProgress);
       await ownableService.init(result.chain, pkg.cid, pkg.uniqueMessageHash);
+      if (!isCurrentAction()) return;
       setOwnables((prev) => [...prev, { chain: result.chain, package: pkg.cid }]);
       onSelect(result.chain.id);
-      ctrl.close();
 
       if (result.txHash) {
         enqueueSnackbar(`${pkg.title} forged and anchored! TX: ${result.txHash.slice(0, 10)}...`, {
@@ -532,8 +557,21 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       } else {
         enqueueSnackbar(`${pkg.title} forged`, { variant: "success" });
       }
+      ctrl.close();
+      if (activeProgressRef.current === ctrl) activeProgressRef.current = null;
     } catch (error) {
-      enqueueSnackbar(`Failed to forge ownable: ${ownableErrorMessage(error)}`, { variant: "error" });
+      if (!mountedRef.current || activeProgressRef.current !== controller) return;
+      const cancelled = isWalletRejection(error);
+      controller?.setError(
+        activeStepIndex,
+        cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(error)
+      );
+      controller?.close();
+      activeProgressRef.current = null;
+      enqueueSnackbar(
+        cancelled ? "Forge cancelled" : `Failed to forge ownable: ${ownableErrorMessage(error)}`,
+        { variant: cancelled ? "info" : "error" }
+      );
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService, progress, chainId, onSelect, showError]);

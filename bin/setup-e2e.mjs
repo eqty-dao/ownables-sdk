@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   createPublicClient,
   createWalletClient,
@@ -22,8 +22,25 @@ import { mnemonicToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
-const HUB_ROOT = join(ROOT, "..", "ownables-hub");
-const CONTRACTS_ROOT = join(ROOT, "..", "eqty-contracts");
+
+function resolveEqtyRepositories(root = ROOT) {
+  const commonDir = runSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    cwd: root,
+  });
+  const eqtyRoot = dirname(dirname(commonDir));
+  const hubRoot = join(eqtyRoot, "ownables-hub");
+  const contractsRoot = join(eqtyRoot, "eqty-contracts");
+
+  for (const [name, path] of [["ownables-hub", hubRoot], ["eqty-contracts", contractsRoot]]) {
+    if (!existsSync(path)) {
+      fail(`Unable to resolve ${name} from Git common directory ${commonDir}: expected ${path}`);
+    }
+  }
+
+  return { hubRoot, contractsRoot };
+}
+
+const { hubRoot: HUB_ROOT, contractsRoot: CONTRACTS_ROOT } = resolveEqtyRepositories();
 const RPC_URL = "http://127.0.0.1:8545";
 const APP_PORT = "3300";
 const HUB_PORT = "3311";
@@ -33,10 +50,11 @@ const REQUIRED_ZIPS = ["potion.zip", "block-stack.zip"];
 const PUBLIC_OWNABLES_DIR = join(ROOT, "public", "ownables");
 const DEFAULT_E2E_MNEMONIC =
   "test test test test test test test test test test test junk";
-const DB_USER = "ownables";
-const DB_PASSWORD = "ownables";
+const DB_CONTAINER = process.env.HUB_DB_CONTAINER || "ownables-hub-postgres";
+const DB_USER = process.env.HUB_DB_USER || "ownables";
+const DB_PASSWORD = process.env.HUB_DB_PASSWORD || "ownables";
 const DB_HOST = "127.0.0.1";
-const DB_PORT = "54329";
+const DB_PORT = process.env.HUB_DB_PORT || "54329";
 const DB_NAME = `ownables_hub_sdk_verify_${process.pid}`;
 const DATABASE_URL = `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
@@ -116,6 +134,16 @@ function ensureProofInputs() {
       fail(
         `Missing ${zipPath}. Build the accepted ownables before running the public-events proof.`
       );
+    }
+  }
+
+  for (const name of ["robot", "paint"]) {
+    const zipPath = join(ROOT, "ownables", `${name}.zip`);
+    if (!existsSync(zipPath)) {
+      runSync("yarn", ["ownables:build", name], { cwd: ROOT });
+    }
+    if (!existsSync(zipPath)) {
+      fail(`Missing ${zipPath} after building the ${name} example`);
     }
   }
 }
@@ -290,26 +318,32 @@ function spawnProcess(cmd, args, options = {}) {
 }
 
 function ensureVerificationDatabase() {
-  const env = {
-    ...process.env,
-    PGPASSWORD: DB_PASSWORD,
-  };
-
-  spawnSync(
-    "dropdb",
-    ["--if-exists", "--host", DB_HOST, "--port", DB_PORT, "--username", DB_USER, DB_NAME],
-    {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      env,
-    }
-  );
-
-  runSync(
-    "createdb",
-    ["--host", DB_HOST, "--port", DB_PORT, "--username", DB_USER, DB_NAME],
-    { env }
-  );
+  runSync("docker", [
+    "exec",
+    DB_CONTAINER,
+    "psql",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    DB_USER,
+    "-d",
+    "postgres",
+    "-c",
+    `DROP DATABASE IF EXISTS \"${DB_NAME}\" WITH (FORCE)`,
+  ]);
+  runSync("docker", [
+    "exec",
+    DB_CONTAINER,
+    "psql",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    DB_USER,
+    "-d",
+    "postgres",
+    "-c",
+    `CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\"`,
+  ]);
 
   runSync("yarn", ["db:migrate:up"], {
     cwd: HUB_ROOT,
@@ -321,18 +355,24 @@ function ensureVerificationDatabase() {
 }
 
 function dropVerificationDatabase() {
-  const env = {
-    ...process.env,
-    PGPASSWORD: DB_PASSWORD,
-  };
-
   const result = spawnSync(
-    "dropdb",
-    ["--if-exists", "--host", DB_HOST, "--port", DB_PORT, "--username", DB_USER, DB_NAME],
+    "docker",
+    [
+      "exec",
+      DB_CONTAINER,
+      "psql",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      DB_USER,
+      "-d",
+      "postgres",
+      "-c",
+      `DROP DATABASE IF EXISTS \"${DB_NAME}\" WITH (FORCE)`,
+    ],
     {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
-      env,
     }
   );
 
@@ -409,7 +449,7 @@ async function main() {
   // spawns a grandchild that can outlive this setup process and keep port 3311
   // bound to a dropped database, producing a false-empty discovery response.
   runSync("yarn", ["build"], { cwd: HUB_ROOT, env: hubEnv });
-  const hub = spawnProcess("node", ["--preserve-symlinks", "--env-file=.env", "dist/main.js"], {
+  const hub = spawnProcess("node", ["--preserve-symlinks", "--env-file-if-exists=.env", "dist/main.js"], {
     cwd: HUB_ROOT,
     env: hubEnv,
   });
@@ -483,4 +523,8 @@ async function main() {
   await new Promise(() => {});
 }
 
-await main();
+if (process.argv.includes("--validate-paths")) {
+  console.log(JSON.stringify({ HUB_ROOT, CONTRACTS_ROOT, DB_CONTAINER, databaseStrategy: "docker-exec" }));
+} else {
+  await main();
+}

@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import type { LogProgress as CoreLogProgress } from '@ownables/core';
 import {
   Button,
   Dialog,
@@ -12,7 +13,6 @@ import {
 } from '@/components/ui';
 import { CircleCheck, AlertCircle, Circle, LoaderCircle } from "lucide-react";
 import { cn } from "@/utils/cn"
-import ownableErrorMessage from "@/utils/ownableErrorMessage";
 
 export type ProgressStepStatus = 'pending' | 'active' | 'done' | 'error';
 
@@ -38,11 +38,16 @@ export interface ProgressController {
   close: () => void;
 }
 
-export type LogProgress = (stepId: string, state: 'active' | 'done' | 'error', meta?: any) => void;
+/**
+ * The callback exposed by @ownables/core. Core calls it once after a known
+ * step completes and does not report a lifecycle state.
+ */
+export type LogProgress = CoreLogProgress;
 
-interface ProgressContextValue {
+type StepLogProgress = (stepId: string, state: 'active' | 'done' | 'error', meta?: unknown) => void;
+
+export interface ProgressContextValue {
   open: (opts: OpenProgressOptions) => [ProgressController, LogProgress];
-  close: () => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
@@ -59,35 +64,68 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [steps, setSteps] = useState<ProgressStep[]>([]);
   const [cancelLabel, setCancelLabel] = useState<string | undefined>(undefined);
   const [onCancel, setOnCancel] = useState<(() => void) | undefined>(undefined);
+  const currentSessionId = useRef<number | undefined>(undefined);
+  const nextSessionId = useRef(0);
 
-  const close = useCallback(() => {
+  const isCurrentSession = useCallback((sessionId: number) => currentSessionId.current === sessionId, []);
+
+  const closeSession = useCallback((sessionId: number) => {
+    if (!isCurrentSession(sessionId)) return;
+
+    currentSessionId.current = undefined;
     setVisible(false);
     setTitle('');
     setSteps([]);
     setCancelLabel(undefined);
     setOnCancel(undefined);
-  }, []);
-
-  const controller = useMemo<ProgressController>(() => ({
-    setActive: (index) => setSteps((prev) => prev.map((s, i) => ({ ...s, status: i === index ? 'active' : (s.status === 'done' ? 'done' : (s.status === 'error' ? 'error' : 'pending')) }))),
-    setDone: (index) => setSteps((prev) => prev.map((s, i) => i === index ? { ...s, status: 'done' } : s)),
-    setError: (index, message) => setSteps((prev) => prev.map((s, i) => i === index ? { ...s, status: 'error', errorMessage: message } : s)),
-    updateStep: (index, patch) => setSteps((prev) => prev.map((s, i) => i === index ? { ...s, ...patch } : s)),
-    close,
-  }), [close]);
+  }, [isCurrentSession]);
 
   const open = useCallback((opts: OpenProgressOptions): [ProgressController, LogProgress] => {
     const indexMap: Record<string, number> = Object.fromEntries(opts.steps.map((step, i) => [step.id, i]));
+    const sessionId = ++nextSessionId.current;
+    currentSessionId.current = sessionId;
 
-    const onProgress = (stepId: string, state: 'active' | 'done' | 'error', meta?: any) => {
+    const updateSteps = (update: (current: ProgressStep[]) => ProgressStep[]) => {
+      if (!isCurrentSession(sessionId)) return;
+      setSteps((current) => isCurrentSession(sessionId) ? update(current) : current);
+    };
+
+    const controller: ProgressController = {
+      setActive: (index) => updateSteps((current) => current.map((step, currentIndex) => ({
+        ...step,
+        status: currentIndex === index
+          ? 'active'
+          : (step.status === 'done' || step.status === 'error' ? step.status : 'pending'),
+      }))),
+      setDone: (index) => updateSteps((current) => current.map((step, currentIndex) => (
+        currentIndex === index ? { ...step, status: 'done' } : step
+      ))),
+      setError: (index, message) => updateSteps((current) => current.map((step, currentIndex) => (
+        currentIndex === index ? { ...step, status: 'error', errorMessage: message } : step
+      ))),
+      updateStep: (index, patch) => updateSteps((current) => current.map((step, currentIndex) => (
+        currentIndex === index ? { ...step, ...patch } : step
+      ))),
+      close: () => closeSession(sessionId),
+    };
+
+    const onProgress: LogProgress = (stepId) => {
       const idx = indexMap[stepId];
-      if (idx === undefined || !controller) return;
-      if (state === 'active') controller.setActive(idx);
-      if (state === 'done') controller.setDone(idx);
-      if (state === 'error') {
-        const message = ownableErrorMessage(meta);
-        controller.setError(idx, message);
-      }
+      if (idx === undefined || !isCurrentSession(sessionId)) return;
+
+      updateSteps((current) => {
+        if (current[idx]?.status === 'done') return current;
+
+        const nextPendingIndex = current.findIndex((step, currentIndex) => (
+          currentIndex > idx && step.status === 'pending'
+        ));
+
+        return current.map((step, currentIndex) => {
+          if (currentIndex === idx) return { ...step, status: 'done' };
+          if (currentIndex === nextPendingIndex) return { ...step, status: 'active' };
+          return step;
+        });
+      });
     };
 
     setTitle(opts.title);
@@ -97,9 +135,9 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setVisible(true);
 
     return [controller, onProgress];
-  }, [controller]);
+  }, [closeSession, isCurrentSession]);
 
-  const value = useMemo(() => ({ open, close }), [open, close]);
+  const value = useMemo(() => ({ open }), [open]);
 
   const isBusy = useMemo(() => steps.some((s) => s.status === 'active'), [steps]);
 
@@ -110,7 +148,9 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         title={title}
         steps={steps}
         open={visible}
-        onClose={close}
+        onClose={() => {
+          if (currentSessionId.current !== undefined) closeSession(currentSessionId.current);
+        }}
         cancelLabel={cancelLabel}
         onCancel={onCancel}
         isBusy={isBusy}
@@ -119,7 +159,7 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
-export function withProgress(log?: LogProgress) {
+export function withProgress(log?: StepLogProgress) {
   return async <T extends any>(stepId: string, callback: () => T | Promise<T>, metaFn?: (res: T) => any): Promise<T> => {
     if (!log) {
       return callback();
@@ -165,7 +205,7 @@ const ProgressModal: React.FC<{
       <DialogContent>
         <List>
           {steps.map((step) => (
-            <ListItem key={step.id}>
+            <ListItem key={step.id} data-progress-step={step.id} data-progress-status={step.status ?? 'pending'}>
               <ListItemIcon style={{ minWidth: 36 }}>
                 {step.status === "active" && <LoaderCircle className="animate-spin inline" />}
                 {step.status === "done" && <CircleCheck className="text-green-600 inline" />}

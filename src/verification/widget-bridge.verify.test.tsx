@@ -25,7 +25,6 @@ vi.mock("@/hooks/useService", () => ({
 vi.mock("@/contexts/Progress.context", () => ({
   useProgress: () => ({
     open: progressOpen,
-    close: progressClose,
   }),
 }));
 
@@ -182,6 +181,7 @@ describe("widget bridge verification", () => {
       onError,
       query,
       rpc,
+      render,
       widgetWindow,
     };
   }
@@ -483,7 +483,7 @@ describe("widget bridge verification", () => {
     });
 
     expect(progressClose).not.toHaveBeenCalled();
-    rejectEmit(new Error("User rejected the request"));
+    rejectEmit(Object.assign(new Error("User rejected the request"), { code: 4001 }));
 
     await act(async () => {
       await action;
@@ -491,8 +491,97 @@ describe("widget bridge verification", () => {
 
     expect(progressClose).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith(
-      "The Ownable returned an error",
-      "User rejected the request"
+      "Action cancelled",
+      "Wallet request cancelled"
     );
+  });
+
+  it("does not let an older widget action close a newer progress session", async () => {
+    let resolveFirst!: (replay: any) => void;
+    const firstClose = vi.fn();
+    const secondClose = vi.fn();
+    const firstCtrl = {
+      close: firstClose,
+      setActive: vi.fn(),
+      setDone: vi.fn(),
+      setError: vi.fn(),
+      updateStep: vi.fn(),
+    };
+    const secondCtrl = {
+      close: secondClose,
+      setActive: vi.fn(),
+      setDone: vi.fn(),
+      setError: vi.fn(),
+      updateStep: vi.fn(),
+    };
+    const pendingReplay = {
+      stateDump: [],
+      appliedEvents: [],
+      appliedReplayKeys: [],
+      duplicateReplayKeys: [],
+      appliedPublicEvents: [],
+      duplicatePublicEvents: [],
+      complete: true,
+      ignoredPublicEvents: [],
+      pendingPublicEvents: [],
+      confirmedPendingPublicEvents: [],
+    };
+    let invocation = 0;
+    const emitPublicEventImpl = vi.fn(() => {
+      invocation += 1;
+      if (invocation === 1) {
+        return new Promise((resolve) => { resolveFirst = resolve; });
+      }
+      return Promise.resolve(pendingReplay);
+    });
+    const { chain, messageHandler, widgetWindow } = setupHook({ emitPublicEventImpl });
+    progressOpen
+      .mockReset()
+      .mockReturnValueOnce([firstCtrl, vi.fn()])
+      .mockReturnValueOnce([secondCtrl, vi.fn()]);
+
+    const first = messageHandler({
+      data: { type: "emit", ownable_id: chain.id, msg: { drink: { amount: 1 } } },
+      source: widgetWindow,
+    } as MessageEvent);
+    const second = messageHandler({
+      data: { type: "emit", ownable_id: chain.id, msg: { drink: { amount: 2 } } },
+      source: widgetWindow,
+    } as MessageEvent);
+
+    await act(async () => { await second; });
+    expect(secondClose).toHaveBeenCalledTimes(1);
+    resolveFirst(pendingReplay);
+    await act(async () => { await first; });
+    expect(firstClose).not.toHaveBeenCalled();
+    expect(secondClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases its owned progress session when unmounted during a pending action", async () => {
+    let resolveEmit!: (replay: any) => void;
+    const emitPublicEventImpl = vi.fn(() => new Promise((resolve) => { resolveEmit = resolve; }));
+    const pendingReplay = {
+      stateDump: [],
+      appliedEvents: [],
+      appliedReplayKeys: [],
+      duplicateReplayKeys: [],
+      appliedPublicEvents: [],
+      duplicatePublicEvents: [],
+      complete: true,
+      ignoredPublicEvents: [],
+      pendingPublicEvents: [],
+      confirmedPendingPublicEvents: [],
+    };
+    const { chain, messageHandler, render, widgetWindow } = setupHook({ emitPublicEventImpl });
+    const action = messageHandler({
+      data: { type: "emit", ownable_id: chain.id, msg: { drink: { amount: 1 } } },
+      source: widgetWindow,
+    } as MessageEvent);
+
+    render.unmount();
+    expect(progressClose).toHaveBeenCalledTimes(1);
+    resolveEmit(pendingReplay);
+    await act(async () => { await action; });
+    expect(progressClose).toHaveBeenCalledTimes(1);
   });
 });
