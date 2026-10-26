@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { useService } from "./useService";
-import { type ProgressController, useProgress } from "@/contexts/Progress.context";
+import { type LogProgress, type ProgressController, useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useOverlay } from "@/contexts/Overlay.context";
 import { useBreakpoint } from "./useBreakpoint";
@@ -87,17 +87,14 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
     let activeStepIndex = 0;
     const isCurrentAction = () => mountedRef.current && activeProgressRef.current === ctrl;
     try {
-      await ownableService.consume(
-        consumer,
-        consumable,
-        ((stepId: string, meta?: unknown) => {
-          const completedIndex = steps.findIndex((step) => step.id === stepId);
-          if (completedIndex >= 0) {
-            activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
-          }
-          onProgress(stepId, meta);
-        }) as any
-      );
+      const trackedProgress: LogProgress = (stepId, meta) => {
+        const completedIndex = steps.findIndex((step) => step.id === stepId);
+        if (completedIndex >= 0) {
+          activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
+        }
+        onProgress(stepId, meta);
+      };
+      await ownableService.consume(consumer, consumable, trackedProgress);
       if (!isCurrentAction()) return;
       setConsuming(null);
       overlay.hide();

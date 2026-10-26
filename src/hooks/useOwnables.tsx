@@ -3,7 +3,7 @@ import { EventChain } from "eqty-core";
 import type { ReplayAttemptResult } from "@ownables/core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
-import { type ProgressController, useProgress } from "@/contexts/Progress.context";
+import { type LogProgress, type ProgressController, useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
@@ -530,12 +530,12 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       controller = ctrl;
       activeProgressRef.current = ctrl;
       const isCurrentAction = () => mountedRef.current && activeProgressRef.current === ctrl;
-      const trackedProgress = (stepId: string, meta?: unknown) => {
+      const trackedProgress: LogProgress = (stepId, meta) => {
         const completedIndex = steps.findIndex((step) => step.id === stepId);
         if (completedIndex >= 0) activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
         onProgress(stepId, meta);
       };
-      const result = await ownableService.create(pkg, trackedProgress as any);
+      const result = await ownableService.create(pkg, trackedProgress);
       await ownableService.init(result.chain, pkg.cid, pkg.uniqueMessageHash);
       if (!isCurrentAction()) return;
       setOwnables((prev) => [...prev, { chain: result.chain, package: pkg.cid }]);
