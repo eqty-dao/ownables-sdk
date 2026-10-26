@@ -83,6 +83,10 @@ function publicReplay() {
   };
 }
 
+function walletRejection() {
+  return Object.assign(new Error("User rejected the request"), { code: 4001 });
+}
+
 const pkg = {
   title: "Test Ownable",
   name: "test-ownable",
@@ -189,7 +193,7 @@ describe("provider-mediated progress actions", () => {
     const rejection = await provider.next("eth_signTypedData_v4");
     expect(stepStatus("emitPublicEvent")).toBe("active");
 
-    await act(async () => rejection.reject(Object.assign(new Error("User rejected the request"), { code: 4001 })));
+    await act(async () => rejection.reject(walletRejection()));
     await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith("Action cancelled", "Wallet request cancelled");
@@ -307,6 +311,102 @@ describe("provider-mediated progress actions", () => {
     expect(stepStatus("anchor")).toBe("active");
     await act(async () => transferAnchor.resolve("0xanchor"));
     await waitFor(() => expect(screen.queryByText("Transferring Ownable")).toBeNull());
+  });
+
+  it("reports one cancellation and no success for rejected forge, consume, and transfer requests", async () => {
+    const consumer = chain("0x0000000000000000000000000000000000000c11");
+    const consumable = chain("0x0000000000000000000000000000000000000c12");
+    const transferChain = chain("0x0000000000000000000000000000000000000c13");
+    const cases = [
+      {
+        button: "Forge",
+        expected: "Forge cancelled",
+        configure(provider: ReturnType<typeof createProvider>) {
+          serviceMap.ownables = {
+            anchoring: false,
+            loadAll: vi.fn().mockResolvedValue([]),
+            create: () => provider.request({ method: "eth_signTypedData_v4" }),
+          };
+        },
+        render: () => render(<ProgressProvider><ForgeHarness /></ProgressProvider>),
+      },
+      {
+        button: "Consume",
+        expected: "Consume cancelled",
+        configure(provider: ReturnType<typeof createProvider>) {
+          serviceMap.ownables = {
+            anchoring: false,
+            consume: () => provider.request({ method: "eth_signTypedData_v4" }),
+          };
+        },
+        render: () => render(
+          <ProgressProvider><ConsumeHarness consumer={consumer} consumable={consumable} /></ProgressProvider>
+        ),
+      },
+      {
+        button: "Transfer",
+        expected: "Transfer cancelled",
+        configure(provider: ReturnType<typeof createProvider>) {
+          serviceMap.ownables = {
+            anchoring: false,
+            isReady: vi.fn().mockReturnValue(true),
+            execute: () => provider.request({ method: "eth_signTypedData_v4" }),
+            zip: vi.fn(),
+          };
+          serviceMap.hub = { isAvailable: vi.fn().mockResolvedValue(true) };
+        },
+        render: () => render(<ProgressProvider><TransferHarness actionChain={transferChain} /></ProgressProvider>),
+      },
+    ];
+
+    for (const action of cases) {
+      vi.clearAllMocks();
+      Object.keys(serviceMap).forEach((key) => delete serviceMap[key]);
+      const provider = createProvider();
+      action.configure(provider);
+      const view = action.render();
+      fireEvent.click(screen.getByRole("button", { name: action.button }));
+      const request = await provider.next("eth_signTypedData_v4");
+      expect(stepStatus("signEvent") ?? stepStatus("signConsumableEvent")).toBe("active");
+
+      await act(async () => request.reject(walletRejection()));
+      await waitFor(() => expect(screen.queryByText(/Forging|Consuming|Transferring/)).toBeNull());
+      expect(enqueueSnackbar).toHaveBeenCalledTimes(1);
+      expect(enqueueSnackbar).toHaveBeenCalledWith(action.expected, { variant: "info" });
+      expect(enqueueSnackbar.mock.calls.map(([message]) => message)).not.toContain("Consumed");
+      expect(enqueueSnackbar.mock.calls.map(([message]) => message)).not.toContain("Ownable transferred through Hub");
+      view.unmount();
+    }
+  });
+
+  it("reports one transfer runtime error after an approved wallet request and never reports success", async () => {
+    const provider = createProvider();
+    const actionChain = chain("0x0000000000000000000000000000000000000c14");
+    serviceMap.ownables = {
+      anchoring: false,
+      isReady: vi.fn().mockReturnValue(true),
+      execute: async (_chain: EventChain, _msg: unknown, _state: unknown, onProgress: any) => {
+        await provider.request({ method: "eth_signTypedData_v4" });
+        onProgress("signEvent", {});
+        return [];
+      },
+      zip: vi.fn().mockResolvedValue({ generateAsync: vi.fn().mockResolvedValue(new Uint8Array()) }),
+    };
+    serviceMap.hub = {
+      isAvailable: vi.fn().mockResolvedValue(true),
+      uploadOwnable: vi.fn().mockRejectedValue(new Error("Hub upload failed")),
+    };
+
+    render(<ProgressProvider><TransferHarness actionChain={actionChain} /></ProgressProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    const request = await provider.next("eth_signTypedData_v4");
+    expect(stepStatus("signEvent")).toBe("active");
+    await act(async () => request.resolve("0xsigned"));
+
+    await waitFor(() => expect(screen.queryByText("Transferring Ownable")).toBeNull());
+    expect(enqueueSnackbar).toHaveBeenCalledTimes(1);
+    expect(enqueueSnackbar).toHaveBeenCalledWith("Transfer failed: Hub upload failed", { variant: "error" });
+    expect(enqueueSnackbar.mock.calls.map(([message]) => message)).not.toContain("Ownable transferred through Hub");
   });
 
   it("prevents stale provider completion after overlap or unmount from closing the current modal", async () => {
