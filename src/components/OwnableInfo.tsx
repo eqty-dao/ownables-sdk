@@ -5,7 +5,7 @@ import {
   IconButton,
   Button,
 } from "@/components/ui";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { Fingerprint, Info as InfoOutlined } from "lucide-react";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
@@ -18,11 +18,17 @@ import { cn } from "@/utils/cn";
 import Tooltip from "./Tooltip";
 import { Alert } from "@/components/ui/alert";
 import { useService } from "@/hooks/useService";
+import PublicEventCard from "./PublicEventCard";
+import {
+  buildPublicEventTimeline,
+  type TimelinePublicEvent,
+} from "@/utils/publicEventTimeline";
 
 interface OwnableInfoProps {
   className?: string;
   chain: EventChain;
   metadata?: TypedMetadata;
+  trackedPublicEvents?: TimelinePublicEvent[];
   children?: React.ReactNode;
 }
 
@@ -71,7 +77,7 @@ function isUnknownOwnableVerificationFailure(response: Response, message: string
 }
 
 export default function OwnableInfo(props: OwnableInfoProps) {
-  const { chain, metadata } = props;
+  const { chain, metadata, trackedPublicEvents } = props;
   const [open, setOpen] = useState(false);
   const [verified, setVerified] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -80,6 +86,10 @@ export default function OwnableInfo(props: OwnableInfoProps) {
   >([]);
   const hub = useService("hub");
   const eventChains = useService("eventChains");
+  const timeline = useMemo(
+    () => buildPublicEventTimeline(chain.events, trackedPublicEvents),
+    [chain.events, trackedPublicEvents]
+  );
 
   const verify = useCallback(
     async (chain: EventChain, open: boolean) => {
@@ -188,20 +198,24 @@ export default function OwnableInfo(props: OwnableInfoProps) {
             <Alert severity="error" className={cn("rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200")}>
               Failed to load verification details: {verificationError}
             </Alert>
-          ) : chain.events.length === 0 ? (
+          ) : timeline.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               This is a static ownable. It does not contain any events.
             </p>
           ) : (
-            chain.events.map((event, i) => (
-              <EventCard
-                key={event.timestamp}
-                event={event}
-                anchorTx={anchors[i]?.tx}
-                verified={!!anchors[i]?.verified}
-                isFirst={i === 0}
-              />
-            ))
+            timeline.map((item, timelineIndex) =>
+              item.kind === "public" ? (
+                <PublicEventCard key={item.key} record={item.record} />
+              ) : (
+                <EventCard
+                  key={item.key}
+                  event={item.event}
+                  anchorTx={anchors[item.chainIndex]?.tx}
+                  verified={!!anchors[item.chainIndex]?.verified}
+                  isFirst={timelineIndex === 0}
+                />
+              )
+            )
           )}
         </DialogContent>
       </Dialog>

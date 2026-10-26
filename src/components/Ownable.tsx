@@ -262,6 +262,7 @@ export default function Ownable(props: OwnableProps) {
         isLockable={pkg.isLockable}
         isLocked={isLocked}
         isTransferred={isTransferred}
+        trackedPublicEvents={props.trackedPublicEvents}
         archived={props.archived}
         isHubAvailable={props.isHubAvailable}
         onArchive={props.onArchive}
