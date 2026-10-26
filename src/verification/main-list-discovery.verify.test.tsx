@@ -810,7 +810,8 @@ describe("main-list discovery verifier", () => {
     await hub.listAvailableOwnables(ACCOUNT);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables`
+      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables`,
+      undefined
     );
   });
 

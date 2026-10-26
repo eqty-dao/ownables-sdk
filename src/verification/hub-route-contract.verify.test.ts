@@ -130,7 +130,7 @@ describe("Hub route contract", () => {
 
     expect(streams.map((stream) => stream.url)).toEqual([
       `${HUB_URL}/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables/events`,
-      `${HUB_URL}/public-events?ownableId=${encodeURIComponent(OWNABLE_ID)}&ownableId=${encodeURIComponent("second?ownable")}&fromBlock=0`,
+      `${HUB_URL}/public-events?ownableId=ownable%2Fwith+space&ownableId=second%3Fownable&fromBlock=0`,
     ]);
     expect(streams[0]?.addEventListener).toHaveBeenCalledWith(
       "available-ownable",
