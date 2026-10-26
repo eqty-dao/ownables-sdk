@@ -42,7 +42,9 @@ const CHAIN = EventChain.create("0x0000000000000000000000000000000000000abc", 84
 const PENDING_EVENT = {
   replayKey: "0x" + "44".repeat(32) + ":1",
   event: {
+    source: "0x0000000000000000000000000000000000000abc",
     eventType: "drink",
+    data: "0x0102",
     transactionHash: "0x" + "44".repeat(32),
     transactionIndex: 0,
     logIndex: 1,
