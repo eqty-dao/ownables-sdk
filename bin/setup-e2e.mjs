@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   createPublicClient,
   createWalletClient,
@@ -22,8 +22,25 @@ import { mnemonicToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
-const HUB_ROOT = join(ROOT, "..", "ownables-hub");
-const CONTRACTS_ROOT = join(ROOT, "..", "eqty-contracts");
+
+function resolveEqtyRepositories(root = ROOT) {
+  const commonDir = runSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    cwd: root,
+  });
+  const eqtyRoot = dirname(dirname(commonDir));
+  const hubRoot = join(eqtyRoot, "ownables-hub");
+  const contractsRoot = join(eqtyRoot, "eqty-contracts");
+
+  for (const [name, path] of [["ownables-hub", hubRoot], ["eqty-contracts", contractsRoot]]) {
+    if (!existsSync(path)) {
+      fail(`Unable to resolve ${name} from Git common directory ${commonDir}: expected ${path}`);
+    }
+  }
+
+  return { hubRoot, contractsRoot };
+}
+
+const { hubRoot: HUB_ROOT, contractsRoot: CONTRACTS_ROOT } = resolveEqtyRepositories();
 const RPC_URL = "http://127.0.0.1:8545";
 const APP_PORT = "3300";
 const HUB_PORT = "3311";
@@ -409,7 +426,7 @@ async function main() {
   // spawns a grandchild that can outlive this setup process and keep port 3311
   // bound to a dropped database, producing a false-empty discovery response.
   runSync("yarn", ["build"], { cwd: HUB_ROOT, env: hubEnv });
-  const hub = spawnProcess("node", ["--preserve-symlinks", "--env-file=.env", "dist/main.js"], {
+  const hub = spawnProcess("node", ["--preserve-symlinks", "--env-file-if-exists=.env", "dist/main.js"], {
     cwd: HUB_ROOT,
     env: hubEnv,
   });
@@ -483,4 +500,8 @@ async function main() {
   await new Promise(() => {});
 }
 
-await main();
+if (process.argv.includes("--validate-paths")) {
+  console.log(JSON.stringify({ HUB_ROOT, CONTRACTS_ROOT }));
+} else {
+  await main();
+}

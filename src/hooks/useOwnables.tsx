@@ -3,7 +3,7 @@ import { EventChain } from "eqty-core";
 import type { ReplayAttemptResult } from "@ownables/core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
-import { useProgress } from "@/contexts/Progress.context";
+import { type ProgressController, useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useChainId } from "wagmi";
 import { enqueueSnackbar } from "notistack";
@@ -106,6 +106,8 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const discoveryEnabled = !!hub?.isConfigured && !!account && isConnected;
   const availableStreamRef = useRef<{ close(): void } | null>(null);
   const publicEventsStreamRef = useRef<{ close(): void } | null>(null);
+  const mountedRef = useRef(true);
+  const activeProgressRef = useRef<ProgressController | null>(null);
   const ownablesRef = useRef(ownables);
   const accountRef = useRef(account);
   const ownableIdsKey = useMemo(
@@ -120,6 +122,15 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   useEffect(() => {
     accountRef.current = account;
   }, [account]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activeProgressRef.current?.close();
+      activeProgressRef.current = null;
+    };
+  }, []);
 
   const persistStoredIds = useCallback(
     (storageKey: string | null, ids: string[]) => {
@@ -506,15 +517,19 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
   const forge = useCallback(async (pkg: TypedPackage) => {
     if (!ownableService) throw new Error("Ownable service not ready");
+    let controller: ProgressController | null = null;
     try {
       const steps = [{ id: "signEvent", label: "Sign the event" }];
       if (ownableService.anchoring) steps.push({ id: "anchorEvent", label: "Anchor the event" });
       const [ctrl, onProgress] = progress.open({ title: `Forging ${pkg.title}`, steps });
+      controller = ctrl;
+      activeProgressRef.current = ctrl;
+      const isCurrentAction = () => mountedRef.current && activeProgressRef.current === ctrl;
       const result = await ownableService.create(pkg, onProgress as any);
       await ownableService.init(result.chain, pkg.cid, pkg.uniqueMessageHash);
+      if (!isCurrentAction()) return;
       setOwnables((prev) => [...prev, { chain: result.chain, package: pkg.cid }]);
       onSelect(result.chain.id);
-      ctrl.close();
 
       if (result.txHash) {
         enqueueSnackbar(`${pkg.title} forged and anchored! TX: ${result.txHash.slice(0, 10)}...`, {
@@ -532,7 +547,12 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       } else {
         enqueueSnackbar(`${pkg.title} forged`, { variant: "success" });
       }
+      ctrl.close();
+      if (activeProgressRef.current === ctrl) activeProgressRef.current = null;
     } catch (error) {
+      if (!mountedRef.current || activeProgressRef.current !== controller) return;
+      controller?.close();
+      activeProgressRef.current = null;
       enqueueSnackbar(`Failed to forge ownable: ${ownableErrorMessage(error)}`, { variant: "error" });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

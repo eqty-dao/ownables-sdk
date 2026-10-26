@@ -9,7 +9,7 @@ import isObject from "@/utils/isObject";
 import ownableErrorMessage from "@/utils/ownableErrorMessage";
 import { useService } from "./useService";
 import { useAccount } from "wagmi";
-import { useProgress, LogProgress } from "@/contexts/Progress.context";
+import { type ProgressController, useProgress, LogProgress } from "@/contexts/Progress.context";
 
 function getWidgetEmitEnvelope(msg: unknown): { eventType: string; payload: TypedDict } {
   if (!isObject(msg)) {
@@ -48,6 +48,8 @@ export function useOwnableState(
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const busyRef = useRef(false);
+  const mountedRef = useRef(true);
+  const activeProgressRef = useRef<ProgressController | null>(null);
   const appliedRef = useRef<any>(new EventChain(chain.id).latestHash);
 
   const [initialized, setInitialized] = useState(false);
@@ -66,6 +68,15 @@ export function useOwnableState(
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const appliedReplayRef = useRef<ReplayAttemptResult | undefined>(undefined);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activeProgressRef.current?.close();
+      activeProgressRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (pkg) setMetadata({ name: pkg.title, description: pkg.description });
@@ -197,7 +208,9 @@ export function useOwnableState(
       msg: TypedDict,
       onProgress?: LogProgress,
       submitAnchors = true,
-      eventAttachments: Array<{ name: string; file: File }> = []
+      eventAttachments: Array<{ name: string; file: File }> = [],
+      reportError = true,
+      isCurrentAction?: () => boolean
     ): Promise<void> => {
       if (!ownables) return;
       if (archived) {
@@ -205,8 +218,9 @@ export function useOwnableState(
         onError("Interaction unavailable", message);
         throw new Error(message);
       }
+      const shouldUpdate = () => mountedRef.current && (!isCurrentAction || isCurrentAction());
       try {
-        setIsExecuting(true);
+        if (shouldUpdate()) setIsExecuting(true);
         const sd = await ownables.execute(
           chain,
           msg,
@@ -215,15 +229,19 @@ export function useOwnableState(
           eventAttachments
         );
         if (submitAnchors) await ownables.submitAnchors(onProgress as any);
+        if (!shouldUpdate()) return;
         await refresh(sd);
+        if (!shouldUpdate()) return;
         appliedRef.current = chain.latestHash;
         setApplied(chain.latestHash);
         setStateDump(sd);
       } catch (e) {
-        onError("The Ownable returned an error", ownableErrorMessage(e));
+        if (reportError && shouldUpdate()) {
+          onError("The Ownable returned an error", ownableErrorMessage(e));
+        }
         throw e;
       } finally {
-        setIsExecuting(false);
+        if (shouldUpdate()) setIsExecuting(false);
       }
     },
     [archived, chain, eventChains, ownables, onError, refresh, stateDump]
@@ -232,7 +250,9 @@ export function useOwnableState(
   const emit = useCallback(
     async (
       msg: TypedDict,
-      onProgress?: LogProgress
+      onProgress?: LogProgress,
+      reportError = true,
+      isCurrentAction?: () => boolean
     ): Promise<void> => {
       if (!ownables) return;
       if (archived) {
@@ -240,27 +260,32 @@ export function useOwnableState(
         onError("Interaction unavailable", message);
         throw new Error(message);
       }
+      const shouldUpdate = () => mountedRef.current && (!isCurrentAction || isCurrentAction());
 
       const { eventType, payload } = getWidgetEmitEnvelope(msg);
       try {
-        setIsExecuting(true);
+        if (shouldUpdate()) setIsExecuting(true);
         const replay = await ownables.emitPublicEvent(
           chain,
           eventType,
           payload,
           onProgress as any
         );
+        if (!shouldUpdate()) return;
         await applyPublicEventReplay(replay);
+        if (!shouldUpdate()) return;
         if (onPublicEventsChanged) {
           void Promise.resolve(onPublicEventsChanged(chain.id, replay)).catch((error) => {
             console.warn("Unable to sync tracked public events after emit", error);
           });
         }
       } catch (e) {
-        onError("The Ownable returned an error", ownableErrorMessage(e));
+        if (reportError && shouldUpdate()) {
+          onError("The Ownable returned an error", ownableErrorMessage(e));
+        }
         throw e;
       } finally {
-        setIsExecuting(false);
+        if (shouldUpdate()) setIsExecuting(false);
       }
     },
     [applyPublicEventReplay, archived, chain, onError, onPublicEventsChanged, ownables]
@@ -303,6 +328,8 @@ export function useOwnableState(
         return;
       }
 
+      let controller: ProgressController | null = null;
+      let isCurrentAction = () => false;
       try {
         const isEmit = event.data.type === "emit";
         if (!isEmit && event.data.type !== "execute") return;
@@ -314,17 +341,25 @@ export function useOwnableState(
           steps.push({ id: "anchor", label: "Anchor the event" });
         }
 
-        const [, onProgress] = progress.open({ title: "Processing action", steps });
+        const [nextController, onProgress] = progress.open({ title: "Processing action", steps });
+        controller = nextController;
+        activeProgressRef.current = controller;
+        isCurrentAction = () => activeProgressRef.current === controller;
         if (isEmit) {
-          await emit(event.data.msg, onProgress);
+          await emit(event.data.msg, onProgress, false, isCurrentAction);
         } else {
-          await execute(event.data.msg, onProgress);
+          await execute(event.data.msg, onProgress, true, [], false, isCurrentAction);
         }
       } catch (e) {
-        console.error("Widget action failed", e);
-        onError("Widget action failed", ownableErrorMessage(e));
+        if (mountedRef.current && isCurrentAction()) {
+          console.error("Widget action failed", e);
+          onError("Widget action failed", ownableErrorMessage(e));
+        }
       } finally {
-        progress.close();
+        controller?.close();
+        if (activeProgressRef.current === controller) {
+          activeProgressRef.current = null;
+        }
       }
     },
     [archived, chain.id, emit, execute, progress, ownables, onError]
