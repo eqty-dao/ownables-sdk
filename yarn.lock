@@ -2337,24 +2337,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/core@npm:^0.11.0":
-  version: 0.11.0
-  resolution: "@ownables/core@npm:0.11.0"
+"@ownables/core@npm:0.12.0, @ownables/core@npm:^0.12.0":
+  version: 0.12.0
+  resolution: "@ownables/core@npm:0.12.0"
   dependencies:
     blockstore-core: "npm:^6.1.2"
     cbor-x: "npm:^1.6.0"
     eqty-core: "npm:^1.1.1"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
-  checksum: 10c0/c421c17632c7c76666fd92141c852822dcf9dfb9202a4dca03e3211dd3611cd91924669e6447cf997b660a54f848bfad97b177e23db03f3c35e688451fa4838a
+  checksum: 10c0/2984f51fee0a8c6be28e2d78855c44349dbd5364b90901470d429fa7b082148c95381d9fda83fe40c62a33c54356c7eacb3893e591ac95b90d54e2a445c1eb74
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@npm:^0.10.0":
-  version: 0.10.0
-  resolution: "@ownables/platform-browser@npm:0.10.0"
+"@ownables/platform-browser@npm:^0.12.0":
+  version: 0.12.0
+  resolution: "@ownables/platform-browser@npm:0.12.0"
   dependencies:
-    "@ownables/core": "npm:0.10.0"
+    "@ownables/core": "npm:0.12.0"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
@@ -2362,7 +2362,7 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/1832d327f8e8a0ed54386ccb8faf03e31a4fc8d84c1aa2f17ce6bb16d9ac070987ecb2c60e1ec567df3966b59af8646899ef2ca5290c9ca164bb8c89ea82e3db
+  checksum: 10c0/a373966c3b6321e438d9b9de4d60003370d93aff67720f111170a41182162aa685afa81ef5c082e9a47462acb80523ecc621bae7a51fe0d401587813d2ac6606
   languageName: node
   linkType: hard
 
@@ -2382,8 +2382,8 @@ __metadata:
     "@letsrunit/mcp-server": "npm:^0.24.1"
     "@ownables/adapter-viem": "npm:^0.11.1"
     "@ownables/builder": "npm:^0.10.0"
-    "@ownables/core": "npm:^0.11.0"
-    "@ownables/platform-browser": "npm:^0.10.0"
+    "@ownables/core": "npm:^0.12.0"
+    "@ownables/platform-browser": "npm:^0.12.0"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
