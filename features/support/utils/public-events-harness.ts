@@ -18,7 +18,7 @@ const PROJECT_ROOT = path.resolve(
   '..'
 );
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
-const HUB_PROJECT_ROOT = resolveHubProjectRoot();
+let hubProjectRoot: string | undefined;
 
 interface TrackedPublicEventRecord {
   replayKey: string;
@@ -83,6 +83,14 @@ function resolveHubProjectRoot(): string {
   }
 
   return hubRoot;
+}
+
+function hubProjectRootForRealProof(): string {
+  if (!hubProjectRoot) {
+    hubProjectRoot = resolveHubProjectRoot();
+  }
+
+  return hubProjectRoot;
 }
 
 function resolveE2EAddress() {
@@ -200,7 +208,7 @@ function runHubIndexer(): void {
   const runtimeEnv = runtimeEnvironment('E2E_HUB_INDEXER_ENV_JSON');
 
   const result = spawnSync('yarn', ['indexer:run'], {
-    cwd: HUB_PROJECT_ROOT,
+    cwd: hubProjectRootForRealProof(),
     env: { ...process.env, ...runtimeEnv },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -574,7 +582,7 @@ async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
     process.execPath,
     ['--preserve-symlinks', '--env-file-if-exists=.env', 'dist/main.js'],
     {
-      cwd: HUB_PROJECT_ROOT,
+      cwd: hubProjectRootForRealProof(),
       env: { ...process.env, ...runtimeEnv },
       stdio: 'ignore',
     }
