@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 import { isWalletRejection } from "./ownableErrorMessage";
 
 describe("isWalletRejection", () => {
-  it("recognizes EIP-1193 rejections through wrapped causes", () => {
-    expect(isWalletRejection({ cause: { code: 4001 } })).toBe(true);
-    expect(isWalletRejection({ cause: { cause: { code: 4001 } } })).toBe(true);
+  it("recognizes direct and multi-level EIP-1193 rejection codes", () => {
+    expect(isWalletRejection({ code: 4001 })).toBe(true);
+    expect(isWalletRejection({ cause: { cause: { cause: { code: 4001 } } } })).toBe(true);
+  });
+
+  it("terminates safely for cyclic causes", () => {
+    const first: { cause?: unknown } = {};
+    const second: { cause?: unknown } = { cause: first };
+    first.cause = second;
+
+    expect(isWalletRejection(first)).toBe(false);
+    expect(isWalletRejection({ code: 4001, cause: first })).toBe(true);
   });
 
   it("does not classify runtime failures as wallet rejections", () => {

@@ -238,6 +238,63 @@ describe("provider-mediated progress actions", () => {
     await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
   });
 
+  it("reports one widget execute cancellation for an EIP-1193 rejection", async () => {
+    const provider = createProvider();
+    serviceMap.ownables = {
+      anchoring: false,
+      isReady: vi.fn().mockReturnValue(true),
+      setWidgetWindow: vi.fn(),
+      execute: () => provider.request({ method: "eth_signTypedData_v4" }),
+      submitAnchors: vi.fn(),
+    };
+
+    const actionChain = chain();
+    render(<ProgressProvider><WidgetHarness actionChain={actionChain} /></ProgressProvider>);
+    await act(async () => dispatchWidget(actionChain, "execute"));
+    const request = await provider.next("eth_signTypedData_v4");
+    expect(stepStatus("signEvent")).toBe("active");
+
+    await act(async () => request.reject(walletRejection()));
+    await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith("Action cancelled", "Wallet request cancelled");
+    expect(enqueueSnackbar).not.toHaveBeenCalled();
+  });
+
+  it("reports one widget runtime failure for emit and execute without a success outcome", async () => {
+    for (const type of ["emit", "execute"] as const) {
+      vi.clearAllMocks();
+      Object.keys(serviceMap).forEach((key) => delete serviceMap[key]);
+      const provider = createProvider();
+      serviceMap.ownables = {
+        anchoring: false,
+        isReady: vi.fn().mockReturnValue(true),
+        setWidgetWindow: vi.fn(),
+        emitPublicEvent: async () => {
+          await provider.request({ method: "eth_signTypedData_v4" });
+          throw new Error("Widget runtime failed");
+        },
+        execute: async () => {
+          await provider.request({ method: "eth_signTypedData_v4" });
+          throw new Error("Widget runtime failed");
+        },
+        submitAnchors: vi.fn(),
+      };
+
+      const actionChain = chain(type === "emit" ? "0x0000000000000000000000000000000000000e01" : "0x0000000000000000000000000000000000000e02");
+      const view = render(<ProgressProvider><WidgetHarness actionChain={actionChain} /></ProgressProvider>);
+      await act(async () => dispatchWidget(actionChain, type));
+      const request = await provider.next("eth_signTypedData_v4");
+
+      await act(async () => request.resolve("0xsigned"));
+      await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith("Widget action failed", "Widget runtime failed");
+      expect(enqueueSnackbar).not.toHaveBeenCalled();
+      view.unmount();
+    }
+  });
+
   it("drives forge, consume, and transfer through their real action hooks", async () => {
     const provider = createProvider();
     const forgedChain = chain("0x0000000000000000000000000000000000000def");
@@ -384,6 +441,67 @@ describe("provider-mediated progress actions", () => {
       expect(enqueueSnackbar).toHaveBeenCalledWith(action.expected, { variant: "info" });
       expect(enqueueSnackbar.mock.calls.map(([message]) => message)).not.toContain("Consumed");
       expect(enqueueSnackbar.mock.calls.map(([message]) => message)).not.toContain("Ownable transferred through Hub");
+      view.unmount();
+    }
+  });
+
+  it("reports one runtime error and no success for forge and consume", async () => {
+    const consumer = chain("0x0000000000000000000000000000000000000c21");
+    const consumable = chain("0x0000000000000000000000000000000000000c22");
+    const cases = [
+      {
+        button: "Forge",
+        configure(provider: ReturnType<typeof createProvider>) {
+          serviceMap.ownables = {
+            anchoring: false,
+            loadAll: vi.fn().mockResolvedValue([]),
+            create: async () => {
+              await provider.request({ method: "eth_signTypedData_v4" });
+              throw new Error("Forge runtime failed");
+            },
+          };
+        },
+        render: () => render(<ProgressProvider><ForgeHarness /></ProgressProvider>),
+        assertError: () => {
+          expect(enqueueSnackbar).toHaveBeenCalledTimes(1);
+          expect(enqueueSnackbar).toHaveBeenCalledWith("Failed to forge ownable: Forge runtime failed", { variant: "error" });
+        },
+      },
+      {
+        button: "Consume",
+        configure(provider: ReturnType<typeof createProvider>) {
+          serviceMap.ownables = {
+            anchoring: false,
+            consume: async () => {
+              await provider.request({ method: "eth_signTypedData_v4" });
+              throw new Error("Consume runtime failed");
+            },
+          };
+        },
+        render: () => render(
+          <ProgressProvider><ConsumeHarness consumer={consumer} consumable={consumable} /></ProgressProvider>
+        ),
+        assertError: () => {
+          expect(showError).toHaveBeenCalledTimes(1);
+          expect(showError).toHaveBeenCalledWith("Consume failed", "Consume runtime failed");
+          expect(enqueueSnackbar).not.toHaveBeenCalled();
+        },
+      },
+    ];
+
+    for (const action of cases) {
+      vi.clearAllMocks();
+      Object.keys(serviceMap).forEach((key) => delete serviceMap[key]);
+      const provider = createProvider();
+      action.configure(provider);
+      const view = action.render();
+      fireEvent.click(screen.getByRole("button", { name: action.button }));
+      const request = await provider.next("eth_signTypedData_v4");
+
+      await act(async () => request.resolve("0xsigned"));
+      await waitFor(() => expect(screen.queryByText(/Forging|Consuming/)).toBeNull());
+      action.assertError();
+      expect(enqueueSnackbar.mock.calls.map(([message]) => message)).not.toContain("Consumed");
       view.unmount();
     }
   });
