@@ -29,8 +29,13 @@ export default defineConfig({
     globals: true,
     server: {
       deps: {
-        // The published adapter has extensionless internal ESM imports.
-        inline: ["@ownables/adapter-viem"],
+        // Published Ownables packages use extensionless internal ESM imports.
+        inline: [
+          "@ownables/adapter-viem",
+          "@ownables/builder",
+          "@ownables/core",
+          "@ownables/platform-browser",
+        ],
       },
     },
   },
