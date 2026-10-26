@@ -1,7 +1,7 @@
 import { expect, type Page, type Request as PlaywrightRequest } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToAccount } from 'viem/accounts';
 
@@ -61,6 +61,7 @@ export interface PublicEventsWorld {
   rememberedOwnableIds?: Record<string, string>;
   latestPublicEventStreamRequest?: PublicEventStreamRequest;
   capturedPublicEventView?: CapturedPublicEventView;
+  replacementHub?: ChildProcess;
 }
 
 function resolveHubProjectRoot(): string {
@@ -169,10 +170,10 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
   page.on('request', handler);
 }
 
-function runHubIndexer(): void {
-  const encodedRuntimeEnv = process.env.E2E_HUB_INDEXER_ENV_JSON;
+function runtimeEnvironment(variable: string): Record<string, string> {
+  const encodedRuntimeEnv = process.env[variable];
   if (!encodedRuntimeEnv) {
-    throw new Error('E2E_HUB_INDEXER_ENV_JSON is required for the real-Hub proof lane');
+    throw new Error(`${variable} is required for the real-Hub proof lane`);
   }
 
   let runtimeEnv: Record<string, string>;
@@ -188,9 +189,15 @@ function runHubIndexer(): void {
     runtimeEnv = parsed as Record<string, string>;
   } catch (error) {
     throw new Error(
-      `Invalid E2E_HUB_INDEXER_ENV_JSON: ${error instanceof Error ? error.message : String(error)}`
+      `Invalid ${variable}: ${error instanceof Error ? error.message : String(error)}`
     );
   }
+
+  return runtimeEnv;
+}
+
+function runHubIndexer(): void {
+  const runtimeEnv = runtimeEnvironment('E2E_HUB_INDEXER_ENV_JSON');
 
   const result = spawnSync('yarn', ['indexer:run'], {
     cwd: HUB_PROJECT_ROOT,
@@ -513,20 +520,79 @@ export async function expectCapturedPublicEventView(
   expect(currentRowTestIds).toEqual(captured.rowTestIds);
 }
 
+async function waitForHubHealth() {
+  if (!HUB_ORIGIN) {
+    throw new Error('VITE_HUB is required for the real-Hub proof lane');
+  }
+
+  await waitFor(
+    async () => {
+      try {
+        return (await fetch(`${HUB_ORIGIN}/health`)).ok ? true : null;
+      } catch {
+        return null;
+      }
+    },
+    Boolean,
+    'replacement ownables-hub runtime',
+    20_000
+  );
+}
+
+async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
+  if (!HUB_ORIGIN) {
+    throw new Error('VITE_HUB is required for the real-Hub proof lane');
+  }
+
+  const processId = Number.parseInt(process.env.E2E_HUB_PROCESS_ID ?? '', 10);
+  if (!Number.isSafeInteger(processId) || processId <= 0) {
+    throw new Error('E2E_HUB_PROCESS_ID must contain the running Hub process id');
+  }
+
+  try {
+    process.kill(processId, 'SIGTERM');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+      throw error;
+    }
+  }
+
+  await waitFor(
+    async () => {
+      try {
+        return (await fetch(`${HUB_ORIGIN}/health`)).ok ? null : true;
+      } catch {
+        return true;
+      }
+    },
+    Boolean,
+    'original ownables-hub runtime shutdown'
+  );
+
+  const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
+  const hub = spawn(
+    process.execPath,
+    ['--preserve-symlinks', '--env-file-if-exists=.env', 'dist/main.js'],
+    {
+      cwd: HUB_PROJECT_ROOT,
+      env: { ...process.env, ...runtimeEnv },
+      stdio: 'ignore',
+    }
+  );
+  world.replacementHub = hub;
+
+  const stopReplacement = () => {
+    if (!hub.killed) {
+      hub.kill('SIGTERM');
+    }
+  };
+  process.once('exit', stopReplacement);
+  await waitForHubHealth();
+}
+
 export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
   const initialRequestCount = world.__hubRequests?.publicEventStreams.length ?? 0;
-  const session = await world.page.context().newCDPSession(world.page);
-  try {
-    // Toggling the browser context offline does not terminate an already-open
-    // EventSource connection. Disabling CDP Network closes that connection while
-    // preserving the document, so the app's real EventSource reconnects and the
-    // Hub replays the indexed events through its normal SSE endpoint.
-    await session.send('Network.disable');
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await session.send('Network.enable');
-  } finally {
-    await session.detach();
-  }
+  await restartHubForPublicEventReplay(world);
 
   await waitFor(
     async () => {
@@ -534,7 +600,7 @@ export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsW
       return requests.length > initialRequestCount ? requests.at(-1) ?? null : null;
     },
     Boolean,
-    'reconnected public-events stream request',
+    'reconnected public-events stream request after Hub restart',
     20_000
   );
 }

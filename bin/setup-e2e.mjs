@@ -430,16 +430,20 @@ async function main() {
   await waitFor(async () => (await rpc("eth_chainId")) === "0x14a34", "anvil RPC");
   const { anchorAddress, eqtyTokenAddress, anchorStartBlock } = await bootstrapContracts();
   const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock });
-
-  const hubEnv = {
-    ...process.env,
+  const hubRuntimeEnv = {
     ...indexerRuntimeEnv,
+    NODE_ENV: process.env.NODE_ENV || "development",
     OWNABLES_STORAGE: `file://${HUB_STORAGE_DIR}`,
     CORS_ORIGINS: APP_URL,
     PORT: HUB_PORT,
     PUBLIC_BASE_URL: HUB_URL,
     LOCAL_DEV_RECIPIENT_DISCOVERY_ENABLED: "true",
     SIGNER_MNEMONIC: DEFAULT_E2E_MNEMONIC,
+  };
+
+  const hubEnv = {
+    ...process.env,
+    ...hubRuntimeEnv,
   };
 
   // Build once and own the actual Hub process directly. The development watcher
@@ -451,6 +455,9 @@ async function main() {
     env: hubEnv,
   });
   children.push(hub);
+  if (!hub.pid) {
+    fail("ownables-hub runtime did not expose a process id");
+  }
 
   await waitFor(async () => {
     const response = await fetch(`${HUB_URL}/health`);
@@ -511,6 +518,8 @@ async function main() {
         VITE_HUB: HUB_URL,
         VITE_OWNABLE_EXAMPLES_URL: "/ownables",
         E2E_HUB_INDEXER_ENV_JSON: JSON.stringify(indexerRuntimeEnv),
+        E2E_HUB_RUNTIME_ENV_JSON: JSON.stringify(hubRuntimeEnv),
+        E2E_HUB_PROCESS_ID: String(hub.pid),
       },
       null,
       2
