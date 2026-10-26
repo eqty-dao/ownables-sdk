@@ -2,16 +2,25 @@
 import { useEffect } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventChain } from "eqty-core";
+import { Binary, EventChain } from "eqty-core";
 import EQTYService from "@ownables/adapter-viem/dist/adapter-viem/src/services/EQTY.service.js";
 import { OwnableService, PublicEventReplayService } from "@ownables/core";
 import { baseSepolia } from "viem/chains";
-import { createWalletClient, custom } from "viem";
+import {
+  createWalletClient,
+  custom,
+  encodeAbiParameters,
+  encodeEventTopics,
+  parseAbiItem,
+} from "viem";
 import { ProgressProvider } from "@/contexts/Progress.context";
 import { useOwnableState } from "@/hooks/useOwnableState";
 
 const ADDRESS = "0x0000000000000000000000000000000000000abc" as const;
 const ANCHOR_ADDRESS = "0x0000000000000000000000000000000000000001" as const;
+const publicEventAbi = parseAbiItem(
+  "event PublicEvent(bytes32 indexed subjectId, address indexed source, string eventType, bytes data, uint64 timestamp)"
+);
 
 const { serviceMap, onError } = vi.hoisted(() => ({
   serviceMap: {} as Record<string, unknown>,
@@ -106,13 +115,17 @@ function createProvider() {
   };
 }
 
-function createOwnableService(provider: ReturnType<typeof createProvider>["provider"], chain: EventChain) {
+function createOwnableService(
+  provider: ReturnType<typeof createProvider>["provider"],
+  chain: EventChain,
+  publicClient: { waitForTransactionReceipt: () => Promise<unknown> } = {} as any
+) {
   const walletClient = createWalletClient({
     account: ADDRESS,
     chain: baseSepolia,
     transport: custom(provider),
   });
-  const eqty = new EQTYService(ADDRESS, 84532, walletClient, {} as any, provider, {
+  const eqty = new EQTYService(ADDRESS, 84532, walletClient, publicClient as any, provider, {
     anchor: { contractAddress: ANCHOR_ADDRESS },
     anchorClient: { anchor: async () => undefined },
     feeReader: {
@@ -145,6 +158,17 @@ function createOwnableService(provider: ReturnType<typeof createProvider>["provi
   });
 
   return { eqty, ownables };
+}
+
+function createReceiptController() {
+  let resolve!: (receipt: unknown) => void;
+  const pending = new Promise<unknown>((next) => {
+    resolve = next;
+  });
+  return {
+    waitForTransactionReceipt: vi.fn(() => pending),
+    resolve,
+  };
 }
 
 function WidgetHarness({ chain }: { chain: EventChain }) {
@@ -244,5 +268,62 @@ describe("provider boundary progress verification", () => {
     await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith("Action cancelled", "Wallet request cancelled");
+  });
+
+  it("keeps public emit open until the real transaction receipt records the event", async () => {
+    const provider = createProvider();
+    const chain = EventChain.create(ADDRESS, 84532);
+    const receipt = createReceiptController();
+    const { eqty, ownables } = createOwnableService(provider.provider, chain, receipt);
+    serviceMap.ownables = ownables;
+    serviceMap.eventChains = { getStateDump: async () => [] };
+    serviceMap.eqty = eqty;
+
+    const transactionHash = `0x${"22".repeat(32)}` as `0x${string}`;
+    const topics = encodeEventTopics({
+      abi: [publicEventAbi],
+      eventName: "PublicEvent",
+      args: { subjectId: Binary.fromHex(chain.id).hash().hex, source: ADDRESS },
+    });
+    const data = encodeAbiParameters(
+      [
+        { name: "eventType", type: "string" },
+        { name: "data", type: "bytes" },
+        { name: "timestamp", type: "uint64" },
+      ],
+      ["drink", "0x010203", 99n]
+    );
+
+    render(<ProgressProvider><WidgetHarness chain={chain} /></ProgressProvider>);
+    await act(async () => dispatchWidgetAction(chain, "emit", { drink: { amount: 1 } }));
+
+    const transaction = await provider.next("eth_sendTransaction");
+    expect(status("emitPublicEvent")).toBe("active");
+    await act(async () => transaction.resolve(transactionHash));
+    await waitFor(() => expect(receipt.waitForTransactionReceipt).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("Processing action")).not.toBeNull();
+
+    await act(async () => receipt.resolve({
+      blockNumber: 123n,
+      transactionIndex: 4,
+      logs: [{
+        address: ANCHOR_ADDRESS,
+        transactionHash,
+        logIndex: 9,
+        data,
+        topics,
+      }],
+    }));
+
+    await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
+    expect(onError).not.toHaveBeenCalled();
+    await expect(ownables.listTrackedPublicEvents(chain.id)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "pending",
+          event: expect.objectContaining({ eventType: "drink" }),
+        }),
+      ])
+    );
   });
 });
