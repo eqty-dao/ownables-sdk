@@ -1,11 +1,10 @@
-import type { Page, Request as PlaywrightRequest } from '@playwright/test';
-import JSZip from 'jszip';
-import { readFile, readdir } from 'node:fs/promises';
+import { expect, type Page, type Request as PlaywrightRequest } from '@playwright/test';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { request as httpRequest } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToAccount } from 'viem/accounts';
-import { expectOwnableWidgetReady } from './ownable-widget.ts';
 
 const DEFAULT_E2E_MNEMONIC =
   'test test test test test test test test test test test junk';
@@ -20,8 +19,7 @@ const PROJECT_ROOT = path.resolve(
   '..'
 );
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
-const HUB_PROJECT_ROOT = path.resolve(PROJECT_ROOT, '..', 'ownables-hub');
-const OWNABLE_ZIP_DIR = path.join(PROJECT_ROOT, 'ownables');
+let hubProjectRoot: string | undefined;
 
 interface TrackedPublicEventRecord {
   replayKey: string;
@@ -36,27 +34,6 @@ interface TrackedPublicEventRecord {
   };
 }
 
-interface StoredOwnableUploadInput {
-  packageCid: string;
-  chainJson: unknown;
-}
-
-interface HubIndexerRunResult {
-  stdout: string;
-  stderr: string;
-}
-
-interface HubUploadAttemptResult {
-  uploaded: boolean;
-  attempt: number;
-  uploadStatus: number;
-  uploadMessage: string;
-  verificationStatus: number;
-  verificationMessage: string;
-  indexerStdout: string;
-  indexerStderr: string;
-}
-
 interface PublicEventSnapshotRequest {
   ownableId: string;
 }
@@ -68,6 +45,13 @@ interface PublicEventStreamRequest {
   queryKeys: string[];
 }
 
+interface CapturedPublicEventView {
+  ownableId: string;
+  widgetId: string;
+  url: string;
+  rowTestIds: string[];
+}
+
 export interface PublicEventsWorld {
   page: Page;
   __hubRequestHandler?: (request: PlaywrightRequest) => void;
@@ -77,9 +61,38 @@ export interface PublicEventsWorld {
   };
   rememberedOwnableIds?: Record<string, string>;
   latestPublicEventStreamRequest?: PublicEventStreamRequest;
+  capturedPublicEventView?: CapturedPublicEventView;
+  replacementHub?: ChildProcess;
 }
 
-let exampleZipPathByPackageCidPromise: Promise<Map<string, string>> | null = null;
+function resolveHubProjectRoot(): string {
+  const result = spawnSync(
+    'git',
+    ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+    { cwd: PROJECT_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+
+  if (result.error || result.status !== 0) {
+    const detail = result.error?.message ?? result.stderr?.trim() ?? 'unknown error';
+    throw new Error(`Unable to resolve the Git common directory for E2E Hub access: ${detail}`);
+  }
+
+  const commonDir = result.stdout.trim();
+  const hubRoot = path.join(path.dirname(path.dirname(commonDir)), 'ownables-hub');
+  if (!existsSync(hubRoot)) {
+    throw new Error(`Unable to resolve ownables-hub from Git common directory ${commonDir}`);
+  }
+
+  return hubRoot;
+}
+
+function hubProjectRootForRealProof(): string {
+  if (!hubProjectRoot) {
+    hubProjectRoot = resolveHubProjectRoot();
+  }
+
+  return hubProjectRoot;
+}
 
 function resolveE2EAddress() {
   const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
@@ -92,34 +105,6 @@ function debugString(value: unknown) {
   return JSON.stringify(value, (_, currentValue) =>
     typeof currentValue === 'bigint' ? currentValue.toString() : currentValue
   );
-}
-
-async function readResponseMessage(response: Response): Promise<string> {
-  try {
-    const text = await response.text();
-    return summarizeMessage(text) || `status ${response.status}`;
-  } catch {
-    return `status ${response.status}`;
-  }
-}
-
-function summarizeMessage(text: string, maxLength = 400): string {
-  const trimmed = text.trim().replace(/\s+/g, ' ');
-  if (trimmed.length <= maxLength) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, maxLength - 3)}...`;
-}
-
-function summarizeProcessOutput(text: string, maxLines = 6): string {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (lines.length === 0) {
-    return '';
-  }
-  return summarizeMessage(lines.slice(-maxLines).join(' | '), 500);
 }
 
 async function waitFor<T>(
@@ -194,10 +179,38 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
   page.on('request', handler);
 }
 
-function runHubIndexer(): HubIndexerRunResult {
+function runtimeEnvironment(variable: string): Record<string, string> {
+  const encodedRuntimeEnv = process.env[variable];
+  if (!encodedRuntimeEnv) {
+    throw new Error(`${variable} is required for the real-Hub proof lane`);
+  }
+
+  let runtimeEnv: Record<string, string>;
+  try {
+    const parsed = JSON.parse(encodedRuntimeEnv) as unknown;
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      Object.values(parsed).some((value) => typeof value !== 'string')
+    ) {
+      throw new Error('must be an object containing only string values');
+    }
+    runtimeEnv = parsed as Record<string, string>;
+  } catch (error) {
+    throw new Error(
+      `Invalid ${variable}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  return runtimeEnv;
+}
+
+function runHubIndexer(): void {
+  const runtimeEnv = runtimeEnvironment('E2E_HUB_INDEXER_ENV_JSON');
+
   const result = spawnSync('yarn', ['indexer:run'], {
-    cwd: HUB_PROJECT_ROOT,
-    env: process.env,
+    cwd: hubProjectRootForRealProof(),
+    env: { ...process.env, ...runtimeEnv },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -215,10 +228,6 @@ function runHubIndexer(): HubIndexerRunResult {
     );
   }
 
-  return {
-    stdout: summarizeProcessOutput(result.stdout ?? ''),
-    stderr: summarizeProcessOutput(result.stderr ?? ''),
-  };
 }
 
 async function resolveOwnablesDatabaseName(page: Page): Promise<string> {
@@ -260,214 +269,6 @@ async function listImportedOwnableIds(page: Page): Promise<string[]> {
     db.close();
     return ids;
   }, { idbName });
-}
-
-async function storedOwnableUploadInput(
-  page: Page,
-  ownableId: string
-): Promise<StoredOwnableUploadInput> {
-  const idbName = await resolveOwnablesDatabaseName(page);
-  return page.evaluate(async ({ idbName, ownableId }) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(idbName);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
-    const storeName = `ownable:${ownableId}`;
-    if (!db.objectStoreNames.contains(storeName)) {
-      db.close();
-      throw new Error(`Missing IndexedDB store for ownable ${ownableId}`);
-    }
-
-    const packageCid = await new Promise<string | undefined>((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const request = tx.objectStore(storeName).get('package');
-      request.onsuccess = () => resolve(request.result as string | undefined);
-      request.onerror = () => reject(request.error);
-    });
-
-    const chainJson = await new Promise<unknown>((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const request = tx.objectStore(storeName).get('chain');
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
-    db.close();
-
-    if (!packageCid) {
-      throw new Error(`Missing package metadata for ownable ${ownableId}`);
-    }
-    if (!chainJson) {
-      throw new Error(`Missing chain data for ownable ${ownableId}`);
-    }
-
-    return {
-      packageCid,
-      chainJson,
-    };
-  }, { idbName, ownableId });
-}
-
-function readPackageCidFromScriptOutput(output: string, zipName: string): string {
-  const lines = output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const cid = lines.at(-1)?.split(/\s+/)[0];
-  if (!cid) {
-    throw new Error(`Unable to resolve package CID for ${zipName}`);
-  }
-  return cid;
-}
-
-async function exampleZipPathByPackageCid(): Promise<Map<string, string>> {
-  if (!exampleZipPathByPackageCidPromise) {
-    exampleZipPathByPackageCidPromise = (async () => {
-      const zipNames = (await readdir(OWNABLE_ZIP_DIR))
-        .filter((name) => name.endsWith('.zip') && !name.startsWith('.'))
-        .sort();
-      const result = new Map<string, string>();
-
-      for (const zipName of zipNames) {
-        const packageName = zipName.slice(0, -4);
-        const output = spawnSync('node', ['bin/package-cid.mjs', packageName], {
-          cwd: PROJECT_ROOT,
-          env: process.env,
-          encoding: 'utf8',
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-
-        if (output.error) {
-          throw output.error;
-        }
-
-        if (output.status !== 0) {
-          const stderr = output.stderr?.trim();
-          throw new Error(
-            stderr
-              ? `bin/package-cid.mjs ${packageName} failed:\n${stderr}`
-              : `bin/package-cid.mjs ${packageName} failed with code ${String(output.status)}`
-          );
-        }
-
-        const packageCid = readPackageCidFromScriptOutput(output.stdout, zipName);
-        result.set(packageCid, path.join(OWNABLE_ZIP_DIR, zipName));
-      }
-
-      return result;
-    })();
-  }
-
-  return exampleZipPathByPackageCidPromise;
-}
-
-async function originalOwnableArchive(
-  page: Page,
-  ownableId: string
-): Promise<{ content: Uint8Array; packageCid: string }> {
-  const { packageCid, chainJson } = await storedOwnableUploadInput(page, ownableId);
-  const zipPaths = await exampleZipPathByPackageCid();
-  const zipPath = zipPaths.get(packageCid);
-
-  if (!zipPath) {
-    const availableCids = [...zipPaths.keys()].sort().join(', ');
-    throw new Error(
-      `No original example zip matches package CID ${packageCid} for ownable ${ownableId}. Available example CIDs: ${availableCids}`
-    );
-  }
-
-  const archive = await JSZip.loadAsync(await readFile(zipPath));
-  archive.remove('eventChain.json');
-  archive.file('chain.json', JSON.stringify(chainJson));
-
-  return {
-    content: await archive.generateAsync({ type: 'uint8array' }),
-    packageCid,
-  };
-}
-
-async function ensureOwnableUploadedToHub(page: Page, ownableId: string): Promise<void> {
-  if (!HUB_ORIGIN) {
-    throw new Error('VITE_HUB is required for the real-Hub proof lane');
-  }
-
-  const verificationResponse = await fetch(
-    `${HUB_ORIGIN}/ownables/${encodeURIComponent(ownableId)}/verification`
-  );
-  if (verificationResponse.ok) {
-    return;
-  }
-
-  const verificationMessage = await readResponseMessage(verificationResponse);
-  if (
-    verificationResponse.status !== 400 ||
-    !verificationMessage.toLowerCase().includes('not available on this hub')
-  ) {
-    throw new Error(
-      `Expected unknown-ownable verification response before upload, received ${verificationResponse.status}: ${verificationMessage}`
-    );
-  }
-
-  const { content, packageCid } = await originalOwnableArchive(page, ownableId);
-  let attempt = 0;
-
-  await waitFor(
-    async (): Promise<HubUploadAttemptResult> => {
-      attempt += 1;
-      const form = new FormData();
-      form.append(
-        'file',
-        new File([content], `${packageCid}.zip`, { type: 'application/zip' })
-      );
-
-      const indexer = runHubIndexer();
-      const uploadResponse = await fetch(`${HUB_ORIGIN}/ownables/upload`, {
-        method: 'POST',
-        body: form,
-      });
-      const uploadMessage = await readResponseMessage(uploadResponse);
-      const verificationResponse = await fetch(
-        `${HUB_ORIGIN}/ownables/${encodeURIComponent(ownableId)}/verification`
-      );
-      const verificationMessage = await readResponseMessage(verificationResponse);
-
-      if (uploadResponse.ok) {
-        return {
-          uploaded: true,
-          attempt,
-          uploadStatus: uploadResponse.status,
-          uploadMessage,
-          verificationStatus: verificationResponse.status,
-          verificationMessage,
-          indexerStdout: indexer.stdout,
-          indexerStderr: indexer.stderr,
-        };
-      }
-
-      if (
-        uploadResponse.status === 400 &&
-        uploadMessage.includes('UNVERIFIED_OWNABLE')
-      ) {
-        return {
-          uploaded: false,
-          attempt,
-          uploadStatus: uploadResponse.status,
-          uploadMessage,
-          verificationStatus: verificationResponse.status,
-          verificationMessage,
-          indexerStdout: indexer.stdout,
-          indexerStderr: indexer.stderr,
-        };
-      }
-
-      throw new Error(`Hub upload failed with status ${uploadResponse.status}: ${uploadMessage}`);
-    },
-    (result) => result.uploaded,
-    `Hub upload for ownable ${ownableId}`,
-    80_000
-  );
 }
 
 async function currentOwnableId(page: Page): Promise<string> {
@@ -561,10 +362,12 @@ export async function startRecordingWidgetActionMessages(page: Page) {
     const win = window as typeof window & {
       __ownableWidgetMessages?: Array<unknown>;
       __ownableWidgetMessageHandler?: (event: MessageEvent) => void;
+      __lastVerifiedOwnableWidgetMessageCount?: number;
       __ownablesPublicEventDiagnosticsEnabled?: boolean;
     };
 
     win.__ownableWidgetMessages = [];
+    win.__lastVerifiedOwnableWidgetMessageCount = 0;
     win.__ownablesPublicEventDiagnosticsEnabled = true;
     if (win.__ownableWidgetMessageHandler) {
       window.removeEventListener('message', win.__ownableWidgetMessageHandler);
@@ -582,18 +385,30 @@ export async function startRecordingWidgetActionMessages(page: Page) {
 }
 
 export async function expectLatestWidgetActionMessage(page: Page, eventType: string) {
-  const message = await page.evaluate(() => {
-    const win = window as typeof window & {
-      __ownableWidgetMessages?: Array<{
-        type?: string;
-        ownable_id?: string;
-        msg?: Record<string, unknown>;
-      }>;
-    };
-    return win.__ownableWidgetMessages?.at(-1) ?? null;
-  });
+  const message = await waitFor(
+    () =>
+      page.evaluate(() => {
+        const win = window as typeof window & {
+          __ownableWidgetMessages?: Array<{
+            type?: string;
+            ownable_id?: string;
+            msg?: Record<string, unknown>;
+          }>;
+          __lastVerifiedOwnableWidgetMessageCount?: number;
+        };
+        const messages = win.__ownableWidgetMessages ?? [];
+        const previousCount = win.__lastVerifiedOwnableWidgetMessageCount ?? 0;
+        if (messages.length <= previousCount) {
+          return null;
+        }
 
-  if (!message) throw new Error('No widget action message was recorded');
+        win.__lastVerifiedOwnableWidgetMessageCount = messages.length;
+        return messages.at(-1) ?? null;
+      }),
+    Boolean,
+    'new widget action message'
+  );
+
   if (message.type !== 'emit') {
     throw new Error(`Expected widget action type emit but received ${String(message.type)}`);
   }
@@ -625,10 +440,241 @@ export async function confirmLatestPendingPublicEvent(page: Page) {
     throw new Error(`No pending public event was found for ownable ${ownableId}`);
   }
 
-  await ensureOwnableUploadedToHub(page, ownableId);
   runHubIndexer();
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expectOwnableWidgetReady(page);
+}
+
+function visiblePublicEventRows(page: Page) {
+  return page.locator('[data-testid^="public-event-"]');
+}
+
+async function isProcessingWidgetAction(page: Page): Promise<boolean> {
+  const dialog = page.getByRole('dialog', { name: 'Processing action' });
+  return (await dialog.count()) > 0 && (await dialog.first().isVisible());
+}
+
+export async function expectVisiblePublicEventRows(
+  page: Page,
+  countText: string,
+  eventType: string,
+  status: 'pending' | 'confirmed'
+): Promise<string[]> {
+  const expectedCount = Number.parseInt(countText, 10);
+  if (!Number.isInteger(expectedCount) || expectedCount < 0) {
+    throw new Error(`Invalid expected visible public-event count: ${countText}`);
+  }
+
+  return waitFor(
+    async () => {
+      const rows = visiblePublicEventRows(page);
+      if ((await rows.count()) !== expectedCount) {
+        return null;
+      }
+
+      const rowTestIds: string[] = [];
+      for (let index = 0; index < expectedCount; index += 1) {
+        const row = rows.nth(index);
+        const testId = await row.getAttribute('data-testid');
+        const text = await row.textContent();
+        if (
+          !testId ||
+          !text?.includes(`Public event: ${eventType}`) ||
+          !text.includes(status === 'pending' ? 'Pending' : 'Confirmed')
+        ) {
+          return null;
+        }
+        rowTestIds.push(testId);
+      }
+
+      return rowTestIds;
+    },
+    (rowTestIds): rowTestIds is string[] => rowTestIds !== null,
+    `${expectedCount} visible ${status} public-event rows for ${eventType}`,
+    20_000
+  );
+}
+
+export async function captureVisiblePublicEventView(
+  world: PublicEventsWorld,
+  countText: string,
+  eventType: string,
+  status: 'pending' | 'confirmed'
+) {
+  const ownableId = await currentOwnableId(world.page);
+  const rowTestIds = await expectVisiblePublicEventRows(
+    world.page,
+    countText,
+    eventType,
+    status
+  );
+
+  world.capturedPublicEventView = {
+    ownableId,
+    widgetId: (await world.page.locator('iframe[aria-label="Ownable widget"]').getAttribute('id')) ?? '',
+    url: world.page.url(),
+    rowTestIds,
+  };
+}
+
+export async function expectCapturedPublicEventView(
+  world: PublicEventsWorld,
+  eventType: string,
+  status: 'pending' | 'confirmed'
+) {
+  const captured = world.capturedPublicEventView;
+  if (!captured) {
+    throw new Error('No public-event view was captured before confirmation');
+  }
+
+  const currentOwnable = await currentOwnableId(world.page);
+  if (currentOwnable !== captured.ownableId) {
+    throw new Error(
+      `The selected ownable changed from ${captured.ownableId} to ${currentOwnable} during confirmation`
+    );
+  }
+  if (world.page.url() !== captured.url) {
+    throw new Error(`The page navigated during public-event confirmation: ${world.page.url()}`);
+  }
+  const widgetId = await world.page.locator('iframe[aria-label="Ownable widget"]').getAttribute('id');
+  if (widgetId !== captured.widgetId) {
+    throw new Error(`The widget changed from ${captured.widgetId} to ${String(widgetId)}`);
+  }
+
+  const currentRowTestIds = await expectVisiblePublicEventRows(
+    world.page,
+    String(captured.rowTestIds.length),
+    eventType,
+    status
+  );
+  expect(currentRowTestIds).toEqual(captured.rowTestIds);
+}
+
+async function waitForHubHealth() {
+  if (!HUB_ORIGIN) {
+    throw new Error('VITE_HUB is required for the real-Hub proof lane');
+  }
+
+  await waitFor(
+    async () => ((await hubIsHealthy()) ? true : null),
+    Boolean,
+    'replacement ownables-hub runtime',
+    20_000
+  );
+}
+
+function hubIsHealthy(): Promise<boolean> {
+  if (!HUB_ORIGIN) {
+    return Promise.resolve(false);
+  }
+
+  const url = new URL(`${HUB_ORIGIN}/health`);
+  return new Promise((resolve) => {
+    const request = httpRequest(
+      {
+        hostname: url.hostname,
+        port: url.port || undefined,
+        path: `${url.pathname}${url.search}`,
+        method: 'GET',
+        agent: false,
+        timeout: 1_000,
+      },
+      (response) => {
+        response.resume();
+        response.once('end', () => resolve(response.statusCode === 200));
+      }
+    );
+
+    request.once('error', () => resolve(false));
+    request.once('timeout', () => {
+      request.destroy();
+      resolve(false);
+    });
+    request.end();
+  });
+}
+
+function processIsRunning(processId: number): boolean {
+  try {
+    process.kill(processId, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
+  if (!HUB_ORIGIN) {
+    throw new Error('VITE_HUB is required for the real-Hub proof lane');
+  }
+
+  const processId = Number.parseInt(process.env.E2E_HUB_PROCESS_ID ?? '', 10);
+  if (!Number.isSafeInteger(processId) || processId <= 0) {
+    throw new Error('E2E_HUB_PROCESS_ID must contain the running Hub process id');
+  }
+
+  try {
+    process.kill(processId, 'SIGKILL');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+      throw error;
+    }
+  }
+
+  await waitFor(
+    async () => (!processIsRunning(processId) ? true : null),
+    Boolean,
+    'original ownables-hub process shutdown'
+  );
+  await waitFor(
+    async () => (!(await hubIsHealthy()) ? true : null),
+    Boolean,
+    'original ownables-hub listener shutdown'
+  );
+
+  const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
+  const hub = spawn(
+    process.execPath,
+    ['--preserve-symlinks', '--env-file-if-exists=.env', 'dist/main.js'],
+    {
+      cwd: hubProjectRootForRealProof(),
+      env: { ...process.env, ...runtimeEnv },
+      stdio: 'ignore',
+    }
+  );
+  world.replacementHub = hub;
+  hub.unref();
+
+  process.once('exit', () => stopReplacementHub(world));
+  await waitForHubHealth();
+}
+
+export function stopReplacementHub(world: PublicEventsWorld) {
+  const hub = world.replacementHub;
+  if (!hub) {
+    return;
+  }
+
+  world.replacementHub = undefined;
+  if (!hub.killed) {
+    hub.kill('SIGTERM');
+  }
+}
+
+export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
+  const initialRequestCount = world.__hubRequests?.publicEventStreams.length ?? 0;
+  await restartHubForPublicEventReplay(world);
+
+  await waitFor(
+    async () => {
+      const requests = world.__hubRequests?.publicEventStreams ?? [];
+      return requests.length > initialRequestCount ? requests.at(-1) ?? null : null;
+    },
+    Boolean,
+    'reconnected public-events stream request after Hub restart',
+    20_000
+  );
 }
 
 export async function expectHubSnapshotRequest(world: PublicEventsWorld) {
@@ -725,16 +771,23 @@ export async function expectTrackedPublicEventStatus(
   const ownableId = await currentOwnableId(page);
   try {
     await waitFor(
-      async () =>
-        [...(await trackedPublicEvents(page, ownableId))]
+      async () => {
+        const record = [...(await trackedPublicEvents(page, ownableId))]
           .reverse()
           .find(
             (candidate) =>
               candidate.status === status &&
               candidate.event.eventType === eventType
-          ) ?? null,
+          );
+        if (!record || (await isProcessingWidgetAction(page))) {
+          return null;
+        }
+
+        return record;
+      },
       Boolean,
-      `${status} tracked public event ${eventType}`
+      `${status} tracked public event ${eventType}`,
+      20_000
     );
   } catch (error) {
     const diagnostics = await publicEventDiagnostics(page, ownableId);
@@ -757,12 +810,18 @@ export async function expectTrackedPublicEventCount(
 ) {
   const ownableId = await currentOwnableId(page);
   const expectedCount = Number.parseInt(countText, 10);
-  const records = await trackedPublicEvents(page, ownableId);
-  const matches = records.filter((record) => record.event.eventType === eventType);
+  await waitFor(
+    async () => {
+      const records = await trackedPublicEvents(page, ownableId);
+      const matches = records.filter((record) => record.event.eventType === eventType);
+      if (matches.length !== expectedCount || (await isProcessingWidgetAction(page))) {
+        return null;
+      }
 
-  if (matches.length !== expectedCount) {
-    throw new Error(
-      `Expected ${expectedCount} tracked public events for ${eventType} but found ${matches.length}: ${debugString(matches)}`
-    );
-  }
+      return matches;
+    },
+    Boolean,
+    `${expectedCount} tracked public events for ${eventType}`,
+    20_000
+  );
 }

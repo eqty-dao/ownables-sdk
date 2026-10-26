@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import type { ReplayAttemptResult } from "@ownables/core";
+import type { ReconciledPublicEvent, ReplayAttemptResult } from "@ownables/core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
@@ -87,6 +87,9 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [availableLoadedAccount, setAvailableLoadedAccount] = useState<string | null>(null);
   const [publicEventReplayById, setPublicEventReplayById] = useState<
     Record<string, ReplayAttemptResult | undefined>
+  >({});
+  const [trackedPublicEventsByOwnableId, setTrackedPublicEventsByOwnableId] = useState<
+    Record<string, ReconciledPublicEvent[] | undefined>
   >({});
 
   const ownableService = useService("ownables");
@@ -388,15 +391,30 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     loaded &&
     (!discoveryEnabled || (availableLoaded && availableLoadedAccount === account));
 
-  const syncTrackedPublicEvents = useCallback(
-    async (entryId: string, replay: ReplayAttemptResult) => {
-      if (!ownableService || !replayTouchesTrackedPublicEvents(replay)) {
-        return;
-      }
+  const refreshTrackedPublicEvents = useCallback(
+    async (entryId: string) => {
+      if (!ownableService) return;
 
-      setPublicEventReplayById((current) => ({ ...current, [entryId]: replay }));
+      const trackedPublicEvents = await ownableService.listTrackedPublicEvents(entryId);
+      setTrackedPublicEventsByOwnableId((current) => ({
+        ...current,
+        [entryId]: trackedPublicEvents,
+      }));
     },
     [ownableService]
+  );
+
+  const syncTrackedPublicEvents = useCallback(
+    async (entryId: string, replay: ReplayAttemptResult) => {
+      if (!ownableService) return;
+
+      if (replayTouchesTrackedPublicEvents(replay)) {
+        setPublicEventReplayById((current) => ({ ...current, [entryId]: replay }));
+      }
+
+      await refreshTrackedPublicEvents(entryId);
+    },
+    [ownableService, refreshTrackedPublicEvents]
   );
 
   useEffect(() => {
@@ -761,6 +779,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     mainListEntries,
     mainListLoaded,
     publicEventReplayById,
+    trackedPublicEventsByOwnableId,
     setOwnables,
     loaded,
     setLoaded,

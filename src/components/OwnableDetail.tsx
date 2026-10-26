@@ -23,6 +23,7 @@ import { OverlayBanner } from "./OverlayBanner";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import { normalizeMetadataBackgroundColor } from "@/utils/metadataBackgroundColor";
+import type { TimelinePublicEvent } from "@/utils/publicEventTimeline";
 
 const actionPanelClass = "mx-4 mt-4 lg:mx-auto lg:mt-0 lg:max-w-125";
 const sectionHeadingClass = "text-caption mb-2 uppercase tracking-wide";
@@ -40,6 +41,7 @@ interface OwnableDetailProps {
   isLockable: boolean;
   isLocked: boolean;
   isTransferred: boolean;
+  trackedPublicEvents?: TimelinePublicEvent[];
   archived?: boolean;
   isHubAvailable?: boolean;
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -84,6 +86,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     isLockable,
     isLocked,
     isTransferred,
+    trackedPublicEvents,
     archived = false,
     isHubAvailable = true,
     iframeRef,
@@ -265,6 +268,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
           <OwnableInfo
             chain={chain}
             metadata={metadata}
+            trackedPublicEvents={trackedPublicEvents}
             className={cn(aboutLink(), "px-0")}
           >
             <Info className="h-4 w-4" />

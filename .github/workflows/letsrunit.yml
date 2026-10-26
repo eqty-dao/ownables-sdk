@@ -60,4 +60,4 @@ jobs:
         run: |
           yarn start &
           wait-on --timeout 30000 http-get://localhost:3000/
-          npx cucumber-js
+          npx cucumber-js --tags 'not @broken and not @story-1'

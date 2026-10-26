@@ -253,7 +253,7 @@ export function useOwnableState(
         await applyPublicEventReplay(replay);
         if (onPublicEventsChanged) {
           void Promise.resolve(onPublicEventsChanged(chain.id, replay)).catch((error) => {
-            console.warn("Unable to sync tracked public events after emit", error);
+            console.warn("Unable to refresh tracked public events after emit", error);
           });
         }
       } catch (e) {

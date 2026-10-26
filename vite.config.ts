@@ -27,5 +27,16 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    server: {
+      deps: {
+        // Published Ownables packages use extensionless internal ESM imports.
+        inline: [
+          "@ownables/adapter-viem",
+          "@ownables/builder",
+          "@ownables/core",
+          "@ownables/platform-browser",
+        ],
+      },
+    },
   },
 });
