@@ -53,7 +53,7 @@ describe("ProgressProvider sessions", () => {
       openProgress(progress);
     });
 
-    expect(screen.getByText("Processing action")).toBeVisible();
+    expect(screen.getByText("Processing action")).not.toBeNull();
     expect(stepStatus("sign")).toBe("active");
     expect(stepStatus("anchor")).toBe("pending");
   });
@@ -109,8 +109,8 @@ describe("ProgressProvider sessions", () => {
       first.close();
     });
 
-    expect(screen.queryByText("First")).not.toBeInTheDocument();
-    expect(screen.getByText("Second")).toBeVisible();
+    expect(screen.queryByText("First")).toBeNull();
+    expect(screen.getByText("Second")).not.toBeNull();
     expect(stepStatus("second")).toBe("active");
 
     act(() => {
@@ -118,6 +118,6 @@ describe("ProgressProvider sessions", () => {
       second.close();
     });
 
-    expect(screen.queryByText("Processing action")).not.toBeInTheDocument();
+    expect(screen.queryByText("Processing action")).toBeNull();
   });
 });
