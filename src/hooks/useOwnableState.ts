@@ -384,8 +384,8 @@ export function useOwnableState(
           );
         }
       } finally {
-        controller?.close();
         if (activeProgressRef.current === controller) {
+          controller?.close();
           activeProgressRef.current = null;
         }
       }
