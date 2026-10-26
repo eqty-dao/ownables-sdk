@@ -103,6 +103,9 @@ const pkg = {
   isTransferable: true,
 };
 
+const emptyOwnables: [] = [];
+const onConsumed = vi.fn();
+
 function WidgetHarness({ actionChain, onSynced }: { actionChain: EventChain; onSynced?: () => void }) {
   const ownable = useOwnableState(actionChain, undefined, onError, false, undefined, onSynced);
 
@@ -119,7 +122,7 @@ function ForgeHarness() {
 }
 
 function ConsumeHarness({ consumer, consumable }: { consumer: EventChain; consumable: EventChain }) {
-  const { consume } = useConsuming({ ownables: [], onConsumed: vi.fn() });
+  const { consume } = useConsuming({ ownables: emptyOwnables, onConsumed });
   return <button type="button" onClick={() => void consume(consumer, consumable)}>Consume</button>;
 }
 
