@@ -2311,7 +2311,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/core@npm:0.10.0, @ownables/core@npm:^0.10.0":
+"@ownables/core@npm:0.10.0":
   version: 0.10.0
   resolution: "@ownables/core@npm:0.10.0"
   dependencies:
@@ -2321,6 +2321,19 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
   checksum: 10c0/bf03cd28f2aad42ec222fc628dd231d2baade1d543f8ad1a90da59554e0df3a7a85876748ddf8bafae5464eb211232ff27511c03d2339f68c219ad97d5688ad8
+  languageName: node
+  linkType: hard
+
+"@ownables/core@npm:^0.11.0":
+  version: 0.11.0
+  resolution: "@ownables/core@npm:0.11.0"
+  dependencies:
+    blockstore-core: "npm:^6.1.2"
+    cbor-x: "npm:^1.6.0"
+    eqty-core: "npm:^1.1.1"
+    ipfs-unixfs-importer: "npm:^16.1.4"
+    jszip: "npm:^3.10.1"
+  checksum: 10c0/c421c17632c7c76666fd92141c852822dcf9dfb9202a4dca03e3211dd3611cd91924669e6447cf997b660a54f848bfad97b177e23db03f3c35e688451fa4838a
   languageName: node
   linkType: hard
 
@@ -2356,7 +2369,7 @@ __metadata:
     "@letsrunit/mcp-server": "npm:^0.24.1"
     "@ownables/adapter-viem": "npm:^0.10.0"
     "@ownables/builder": "npm:^0.10.0"
-    "@ownables/core": "npm:^0.10.0"
+    "@ownables/core": "npm:^0.11.0"
     "@ownables/platform-browser": "npm:^0.10.0"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
