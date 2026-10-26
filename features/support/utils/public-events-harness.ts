@@ -1,12 +1,9 @@
 import { expect, type Page, type Request as PlaywrightRequest } from '@playwright/test';
-import JSZip from 'jszip';
 import { existsSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToAccount } from 'viem/accounts';
-import { expectOwnableWidgetReady } from './ownable-widget.ts';
 
 const DEFAULT_E2E_MNEMONIC =
   'test test test test test test test test test test test junk';
@@ -22,7 +19,6 @@ const PROJECT_ROOT = path.resolve(
 );
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
 const HUB_PROJECT_ROOT = resolveHubProjectRoot();
-const OWNABLE_ZIP_DIR = path.join(PROJECT_ROOT, 'ownables');
 
 interface TrackedPublicEventRecord {
   replayKey: string;
@@ -35,27 +31,6 @@ interface TrackedPublicEventRecord {
     blockNumber: number;
     [key: string]: unknown;
   };
-}
-
-interface StoredOwnableUploadInput {
-  packageCid: string;
-  chainJson: unknown;
-}
-
-interface HubIndexerRunResult {
-  stdout: string;
-  stderr: string;
-}
-
-interface HubUploadAttemptResult {
-  uploaded: boolean;
-  attempt: number;
-  uploadStatus: number;
-  uploadMessage: string;
-  verificationStatus: number;
-  verificationMessage: string;
-  indexerStdout: string;
-  indexerStderr: string;
 }
 
 interface PublicEventSnapshotRequest {
@@ -87,8 +62,6 @@ export interface PublicEventsWorld {
   latestPublicEventStreamRequest?: PublicEventStreamRequest;
   capturedPublicEventView?: CapturedPublicEventView;
 }
-
-let exampleZipPathByPackageCidPromise: Promise<Map<string, string>> | null = null;
 
 function resolveHubProjectRoot(): string {
   const result = spawnSync(
@@ -122,34 +95,6 @@ function debugString(value: unknown) {
   return JSON.stringify(value, (_, currentValue) =>
     typeof currentValue === 'bigint' ? currentValue.toString() : currentValue
   );
-}
-
-async function readResponseMessage(response: Response): Promise<string> {
-  try {
-    const text = await response.text();
-    return summarizeMessage(text) || `status ${response.status}`;
-  } catch {
-    return `status ${response.status}`;
-  }
-}
-
-function summarizeMessage(text: string, maxLength = 400): string {
-  const trimmed = text.trim().replace(/\s+/g, ' ');
-  if (trimmed.length <= maxLength) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, maxLength - 3)}...`;
-}
-
-function summarizeProcessOutput(text: string, maxLines = 6): string {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (lines.length === 0) {
-    return '';
-  }
-  return summarizeMessage(lines.slice(-maxLines).join(' | '), 500);
 }
 
 async function waitFor<T>(
@@ -224,7 +169,7 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
   page.on('request', handler);
 }
 
-function runHubIndexer(): HubIndexerRunResult {
+function runHubIndexer(): void {
   const encodedRuntimeEnv = process.env.E2E_HUB_INDEXER_ENV_JSON;
   if (!encodedRuntimeEnv) {
     throw new Error('E2E_HUB_INDEXER_ENV_JSON is required for the real-Hub proof lane');
@@ -267,10 +212,6 @@ function runHubIndexer(): HubIndexerRunResult {
     );
   }
 
-  return {
-    stdout: summarizeProcessOutput(result.stdout ?? ''),
-    stderr: summarizeProcessOutput(result.stderr ?? ''),
-  };
 }
 
 async function resolveOwnablesDatabaseName(page: Page): Promise<string> {
@@ -312,214 +253,6 @@ async function listImportedOwnableIds(page: Page): Promise<string[]> {
     db.close();
     return ids;
   }, { idbName });
-}
-
-async function storedOwnableUploadInput(
-  page: Page,
-  ownableId: string
-): Promise<StoredOwnableUploadInput> {
-  const idbName = await resolveOwnablesDatabaseName(page);
-  return page.evaluate(async ({ idbName, ownableId }) => {
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(idbName);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
-    const storeName = `ownable:${ownableId}`;
-    if (!db.objectStoreNames.contains(storeName)) {
-      db.close();
-      throw new Error(`Missing IndexedDB store for ownable ${ownableId}`);
-    }
-
-    const packageCid = await new Promise<string | undefined>((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const request = tx.objectStore(storeName).get('package');
-      request.onsuccess = () => resolve(request.result as string | undefined);
-      request.onerror = () => reject(request.error);
-    });
-
-    const chainJson = await new Promise<unknown>((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const request = tx.objectStore(storeName).get('chain');
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
-    db.close();
-
-    if (!packageCid) {
-      throw new Error(`Missing package metadata for ownable ${ownableId}`);
-    }
-    if (!chainJson) {
-      throw new Error(`Missing chain data for ownable ${ownableId}`);
-    }
-
-    return {
-      packageCid,
-      chainJson,
-    };
-  }, { idbName, ownableId });
-}
-
-function readPackageCidFromScriptOutput(output: string, zipName: string): string {
-  const lines = output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const cid = lines.at(-1)?.split(/\s+/)[0];
-  if (!cid) {
-    throw new Error(`Unable to resolve package CID for ${zipName}`);
-  }
-  return cid;
-}
-
-async function exampleZipPathByPackageCid(): Promise<Map<string, string>> {
-  if (!exampleZipPathByPackageCidPromise) {
-    exampleZipPathByPackageCidPromise = (async () => {
-      const zipNames = (await readdir(OWNABLE_ZIP_DIR))
-        .filter((name) => name.endsWith('.zip') && !name.startsWith('.'))
-        .sort();
-      const result = new Map<string, string>();
-
-      for (const zipName of zipNames) {
-        const packageName = zipName.slice(0, -4);
-        const output = spawnSync('node', ['bin/package-cid.mjs', packageName], {
-          cwd: PROJECT_ROOT,
-          env: process.env,
-          encoding: 'utf8',
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-
-        if (output.error) {
-          throw output.error;
-        }
-
-        if (output.status !== 0) {
-          const stderr = output.stderr?.trim();
-          throw new Error(
-            stderr
-              ? `bin/package-cid.mjs ${packageName} failed:\n${stderr}`
-              : `bin/package-cid.mjs ${packageName} failed with code ${String(output.status)}`
-          );
-        }
-
-        const packageCid = readPackageCidFromScriptOutput(output.stdout, zipName);
-        result.set(packageCid, path.join(OWNABLE_ZIP_DIR, zipName));
-      }
-
-      return result;
-    })();
-  }
-
-  return exampleZipPathByPackageCidPromise;
-}
-
-async function originalOwnableArchive(
-  page: Page,
-  ownableId: string
-): Promise<{ content: Uint8Array; packageCid: string }> {
-  const { packageCid, chainJson } = await storedOwnableUploadInput(page, ownableId);
-  const zipPaths = await exampleZipPathByPackageCid();
-  const zipPath = zipPaths.get(packageCid);
-
-  if (!zipPath) {
-    const availableCids = [...zipPaths.keys()].sort().join(', ');
-    throw new Error(
-      `No original example zip matches package CID ${packageCid} for ownable ${ownableId}. Available example CIDs: ${availableCids}`
-    );
-  }
-
-  const archive = await JSZip.loadAsync(await readFile(zipPath));
-  archive.remove('eventChain.json');
-  archive.file('chain.json', JSON.stringify(chainJson));
-
-  return {
-    content: await archive.generateAsync({ type: 'uint8array' }),
-    packageCid,
-  };
-}
-
-async function ensureOwnableUploadedToHub(page: Page, ownableId: string): Promise<void> {
-  if (!HUB_ORIGIN) {
-    throw new Error('VITE_HUB is required for the real-Hub proof lane');
-  }
-
-  const verificationResponse = await fetch(
-    `${HUB_ORIGIN}/ownables/${encodeURIComponent(ownableId)}/verification`
-  );
-  if (verificationResponse.ok) {
-    return;
-  }
-
-  const verificationMessage = await readResponseMessage(verificationResponse);
-  if (
-    verificationResponse.status !== 400 ||
-    !verificationMessage.toLowerCase().includes('not available on this hub')
-  ) {
-    throw new Error(
-      `Expected unknown-ownable verification response before upload, received ${verificationResponse.status}: ${verificationMessage}`
-    );
-  }
-
-  const { content, packageCid } = await originalOwnableArchive(page, ownableId);
-  let attempt = 0;
-
-  await waitFor(
-    async (): Promise<HubUploadAttemptResult> => {
-      attempt += 1;
-      const form = new FormData();
-      form.append(
-        'file',
-        new File([content], `${packageCid}.zip`, { type: 'application/zip' })
-      );
-
-      const indexer = runHubIndexer();
-      const uploadResponse = await fetch(`${HUB_ORIGIN}/ownables/upload`, {
-        method: 'POST',
-        body: form,
-      });
-      const uploadMessage = await readResponseMessage(uploadResponse);
-      const verificationResponse = await fetch(
-        `${HUB_ORIGIN}/ownables/${encodeURIComponent(ownableId)}/verification`
-      );
-      const verificationMessage = await readResponseMessage(verificationResponse);
-
-      if (uploadResponse.ok) {
-        return {
-          uploaded: true,
-          attempt,
-          uploadStatus: uploadResponse.status,
-          uploadMessage,
-          verificationStatus: verificationResponse.status,
-          verificationMessage,
-          indexerStdout: indexer.stdout,
-          indexerStderr: indexer.stderr,
-        };
-      }
-
-      if (
-        uploadResponse.status === 400 &&
-        uploadMessage.includes('UNVERIFIED_OWNABLE')
-      ) {
-        return {
-          uploaded: false,
-          attempt,
-          uploadStatus: uploadResponse.status,
-          uploadMessage,
-          verificationStatus: verificationResponse.status,
-          verificationMessage,
-          indexerStdout: indexer.stdout,
-          indexerStderr: indexer.stderr,
-        };
-      }
-
-      throw new Error(`Hub upload failed with status ${uploadResponse.status}: ${uploadMessage}`);
-    },
-    (result) => result.uploaded,
-    `Hub upload for ownable ${ownableId}`,
-    80_000
-  );
 }
 
 async function currentOwnableId(page: Page): Promise<string> {
@@ -677,7 +410,6 @@ export async function confirmLatestPendingPublicEvent(page: Page) {
     throw new Error(`No pending public event was found for ownable ${ownableId}`);
   }
 
-  await ensureOwnableUploadedToHub(page, ownableId);
   runHubIndexer();
 }
 
