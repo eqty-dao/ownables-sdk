@@ -86,7 +86,7 @@ function createProvider() {
     request: vi.fn(({ method }: { method: string }) => {
       if (method === "eth_chainId") return Promise.resolve("0x14a34");
       if (method === "eth_accounts") return Promise.resolve([ADDRESS]);
-      return new Promise<string>((resolve, reject) => {
+      return new Promise<unknown>((resolve, reject) => {
         pending.push({ method, resolve, reject });
       });
     }),
@@ -138,7 +138,7 @@ function createOwnableService(provider: ReturnType<typeof createProvider>["provi
   }) as any;
   ownables._rpc.set(chain.id, {
     execute: async () => ({ state: [] }),
-    encodePublicEvent: async () => Uint8Array.of(1, 2, 3),
+    encodePublicEvent: async () => "0x010203",
     query: async () => ({}),
     setWidgetWindow() {},
     terminate() {},
