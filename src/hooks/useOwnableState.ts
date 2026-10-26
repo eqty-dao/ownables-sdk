@@ -421,6 +421,9 @@ export function useOwnableState(
     if (isApplying || isExecuting || error) return;
 
     const partial = chain.startingAfter(appliedRef.current);
+    if (partial.events.length > 0 && !partial.isSigned()) {
+      return;
+    }
     if (partial.events.length > 0) {
       apply(partial).catch((e) => {
         console.error("Error applying chain:", e);
