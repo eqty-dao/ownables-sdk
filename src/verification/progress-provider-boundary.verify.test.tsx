@@ -28,7 +28,7 @@ vi.mock("wagmi", () => ({
 
 type PendingRequest = {
   method: string;
-  resolve: (value: string) => void;
+  resolve: (value: unknown) => void;
   reject: (error: Error & { code?: number }) => void;
 };
 
@@ -94,12 +94,12 @@ function createProvider() {
 
   return {
     provider,
-    async nextSignature(): Promise<PendingRequest> {
+    async next(method: string): Promise<PendingRequest> {
       await waitFor(() => {
-        expect(pending.some((request) => request.method === "eth_signTypedData_v4")).toBe(true);
+        expect(pending.some((request) => request.method === method)).toBe(true);
       });
       return pending.splice(
-        pending.findIndex((request) => request.method === "eth_signTypedData_v4"),
+        pending.findIndex((request) => request.method === method),
         1
       )[0];
     },
@@ -115,6 +115,12 @@ function createOwnableService(provider: ReturnType<typeof createProvider>["provi
   const eqty = new EQTYService(ADDRESS, 84532, walletClient, {} as any, provider, {
     anchor: { contractAddress: ANCHOR_ADDRESS },
     anchorClient: { anchor: async () => undefined },
+    feeReader: {
+      quoteEqtyCost: async () => 0n,
+      quoteEthCost: async () => 0n,
+      eqtyToken: async () => ANCHOR_ADDRESS,
+    },
+    eqtyToken: { allowance: async () => 0n },
     logger: { debug() {}, info() {}, warn() {}, error() {} },
   } as any);
   const ownables = new OwnableService({
@@ -132,6 +138,7 @@ function createOwnableService(provider: ReturnType<typeof createProvider>["provi
   }) as any;
   ownables._rpc.set(chain.id, {
     execute: async () => ({ state: [] }),
+    encodePublicEvent: async () => Uint8Array.of(1, 2, 3),
     query: async () => ({}),
     setWidgetWindow() {},
     terminate() {},
@@ -150,16 +157,12 @@ function WidgetHarness({ chain }: { chain: EventChain }) {
   return null;
 }
 
-function dispatchExecute(chain: EventChain) {
+function dispatchWidgetAction(chain: EventChain, type: "emit" | "execute", msg: Record<string, unknown>) {
   fireEvent(
     window,
     new MessageEvent("message", {
       source: window,
-      data: {
-        type: "execute",
-        ownable_id: chain.id,
-        msg: { transfer: { to: "0x0000000000000000000000000000000000000def" } },
-      },
+      data: { type, ownable_id: chain.id, msg },
     })
   );
 }
@@ -185,9 +188,9 @@ describe("provider boundary progress verification", () => {
     serviceMap.eqty = eqty;
 
     render(<ProgressProvider><WidgetHarness chain={chain} /></ProgressProvider>);
-    await act(async () => dispatchExecute(chain));
+    await act(async () => dispatchWidgetAction(chain, "execute", { transfer: { to: "0x0000000000000000000000000000000000000def" } }));
 
-    const signature = await provider.nextSignature();
+    const signature = await provider.next("eth_signTypedData_v4");
     expect(screen.getByText("Processing action")).not.toBeNull();
     expect(status("signEvent")).toBe("active");
     expect(provider.provider.request).toHaveBeenCalledWith(
@@ -208,11 +211,35 @@ describe("provider boundary progress verification", () => {
     serviceMap.eqty = eqty;
 
     render(<ProgressProvider><WidgetHarness chain={chain} /></ProgressProvider>);
-    await act(async () => dispatchExecute(chain));
+    await act(async () => dispatchWidgetAction(chain, "execute", { transfer: { to: "0x0000000000000000000000000000000000000def" } }));
 
-    const signature = await provider.nextSignature();
+    const signature = await provider.next("eth_signTypedData_v4");
     expect(status("signEvent")).toBe("active");
     await act(async () => signature.reject(Object.assign(new Error("rejected"), { code: 4001 })));
+
+    await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith("Action cancelled", "Wallet request cancelled");
+  });
+
+  it("keeps public emit active through a real EIP-1193 transaction and reports one cancellation", async () => {
+    const provider = createProvider();
+    const chain = EventChain.create(ADDRESS, 84532);
+    const { eqty, ownables } = createOwnableService(provider.provider, chain);
+    serviceMap.ownables = ownables;
+    serviceMap.eventChains = { getStateDump: async () => [] };
+    serviceMap.eqty = eqty;
+
+    render(<ProgressProvider><WidgetHarness chain={chain} /></ProgressProvider>);
+    await act(async () =>
+      dispatchWidgetAction(chain, "emit", { drink: { amount: 1 } })
+    );
+
+    const transaction = await provider.next("eth_sendTransaction");
+    expect(screen.getByText("Processing action")).not.toBeNull();
+    expect(status("emitPublicEvent")).toBe("active");
+
+    await act(async () => transaction.reject(Object.assign(new Error("rejected"), { code: 4001 })));
 
     await waitFor(() => expect(screen.queryByText("Processing action")).toBeNull());
     expect(onError).toHaveBeenCalledTimes(1);
