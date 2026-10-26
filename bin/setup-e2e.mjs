@@ -136,6 +136,16 @@ function ensureProofInputs() {
       );
     }
   }
+
+  for (const name of ["robot", "paint"]) {
+    const zipPath = join(ROOT, "ownables", `${name}.zip`);
+    if (!existsSync(zipPath)) {
+      runSync("yarn", ["ownables:build", name], { cwd: ROOT });
+    }
+    if (!existsSync(zipPath)) {
+      fail(`Missing ${zipPath} after building the ${name} example`);
+    }
+  }
 }
 
 function syncOwnableZips() {
