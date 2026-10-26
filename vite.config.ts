@@ -27,5 +27,11 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    server: {
+      deps: {
+        // The published adapter has extensionless internal ESM imports.
+        inline: ["@ownables/adapter-viem"],
+      },
+    },
   },
 });
