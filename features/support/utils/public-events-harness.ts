@@ -2,6 +2,7 @@ import { expect, type Page, type Request as PlaywrightRequest } from '@playwrigh
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { request as httpRequest } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToAccount } from 'viem/accounts';
 
@@ -361,10 +362,12 @@ export async function startRecordingWidgetActionMessages(page: Page) {
     const win = window as typeof window & {
       __ownableWidgetMessages?: Array<unknown>;
       __ownableWidgetMessageHandler?: (event: MessageEvent) => void;
+      __lastVerifiedOwnableWidgetMessageCount?: number;
       __ownablesPublicEventDiagnosticsEnabled?: boolean;
     };
 
     win.__ownableWidgetMessages = [];
+    win.__lastVerifiedOwnableWidgetMessageCount = 0;
     win.__ownablesPublicEventDiagnosticsEnabled = true;
     if (win.__ownableWidgetMessageHandler) {
       window.removeEventListener('message', win.__ownableWidgetMessageHandler);
@@ -382,18 +385,30 @@ export async function startRecordingWidgetActionMessages(page: Page) {
 }
 
 export async function expectLatestWidgetActionMessage(page: Page, eventType: string) {
-  const message = await page.evaluate(() => {
-    const win = window as typeof window & {
-      __ownableWidgetMessages?: Array<{
-        type?: string;
-        ownable_id?: string;
-        msg?: Record<string, unknown>;
-      }>;
-    };
-    return win.__ownableWidgetMessages?.at(-1) ?? null;
-  });
+  const message = await waitFor(
+    () =>
+      page.evaluate(() => {
+        const win = window as typeof window & {
+          __ownableWidgetMessages?: Array<{
+            type?: string;
+            ownable_id?: string;
+            msg?: Record<string, unknown>;
+          }>;
+          __lastVerifiedOwnableWidgetMessageCount?: number;
+        };
+        const messages = win.__ownableWidgetMessages ?? [];
+        const previousCount = win.__lastVerifiedOwnableWidgetMessageCount ?? 0;
+        if (messages.length <= previousCount) {
+          return null;
+        }
 
-  if (!message) throw new Error('No widget action message was recorded');
+        win.__lastVerifiedOwnableWidgetMessageCount = messages.length;
+        return messages.at(-1) ?? null;
+      }),
+    Boolean,
+    'new widget action message'
+  );
+
   if (message.type !== 'emit') {
     throw new Error(`Expected widget action type emit but received ${String(message.type)}`);
   }
@@ -430,6 +445,11 @@ export async function confirmLatestPendingPublicEvent(page: Page) {
 
 function visiblePublicEventRows(page: Page) {
   return page.locator('[data-testid^="public-event-"]');
+}
+
+async function isProcessingWidgetAction(page: Page): Promise<boolean> {
+  const dialog = page.getByRole('dialog', { name: 'Processing action' });
+  return (await dialog.count()) > 0 && (await dialog.first().isVisible());
 }
 
 export async function expectVisiblePublicEventRows(
@@ -534,17 +554,54 @@ async function waitForHubHealth() {
   }
 
   await waitFor(
-    async () => {
-      try {
-        return (await fetch(`${HUB_ORIGIN}/health`)).ok ? true : null;
-      } catch {
-        return null;
-      }
-    },
+    async () => ((await hubIsHealthy()) ? true : null),
     Boolean,
     'replacement ownables-hub runtime',
     20_000
   );
+}
+
+function hubIsHealthy(): Promise<boolean> {
+  if (!HUB_ORIGIN) {
+    return Promise.resolve(false);
+  }
+
+  const url = new URL(`${HUB_ORIGIN}/health`);
+  return new Promise((resolve) => {
+    const request = httpRequest(
+      {
+        hostname: url.hostname,
+        port: url.port || undefined,
+        path: `${url.pathname}${url.search}`,
+        method: 'GET',
+        agent: false,
+        timeout: 1_000,
+      },
+      (response) => {
+        response.resume();
+        response.once('end', () => resolve(response.statusCode === 200));
+      }
+    );
+
+    request.once('error', () => resolve(false));
+    request.once('timeout', () => {
+      request.destroy();
+      resolve(false);
+    });
+    request.end();
+  });
+}
+
+function processIsRunning(processId: number): boolean {
+  try {
+    process.kill(processId, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
+      return false;
+    }
+    throw error;
+  }
 }
 
 async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
@@ -566,15 +623,14 @@ async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
   }
 
   await waitFor(
-    async () => {
-      try {
-        return (await fetch(`${HUB_ORIGIN}/health`)).ok ? null : true;
-      } catch {
-        return true;
-      }
-    },
+    async () => (!processIsRunning(processId) ? true : null),
     Boolean,
-    'original ownables-hub runtime shutdown'
+    'original ownables-hub process shutdown'
+  );
+  await waitFor(
+    async () => (!(await hubIsHealthy()) ? true : null),
+    Boolean,
+    'original ownables-hub listener shutdown'
   );
 
   const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
@@ -715,16 +771,23 @@ export async function expectTrackedPublicEventStatus(
   const ownableId = await currentOwnableId(page);
   try {
     await waitFor(
-      async () =>
-        [...(await trackedPublicEvents(page, ownableId))]
+      async () => {
+        const record = [...(await trackedPublicEvents(page, ownableId))]
           .reverse()
           .find(
             (candidate) =>
               candidate.status === status &&
               candidate.event.eventType === eventType
-          ) ?? null,
+          );
+        if (!record || (await isProcessingWidgetAction(page))) {
+          return null;
+        }
+
+        return record;
+      },
       Boolean,
-      `${status} tracked public event ${eventType}`
+      `${status} tracked public event ${eventType}`,
+      20_000
     );
   } catch (error) {
     const diagnostics = await publicEventDiagnostics(page, ownableId);
@@ -747,12 +810,18 @@ export async function expectTrackedPublicEventCount(
 ) {
   const ownableId = await currentOwnableId(page);
   const expectedCount = Number.parseInt(countText, 10);
-  const records = await trackedPublicEvents(page, ownableId);
-  const matches = records.filter((record) => record.event.eventType === eventType);
+  await waitFor(
+    async () => {
+      const records = await trackedPublicEvents(page, ownableId);
+      const matches = records.filter((record) => record.event.eventType === eventType);
+      if (matches.length !== expectedCount || (await isProcessingWidgetAction(page))) {
+        return null;
+      }
 
-  if (matches.length !== expectedCount) {
-    throw new Error(
-      `Expected ${expectedCount} tracked public events for ${eventType} but found ${matches.length}: ${debugString(matches)}`
-    );
-  }
+      return matches;
+    },
+    Boolean,
+    `${expectedCount} tracked public events for ${eventType}`,
+    20_000
+  );
 }
