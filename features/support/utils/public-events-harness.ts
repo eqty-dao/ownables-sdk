@@ -1,5 +1,6 @@
-import type { Page, Request as PlaywrightRequest } from '@playwright/test';
+import { expect, type Page, type Request as PlaywrightRequest } from '@playwright/test';
 import JSZip from 'jszip';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -20,7 +21,7 @@ const PROJECT_ROOT = path.resolve(
   '..'
 );
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
-const HUB_PROJECT_ROOT = path.resolve(PROJECT_ROOT, '..', 'ownables-hub');
+const HUB_PROJECT_ROOT = resolveHubProjectRoot();
 const OWNABLE_ZIP_DIR = path.join(PROJECT_ROOT, 'ownables');
 
 interface TrackedPublicEventRecord {
@@ -68,6 +69,13 @@ interface PublicEventStreamRequest {
   queryKeys: string[];
 }
 
+interface CapturedPublicEventView {
+  ownableId: string;
+  widgetId: string;
+  url: string;
+  rowTestIds: string[];
+}
+
 export interface PublicEventsWorld {
   page: Page;
   __hubRequestHandler?: (request: PlaywrightRequest) => void;
@@ -77,9 +85,31 @@ export interface PublicEventsWorld {
   };
   rememberedOwnableIds?: Record<string, string>;
   latestPublicEventStreamRequest?: PublicEventStreamRequest;
+  capturedPublicEventView?: CapturedPublicEventView;
 }
 
 let exampleZipPathByPackageCidPromise: Promise<Map<string, string>> | null = null;
+
+function resolveHubProjectRoot(): string {
+  const result = spawnSync(
+    'git',
+    ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+    { cwd: PROJECT_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+
+  if (result.error || result.status !== 0) {
+    const detail = result.error?.message ?? result.stderr?.trim() ?? 'unknown error';
+    throw new Error(`Unable to resolve the Git common directory for E2E Hub access: ${detail}`);
+  }
+
+  const commonDir = result.stdout.trim();
+  const hubRoot = path.join(path.dirname(path.dirname(commonDir)), 'ownables-hub');
+  if (!existsSync(hubRoot)) {
+    throw new Error(`Unable to resolve ownables-hub from Git common directory ${commonDir}`);
+  }
+
+  return hubRoot;
+}
 
 function resolveE2EAddress() {
   const mnemonic = process.env.VITE_E2E_MNEMONIC?.trim() || DEFAULT_E2E_MNEMONIC;
@@ -627,8 +657,122 @@ export async function confirmLatestPendingPublicEvent(page: Page) {
 
   await ensureOwnableUploadedToHub(page, ownableId);
   runHubIndexer();
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expectOwnableWidgetReady(page);
+}
+
+function visiblePublicEventRows(page: Page) {
+  return page.locator('[data-testid^="public-event-"]');
+}
+
+export async function expectVisiblePublicEventRows(
+  page: Page,
+  countText: string,
+  eventType: string,
+  status: 'pending' | 'confirmed'
+): Promise<string[]> {
+  const expectedCount = Number.parseInt(countText, 10);
+  if (!Number.isInteger(expectedCount) || expectedCount < 0) {
+    throw new Error(`Invalid expected visible public-event count: ${countText}`);
+  }
+
+  return waitFor(
+    async () => {
+      const rows = visiblePublicEventRows(page);
+      if ((await rows.count()) !== expectedCount) {
+        return null;
+      }
+
+      const rowTestIds: string[] = [];
+      for (let index = 0; index < expectedCount; index += 1) {
+        const row = rows.nth(index);
+        const testId = await row.getAttribute('data-testid');
+        const text = await row.textContent();
+        if (
+          !testId ||
+          !text?.includes(`Public event: ${eventType}`) ||
+          !text.includes(status === 'pending' ? 'Pending' : 'Confirmed')
+        ) {
+          return null;
+        }
+        rowTestIds.push(testId);
+      }
+
+      return rowTestIds;
+    },
+    (rowTestIds): rowTestIds is string[] => rowTestIds !== null,
+    `${expectedCount} visible ${status} public-event rows for ${eventType}`,
+    20_000
+  );
+}
+
+export async function captureVisiblePublicEventView(
+  world: PublicEventsWorld,
+  countText: string,
+  eventType: string,
+  status: 'pending' | 'confirmed'
+) {
+  const ownableId = await currentOwnableId(world.page);
+  const rowTestIds = await expectVisiblePublicEventRows(
+    world.page,
+    countText,
+    eventType,
+    status
+  );
+
+  world.capturedPublicEventView = {
+    ownableId,
+    widgetId: (await world.page.locator('iframe[aria-label="Ownable widget"]').getAttribute('id')) ?? '',
+    url: world.page.url(),
+    rowTestIds,
+  };
+}
+
+export async function expectCapturedPublicEventView(
+  world: PublicEventsWorld,
+  eventType: string,
+  status: 'pending' | 'confirmed'
+) {
+  const captured = world.capturedPublicEventView;
+  if (!captured) {
+    throw new Error('No public-event view was captured before confirmation');
+  }
+
+  const currentOwnable = await currentOwnableId(world.page);
+  if (currentOwnable !== captured.ownableId) {
+    throw new Error(
+      `The selected ownable changed from ${captured.ownableId} to ${currentOwnable} during confirmation`
+    );
+  }
+  if (world.page.url() !== captured.url) {
+    throw new Error(`The page navigated during public-event confirmation: ${world.page.url()}`);
+  }
+  const widgetId = await world.page.locator('iframe[aria-label="Ownable widget"]').getAttribute('id');
+  if (widgetId !== captured.widgetId) {
+    throw new Error(`The widget changed from ${captured.widgetId} to ${String(widgetId)}`);
+  }
+
+  const currentRowTestIds = await expectVisiblePublicEventRows(
+    world.page,
+    String(captured.rowTestIds.length),
+    eventType,
+    status
+  );
+  expect(currentRowTestIds).toEqual(captured.rowTestIds);
+}
+
+export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
+  const initialRequestCount = world.__hubRequests?.publicEventStreams.length ?? 0;
+  await world.page.context().setOffline(true);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  await world.page.context().setOffline(false);
+
+  await waitFor(
+    async () => {
+      const requests = world.__hubRequests?.publicEventStreams ?? [];
+      return requests.length > initialRequestCount ? requests.at(-1) ?? null : null;
+    },
+    Boolean,
+    'reconnected public-events stream request'
+  );
 }
 
 export async function expectHubSnapshotRequest(world: PublicEventsWorld) {

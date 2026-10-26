@@ -20,7 +20,9 @@ Given('I switch the controlled E2E wallet to address index {int}', async functio
   await this.page.reload({ waitUntil: 'domcontentloaded' });
 });
 import {
+  captureVisiblePublicEventView,
   confirmLatestPendingPublicEvent,
+  expectCapturedPublicEventView,
   expectHubSnapshotRequest,
   expectHubStreamRequest,
   expectLatestHubStreamQuery,
@@ -28,7 +30,9 @@ import {
   expectLaterHubStreamRequest,
   expectTrackedPublicEventCount,
   expectTrackedPublicEventStatus,
+  expectVisiblePublicEventRows,
   rememberCurrentOwnableId,
+  repeatCurrentOwnablePublicEventStream,
   resetHubTransport,
   startRecordingWidgetActionMessages,
   type PublicEventsWorld,
@@ -100,6 +104,43 @@ Then(
     await expectTrackedPublicEventCount(this.page, countText, eventType);
   }
 );
+
+Then(
+  'there are exactly {string} visible {string} public event rows for {string}',
+  async function (
+    countText: string,
+    status: 'pending' | 'confirmed',
+    eventType: string
+  ) {
+    await expectVisiblePublicEventRows(this.page, countText, eventType, status);
+  }
+);
+
+When(
+  'I capture the visible {string} public event rows for {string}',
+  async function (
+    countText: string,
+    eventType: string
+  ) {
+    await captureVisiblePublicEventView(
+      this as PublicEventsWorld,
+      countText,
+      eventType,
+      'pending'
+    );
+  }
+);
+
+Then(
+  'the captured public event rows remain in place and become {string} for {string}',
+  async function (status: 'pending' | 'confirmed', eventType: string) {
+    await expectCapturedPublicEventView(this as PublicEventsWorld, eventType, status);
+  }
+);
+
+When('the Hub repeats the current ownable public-event stream', async function () {
+  await repeatCurrentOwnablePublicEventStream(this as PublicEventsWorld);
+});
 
 When(
   'I upload the file {string} into the {string} file input',
