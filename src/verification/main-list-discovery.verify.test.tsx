@@ -941,6 +941,13 @@ describe("main-list discovery verifier", () => {
     const onError = vi.fn();
     const init = vi.fn().mockResolvedValue(undefined);
     const setWidgetWindow = vi.fn();
+    const pkg = {
+      cid: "bafy",
+      uniqueMessageHash: "message-hash",
+      isDynamic: true,
+      title: "Archived ownable",
+      description: "desc",
+    } as any;
 
     serviceMap.ownables = {
       init,
@@ -951,13 +958,7 @@ describe("main-list discovery verifier", () => {
     const { result } = renderHook(() =>
       useOwnableState(
         chain,
-        {
-          cid: "bafy",
-          uniqueMessageHash: "message-hash",
-          isDynamic: true,
-          title: "Archived ownable",
-          description: "desc",
-        } as any,
+        pkg,
         onError,
         true
       )
