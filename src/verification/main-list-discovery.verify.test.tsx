@@ -797,7 +797,7 @@ describe("main-list discovery verifier", () => {
     });
   });
 
-  it("uses the ownables-scoped discovery route", async () => {
+  it("uses the account-scoped discovery route", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ owner: ACCOUNT, entries: [] }), {
         status: 200,
@@ -810,12 +810,11 @@ describe("main-list discovery verifier", () => {
     await hub.listAvailableOwnables(ACCOUNT);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `https://hub.example/ownables/available?owner=${encodeURIComponent(ACCOUNT)}`,
-      undefined
+      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables`
     );
   });
 
-  it("uses the wallet-scoped discovery SSE route", async () => {
+  it("uses the account-scoped discovery SSE route", async () => {
     const streams: string[] = [];
     const hub = new HubService(
       "https://hub.example",
@@ -836,7 +835,7 @@ describe("main-list discovery verifier", () => {
     });
 
     expect(streams).toEqual([
-      `https://hub.example/ownables/available/stream?owner=${encodeURIComponent(ACCOUNT)}`,
+      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables/events`,
     ]);
   });
 
