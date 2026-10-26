@@ -81,7 +81,7 @@ Then(
 );
 
 Then(
-  'the latest Hub public-events stream request uses only repeated {string} params plus {string}',
+  'the latest Hub public-events stream request uses only repeated {string} params and optional {string}',
   function (idParamName: string, fromParamName: string) {
     expectLatestHubStreamQuery(
       this as PublicEventsWorld,
