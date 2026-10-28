@@ -10,6 +10,8 @@ jobs:
         package:
           - antenna
           - armor
+          - basic
+          - block-stack
           - car
           - paint
           - potion

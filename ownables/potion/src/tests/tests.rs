@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{OwnedDeps, MemoryStorage, Response, MessageInfo, Addr, Binary, from_binary, Uint128};
+use cosmwasm_std::{OwnedDeps, MemoryStorage, Response, MessageInfo, Addr, Binary, from_binary};
 use crate::{create_env, ExecuteMsg, instantiate, InstantiateMsg};
 use crate::contract::{execute, query};
 use crate::error::ContractError;
 use crate::msg::QueryMsg;
-use crate::state::NFT;
 use crate::utils::{EmptyApi, EmptyQuerier};
 
 const OWNABLE_USER: &str = "2bJ69cFXzS8AJTcCmzjc9oeHZmBrmMVUr8svJ1mTGpho9izYrbZjrMr9q1YwvY";
@@ -18,7 +17,7 @@ struct CommonTest {
     info: MessageInfo,
     res: Response,
 }
-fn setup_test(network: String) -> CommonTest {
+fn setup_test() -> CommonTest {
     let mut deps = OwnedDeps {
         storage: MemoryStorage::default(),
         api: EmptyApi::default(),
@@ -26,14 +25,8 @@ fn setup_test(network: String) -> CommonTest {
         custom_query_type: PhantomData,
     };
     let info = mock_info(PUBLIC_KEY, &[]);
-    let nft = NFT {
-        nft_id: Uint128::one(),
-        network: network.to_string(),
-        nft_contract_address: "nft-contract-address".to_string(),
-    };
     let msg = InstantiateMsg {
         ownable_id: "2bJ69cFXzS8AJTcCmzjc9oeHZmBrmMVUr8svJ1mTGpho9izYrbZjrMr9q1YwvY".to_string(),
-        nft,
         network_id: 84,
         image: None,
         image_data: None,
@@ -66,7 +59,7 @@ fn test_initialize() {
         deps: _,
         info: _,
         res,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     assert_eq!(0, res.messages.len());
     assert_eq!(res.attributes.get(0).unwrap().value, "instantiate".to_string());
@@ -83,7 +76,7 @@ fn test_drink() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
     let deps = deps.as_mut();
 
     let msg = ExecuteMsg::Consume { amount: 50 };
@@ -100,7 +93,7 @@ fn test_drink_unauthorized() {
         mut deps,
         mut info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
     let deps = deps.as_mut();
     info.sender = Addr::unchecked("not-the-owner".to_string());
     let msg = ExecuteMsg::Consume { amount: 50 };
@@ -120,7 +113,7 @@ fn test_drink_locked() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     // lock the ownable
     execute(
@@ -149,7 +142,7 @@ fn test_drink_too_much() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
     let deps = deps.as_mut();
     let msg = ExecuteMsg::Consume { amount: 150 };
 
@@ -166,7 +159,7 @@ fn test_transfer() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
     let deps = deps.as_mut();
 
     let msg = ExecuteMsg::Transfer { to: Addr::unchecked("other-owner-1") };
@@ -183,7 +176,7 @@ fn test_transfer_locked() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     // lock the ownable
     execute(
@@ -212,7 +205,7 @@ fn test_transfer_unauthorized() {
         mut deps,
         mut info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
     let deps = deps.as_mut();
     info.sender = Addr::unchecked("not-the-owner".to_string());
     let msg = ExecuteMsg::Transfer { to: Addr::unchecked("not-the-owner") };
@@ -232,7 +225,7 @@ fn test_query_config() {
         deps,
         info: _,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     let msg = QueryMsg::GetOwnableConfig {};
     let resp: Binary = query(deps.as_ref(), create_env(), msg).unwrap();
@@ -248,7 +241,7 @@ fn test_query_ownership() {
         deps,
         info: _,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     let msg = QueryMsg::GetOwnership {};
     let resp: Binary = query(deps.as_ref(), create_env(), msg).unwrap();
@@ -264,7 +257,7 @@ fn test_query_metadata() {
         deps,
         info: _,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     let msg = QueryMsg::GetOwnableMetadata {};
     let resp: Binary = query(deps.as_ref(), create_env(), msg).unwrap();
@@ -280,7 +273,7 @@ fn test_lock() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     // lock the ownable
     execute(
@@ -306,7 +299,7 @@ fn test_lock_unauthorized() {
         mut deps,
         info: _,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     // attempt to lock the ownable
     let err = execute(
@@ -328,7 +321,7 @@ fn test_lock_already_locked() {
         mut deps,
         info,
         res: _,
-    } = setup_test("eip155:1".to_string());
+    } = setup_test();
 
     // lock the ownable
     execute(
