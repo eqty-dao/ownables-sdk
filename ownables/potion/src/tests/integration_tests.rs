@@ -1,7 +1,7 @@
+use crate::msg::ExecuteMsg;
 use crate::msg::InstantiateMsg;
 use cosmwasm_std::{Addr, Coin, Empty, Uint128};
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
-use crate::msg::ExecuteMsg;
 
 pub fn contract_template() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -69,12 +69,8 @@ fn drink_percentage() {
 
     let msg = ExecuteMsg::Consume { amount: 1 };
 
-    app.execute_contract(
-        Addr::unchecked(OWNABLE_USER),
-        ownable_addr,
-        &msg,
-        &vec![]
-    ).unwrap();
+    app.execute_contract(Addr::unchecked(OWNABLE_USER), ownable_addr, &msg, &vec![])
+        .unwrap();
 }
 
 #[test]
@@ -85,11 +81,6 @@ fn transfer() {
         to: Addr::unchecked(ADMIN),
     };
 
-    app.execute_contract(
-        Addr::unchecked(OWNABLE_USER),
-        ownable_addr,
-        &msg,
-        &vec![]
-    )
-    .unwrap();
+    app.execute_contract(Addr::unchecked(OWNABLE_USER), ownable_addr, &msg, &vec![])
+        .unwrap();
 }

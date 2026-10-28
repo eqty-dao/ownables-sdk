@@ -1,15 +1,15 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID};
+use crate::state::{Config, CONFIG, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID};
 use alloy_sol_types::sol;
+use cosmwasm_std::{to_json_binary, Binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::abi::cbor_from_slice;
 use ownable_std::{
-    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
-    decode_abi_for, encode_abi, package_title_from_name,
+    decode_abi_for, encode_abi, package_title_from_name, EncodePublicEventRequest, InfoResponse,
+    Metadata, OwnableEvent, OwnableInfo, PublicEvent,
 };
 
 const CONTRACT_NAME: &str = concat!("crates.io:", env!("CARGO_PKG_NAME"));
@@ -56,12 +56,7 @@ pub fn instantiate(
     };
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
-    CONFIG.save(
-        deps.storage,
-        &Config {
-            stacked_blocks: 1,
-        },
-    )?;
+    CONFIG.save(deps.storage, &Config { stacked_blocks: 1 })?;
     METADATA.save(deps.storage, &metadata)?;
     OWNABLE_INFO.save(deps.storage, &ownable_info)?;
     PACKAGE_CID.save(deps.storage, &msg.package)?;
@@ -150,21 +145,22 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {
-    let ownership = OWNABLE_INFO.update(deps.storage, |mut config| -> Result<_, ContractError> {
-        let address = info.sender.clone();
-        if address != config.owner {
-            return Err(ContractError::Unauthorized {
-                val: "Unauthorized transfer attempt".to_string(),
-            });
-        }
-        if address == to {
-            return Err(ContractError::CustomError {
-                val: "Unable to transfer: Recipient address is current owner".to_string(),
-            });
-        }
-        config.owner = to.clone();
-        Ok(config)
-    })?;
+    let ownership =
+        OWNABLE_INFO.update(deps.storage, |mut config| -> Result<_, ContractError> {
+            let address = info.sender.clone();
+            if address != config.owner {
+                return Err(ContractError::Unauthorized {
+                    val: "Unauthorized transfer attempt".to_string(),
+                });
+            }
+            if address == to {
+                return Err(ContractError::CustomError {
+                    val: "Unable to transfer: Recipient address is current owner".to_string(),
+                });
+            }
+            config.owner = to.clone();
+            Ok(config)
+        })?;
 
     Ok(Response::new()
         .add_attribute("method", "try_transfer")

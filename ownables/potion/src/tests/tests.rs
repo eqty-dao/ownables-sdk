@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{OwnedDeps, MemoryStorage, Response, MessageInfo, Addr, Binary, from_binary};
-use crate::{create_env, ExecuteMsg, instantiate, InstantiateMsg};
 use crate::contract::{execute, query};
 use crate::error::ContractError;
 use crate::msg::QueryMsg;
 use crate::utils::{EmptyApi, EmptyQuerier};
+use crate::{create_env, instantiate, ExecuteMsg, InstantiateMsg};
+use cosmwasm_std::testing::{mock_env, mock_info};
+use cosmwasm_std::{from_binary, Addr, Binary, MemoryStorage, MessageInfo, OwnedDeps, Response};
+use std::collections::HashMap;
+use std::marker::PhantomData;
 
 const OWNABLE_USER: &str = "2bJ69cFXzS8AJTcCmzjc9oeHZmBrmMVUr8svJ1mTGpho9izYrbZjrMr9q1YwvY";
 const PUBLIC_KEY: &str = "v3KjemAaDRYztCiwdT9X72waHdpTq6tHBxyqqCBfFCf7";
@@ -38,23 +38,13 @@ fn setup_test() -> CommonTest {
         youtube_url: None,
     };
 
-    let res: Response = instantiate(
-        deps.as_mut(),
-        mock_env(),
-        info.clone(),
-        msg
-    ).unwrap();
+    let res: Response = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    CommonTest {
-        deps,
-        info,
-        res,
-    }
+    CommonTest { deps, info, res }
 }
 
 #[test]
 fn test_initialize() {
-
     let CommonTest {
         deps: _,
         info: _,
@@ -62,7 +52,10 @@ fn test_initialize() {
     } = setup_test();
 
     assert_eq!(0, res.messages.len());
-    assert_eq!(res.attributes.get(0).unwrap().value, "instantiate".to_string());
+    assert_eq!(
+        res.attributes.get(0).unwrap().value,
+        "instantiate".to_string()
+    );
     assert_eq!(res.attributes.get(1).unwrap().value, PUBLIC_KEY.to_string());
     assert_eq!(res.attributes.get(2).unwrap().value, PUBLIC_KEY.to_string());
     assert!(res.attributes.get(3).unwrap().value.starts_with("#"));
@@ -83,7 +76,10 @@ fn test_drink() {
     let res: Response = execute(deps, mock_env(), info, msg).unwrap();
 
     assert_eq!(0, res.messages.len());
-    assert_eq!(res.attributes.get(0).unwrap().value, "try_drink".to_string());
+    assert_eq!(
+        res.attributes.get(0).unwrap().value,
+        "try_drink".to_string()
+    );
     assert_eq!(res.attributes.get(1).unwrap().value, "50".to_string());
 }
 
@@ -98,8 +94,7 @@ fn test_drink_unauthorized() {
     info.sender = Addr::unchecked("not-the-owner".to_string());
     let msg = ExecuteMsg::Consume { amount: 50 };
 
-    let err: ContractError = execute(deps, mock_env(), info, msg)
-        .unwrap_err();
+    let err: ContractError = execute(deps, mock_env(), info, msg).unwrap_err();
 
     let _expected_err = ContractError::Unauthorized {
         val: "Unable to drink potion".to_string(),
@@ -121,17 +116,17 @@ fn test_drink_locked() {
         create_env(),
         info.clone(),
         ExecuteMsg::Lock {},
-    ).unwrap();
+    )
+    .unwrap();
 
     // attempt to drink a locked ownable
     let err = execute(
         deps.as_mut(),
         create_env(),
         mock_info(OWNABLE_USER, &[]),
-        ExecuteMsg::Consume {
-            amount: 10,
-        },
-    ).unwrap_err();
+        ExecuteMsg::Consume { amount: 10 },
+    )
+    .unwrap_err();
 
     assert!(matches!(err, ContractError::LockError { .. }));
 }
@@ -146,11 +141,15 @@ fn test_drink_too_much() {
     let deps = deps.as_mut();
     let msg = ExecuteMsg::Consume { amount: 150 };
 
-    let err: ContractError = execute(deps, mock_env(), info, msg)
-        .unwrap_err();
+    let err: ContractError = execute(deps, mock_env(), info, msg).unwrap_err();
 
     let _expected_err_val = "attempt to drink more than possible".to_string();
-    assert!(matches!(err, ContractError::CustomError { val: _expected_err_val }));
+    assert!(matches!(
+        err,
+        ContractError::CustomError {
+            val: _expected_err_val
+        }
+    ));
 }
 
 #[test]
@@ -162,12 +161,20 @@ fn test_transfer() {
     } = setup_test();
     let deps = deps.as_mut();
 
-    let msg = ExecuteMsg::Transfer { to: Addr::unchecked("other-owner-1") };
+    let msg = ExecuteMsg::Transfer {
+        to: Addr::unchecked("other-owner-1"),
+    };
 
     let res: Response = execute(deps, mock_env(), info, msg).unwrap();
 
-    assert_eq!(res.attributes.get(0).unwrap().value, "try_transfer".to_string());
-    assert_eq!(res.attributes.get(1).unwrap().value, "other-owner-1".to_string());
+    assert_eq!(
+        res.attributes.get(0).unwrap().value,
+        "try_transfer".to_string()
+    );
+    assert_eq!(
+        res.attributes.get(1).unwrap().value,
+        "other-owner-1".to_string()
+    );
 }
 
 #[test]
@@ -184,7 +191,8 @@ fn test_transfer_locked() {
         create_env(),
         info.clone(),
         ExecuteMsg::Lock {},
-    ).unwrap();
+    )
+    .unwrap();
 
     // attempt to transfer a locked ownable
     let err = execute(
@@ -192,9 +200,10 @@ fn test_transfer_locked() {
         create_env(),
         mock_info("sender-1", &[]),
         ExecuteMsg::Transfer {
-            to: Addr::unchecked(OWNABLE_USER)
+            to: Addr::unchecked(OWNABLE_USER),
         },
-    ).unwrap_err();
+    )
+    .unwrap_err();
 
     assert!(matches!(err, ContractError::LockError { .. }));
 }
@@ -208,10 +217,11 @@ fn test_transfer_unauthorized() {
     } = setup_test();
     let deps = deps.as_mut();
     info.sender = Addr::unchecked("not-the-owner".to_string());
-    let msg = ExecuteMsg::Transfer { to: Addr::unchecked("not-the-owner") };
+    let msg = ExecuteMsg::Transfer {
+        to: Addr::unchecked("not-the-owner"),
+    };
 
-    let err: ContractError = execute(deps, mock_env(), info, msg)
-        .unwrap_err();
+    let err: ContractError = execute(deps, mock_env(), info, msg).unwrap_err();
 
     let _expected_err = ContractError::Unauthorized {
         val: "Unauthorized transfer attempt".to_string(),
@@ -229,7 +239,8 @@ fn test_query_config() {
 
     let msg = QueryMsg::GetOwnableConfig {};
     let resp: Binary = query(deps.as_ref(), create_env(), msg).unwrap();
-    let json: String = "{\"current_amount\":100,\"max_capacity\":100,\"color\":\"#11D539\"}".to_string();
+    let json: String =
+        "{\"current_amount\":100,\"max_capacity\":100,\"color\":\"#11D539\"}".to_string();
     let expected_binary = Binary::from(json.as_bytes());
 
     assert_eq!(resp, expected_binary);
@@ -276,18 +287,9 @@ fn test_lock() {
     } = setup_test();
 
     // lock the ownable
-    execute(
-        deps.as_mut(),
-        create_env(),
-        info,
-        ExecuteMsg::Lock {},
-    ).unwrap();
+    execute(deps.as_mut(), create_env(), info, ExecuteMsg::Lock {}).unwrap();
 
-    let resp = query(
-        deps.as_ref(),
-        create_env(),
-        QueryMsg::IsLocked {}
-    ).unwrap();
+    let resp = query(deps.as_ref(), create_env(), QueryMsg::IsLocked {}).unwrap();
 
     let is_locked: bool = from_binary(&resp).unwrap();
     assert!(is_locked);
@@ -307,7 +309,8 @@ fn test_lock_unauthorized() {
         create_env(),
         mock_info(OWNABLE_PUBLIC_KEY_ALT, &[]),
         ExecuteMsg::Lock {},
-    ).unwrap_err();
+    )
+    .unwrap_err();
 
     let _expected_err = ContractError::Unauthorized {
         val: "Unauthorized".to_string(),
@@ -329,15 +332,12 @@ fn test_lock_already_locked() {
         create_env(),
         info.clone(),
         ExecuteMsg::Lock {},
-    ).unwrap();
+    )
+    .unwrap();
 
     // attempt to lock the ownable again
-    let err: ContractError = execute(
-        deps.as_mut(),
-        create_env(),
-        info,
-        ExecuteMsg::Lock {},
-    ).unwrap_err();
+    let err: ContractError =
+        execute(deps.as_mut(), create_env(), info, ExecuteMsg::Lock {}).unwrap_err();
 
     assert!(matches!(err, ContractError::LockError { .. }));
 }

@@ -1,15 +1,13 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{
-    CONFIG, Config, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID,
-};
+use crate::state::{Config, CONFIG, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID};
+use cosmwasm_std::{to_json_binary, Binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
-    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
-    package_title_from_name, rgb_hex,
+    package_title_from_name, rgb_hex, EncodePublicEventRequest, InfoResponse, Metadata,
+    OwnableEvent, OwnableInfo, PublicEvent,
 };
 
 // version info for migration info
@@ -178,7 +176,6 @@ fn try_ingest_consume(
         .add_attribute("status", "success"))
 }
 
-
 pub fn try_transfer(info: MessageInfo, deps: DepsMut, to: Addr) -> Result<Response, ContractError> {
     let ownership =
         OWNABLE_INFO.update(deps.storage, |mut config| -> Result<_, ContractError> {
@@ -231,7 +228,6 @@ fn query_ownable_widget_state(deps: Deps) -> StdResult<Binary> {
     let widget_config = CONFIG.load(deps.storage)?;
     to_json_binary(&widget_config)
 }
-
 
 fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
     let ownable_info = OWNABLE_INFO.load(deps.storage)?;
