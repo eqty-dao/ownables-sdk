@@ -1,13 +1,13 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Config, CONFIG, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID};
-use cosmwasm_std::{to_json_binary, Binary};
+use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, to_json_binary};
 use cw2::set_contract_version;
 use ownable_std::{
-    package_title_from_name, rgb_hex, EncodePublicEventRequest, InfoResponse, Metadata,
-    OwnableEvent, OwnableInfo, PublicEvent,
+    EncodePublicEventRequest, InfoResponse, Metadata, OwnableEvent, OwnableInfo, PublicEvent,
+    package_title_from_name, rgb_hex,
 };
 
 // version info for migration info
