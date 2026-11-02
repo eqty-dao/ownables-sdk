@@ -6,7 +6,7 @@ Feature: Apply submitted public events before Hub confirmation
     And I'm on the homepage
     When I click button "menu"
     And I check switch "Anchor events"
-    And I click button "Close settings"
+    And I close the settings sidebar
     And I click button "Issue an Ownable"
     And I click button "Block Stack Stack seven crooked public blocks"
     And the ownable widget is ready

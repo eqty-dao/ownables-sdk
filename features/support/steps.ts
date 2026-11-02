@@ -1,4 +1,5 @@
 import { Given, Then, When } from '@letsrunit/bdd';
+import { expect } from '@playwright/test';
 import { uploadFile } from './utils/file-upload.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 import { expectWalletEmpty } from './utils/wallet.ts';
@@ -80,6 +81,14 @@ When('I import the transferred ownable', async function () {
 
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
+});
+
+When('I close the settings sidebar', async function () {
+  const closeButton = this.page.getByRole('button', { name: 'Close settings' });
+
+  await expect(closeButton).toBeVisible({ timeout: 10_000 });
+  await closeButton.click();
+  await expect(closeButton).toBeHidden({ timeout: 10_000 });
 });
 
 When('I start recording widget action messages', async function () {
