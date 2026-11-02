@@ -379,7 +379,7 @@ export function useOwnableState(
   const chainEventCount = chain.events.length;
   const prev = useRef({ initialized, appliedHex: applied.hex });
   useEffect(() => {
-    if (isApplying || isExecuting || error) return;
+    if (!initialized || isApplying || isExecuting || error) return;
 
     const partial = chain.startingAfter(appliedRef.current);
     if (partial.events.length > 0) {

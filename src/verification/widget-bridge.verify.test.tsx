@@ -72,6 +72,7 @@ describe("widget bridge verification", () => {
     onPublicEventsChanged,
     emitPublicEventImpl,
     listTrackedPublicEvents,
+    pendingChainEvent = false,
   }: {
     archived?: boolean;
     pkg?: TypedPackage;
@@ -80,11 +81,19 @@ describe("widget bridge verification", () => {
     onPublicEventsChanged?: (entryId: string, replay: any) => void | Promise<void>;
     emitPublicEventImpl?: (...args: any[]) => Promise<any>;
     listTrackedPublicEvents?: () => Promise<any[]>;
+    pendingChainEvent?: boolean;
   } = {}) {
     const chain = EventChain.create(
       "0x0000000000000000000000000000000000000abc",
       84532
     );
+    if (pendingChainEvent) {
+      vi.spyOn(chain, "startingAfter").mockReturnValue({
+        events: [{}],
+        isSigned: () => true,
+        state: chain.state,
+      } as unknown as EventChain);
+    }
     const onError = vi.fn();
     const execute = vi.fn().mockResolvedValue([]);
     const defaultEmitReplay = {
@@ -230,6 +239,28 @@ describe("widget bridge verification", () => {
 
     expect(getStateDump).toHaveBeenCalledTimes(1);
     expect(query).toHaveBeenCalledWith({ get_widget_state: {} }, []);
+  });
+
+  it("waits for initialization before applying pending chain events", () => {
+    const pkg = {
+      title: "Block Stack",
+      name: "ownable-block-stack",
+      description: "Stack seven crooked public blocks",
+      cid: "bafy-test",
+      versions: [],
+      isDynamic: true,
+      hasMetadata: true,
+      hasWidgetState: true,
+      hasAttachments: false,
+      isClosable: false,
+      isConsumable: false,
+      isConsumer: false,
+      isLockable: false,
+      isTransferable: true,
+    } satisfies TypedPackage;
+    const { getStateDump } = setupHook({ pkg, pendingChainEvent: true });
+
+    expect(getStateDump).not.toHaveBeenCalled();
   });
 
   it("keeps execute messages on the private execute path", async () => {
