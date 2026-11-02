@@ -5,6 +5,7 @@ loadE2ERuntimeEnvironment();
 
 const RECIPIENT_ADDRESS = '0x70997970c51812dc3a010c7d01b50e0d17dc79c8';
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
+const EVENT_SOURCE_OPEN_URLS_KEY = '__ownablesStory10EventSourceOpenUrls';
 
 interface PendingUpload {
   status: number;
@@ -19,6 +20,7 @@ export interface TransferImportWorld {
   __transferImportRecipientSnapshots?: number;
   __transferImportRecipientStreams?: number;
   __transferImportSnapshotBaseline?: number;
+  __transferImportEventSourceTrackingInstalled?: boolean;
 }
 
 async function waitFor<T>(
@@ -60,10 +62,34 @@ function isRecipientStreamPath(pathname: string): boolean {
   );
 }
 
-export function resetTransferImportProof(world: TransferImportWorld): void {
+async function installEventSourceOpenTracking(world: TransferImportWorld): Promise<void> {
+  if (world.__transferImportEventSourceTrackingInstalled) return;
+
+  await world.page.addInitScript((key: string) => {
+    const trackedWindow = window as Window & Record<string, string[]>;
+    trackedWindow[key] = [];
+    const NativeEventSource = window.EventSource;
+    if (!NativeEventSource) return;
+
+    window.EventSource = new Proxy(NativeEventSource, {
+      construct(target, args) {
+        const source = Reflect.construct(target, args) as EventSource;
+        source.addEventListener('open', () => {
+          trackedWindow[key].push(String(args[0]));
+        });
+        return source;
+      },
+    }) as typeof EventSource;
+  }, EVENT_SOURCE_OPEN_URLS_KEY);
+  world.__transferImportEventSourceTrackingInstalled = true;
+}
+
+export async function resetTransferImportProof(world: TransferImportWorld): Promise<void> {
   if (!HUB_ORIGIN) {
     throw new Error('VITE_HUB is required for the transfer and import proof');
   }
+
+  await installEventSourceOpenTracking(world);
 
   world.__transferImportPendingUploads = [];
   world.__transferImportRecipientSnapshots = 0;
@@ -111,12 +137,26 @@ export async function expectPendingTransferUpload(world: TransferImportWorld): P
 
 export async function expectRecipientDiscoveryReady(world: TransferImportWorld): Promise<void> {
   await waitFor(
-    async () =>
-      (world.__transferImportRecipientSnapshots ?? 0) > 0 &&
-      (world.__transferImportRecipientStreams ?? 0) > 0
+    async () => {
+      const eventSourceUrls = await world.page.evaluate((key: string) => {
+        const value = (window as Window & Record<string, unknown>)[key];
+        return Array.isArray(value) ? value.filter((url): url is string => typeof url === 'string') : [];
+      }, EVENT_SOURCE_OPEN_URLS_KEY);
+      const recipientStreamOpened = eventSourceUrls.some((url) => {
+        try {
+          return isRecipientStreamPath(new URL(url).pathname);
+        } catch {
+          return false;
+        }
+      });
+
+      return (world.__transferImportRecipientSnapshots ?? 0) > 0 &&
+        (world.__transferImportRecipientStreams ?? 0) > 0 &&
+        recipientStreamOpened
         ? true
-        : null,
-    'recipient discovery snapshot and availability stream'
+        : null;
+    },
+    'recipient discovery snapshot and open availability stream'
   );
   world.__transferImportSnapshotBaseline = world.__transferImportRecipientSnapshots;
 }

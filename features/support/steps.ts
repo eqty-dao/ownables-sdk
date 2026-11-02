@@ -50,8 +50,8 @@ Given('the Hub transport verifier backend is reset', function () {
   resetHubTransport(this as PublicEventsWorld);
 });
 
-Given('the transfer and import proof is reset', function () {
-  resetTransferImportProof(this as TransferImportWorld);
+Given('the transfer and import proof is reset', async function () {
+  await resetTransferImportProof(this as TransferImportWorld);
 });
 
 Then('the Hub upload response is pending for the transfer', async function () {
