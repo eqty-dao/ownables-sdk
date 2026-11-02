@@ -8,6 +8,7 @@ Feature: Transfer and import through Hub
     And I click button "Robot An adorable robot companion"
     Then heading "Robot" is visible
     And the ownable widget is ready
+    And I check switch "Anchor events"
     When I click button "More options"
     And I click menuitem "Transfer"
     And I set field "Recipient address" to "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
