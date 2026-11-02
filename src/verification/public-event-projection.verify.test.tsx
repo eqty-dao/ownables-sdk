@@ -136,6 +136,19 @@ describe("public-event projection verification", () => {
     cleanup();
   });
 
+  it("keeps tracked events without creating replay state for an empty Hub snapshot", async () => {
+    configureServices();
+    const { result } = renderHook(() => useOwnables({ onSelect: vi.fn() }));
+
+    await waitFor(() => {
+      expect(result.current.trackedPublicEventsByOwnableId[CHAIN.id]).toEqual([PENDING_EVENT]);
+      expect(handlers.publicEvents).toEqual(expect.any(Function));
+    });
+
+    expect(serviceMap.ownables.applyIndexedPublicEventSnapshot).not.toHaveBeenCalled();
+    expect(serviceMap.ownables.listTrackedPublicEvents).toHaveBeenCalledWith(CHAIN.id);
+  });
+
   it("replaces each Ownable's tracked projection after local, snapshot, and stream replay", async () => {
     const { setTrackedEvents } = configureServices();
     const { result } = renderHook(() => useOwnables({ onSelect: vi.fn() }));

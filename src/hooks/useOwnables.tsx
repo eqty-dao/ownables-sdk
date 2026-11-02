@@ -438,11 +438,15 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
             return;
           }
 
-          const replay = await ownableService.applyIndexedPublicEventSnapshot(
-            entry.chain,
-            snapshot.publicEvents
-          );
-          await syncTrackedPublicEvents(entry.chain.id, replay);
+          if (snapshot.publicEvents.length > 0) {
+            const replay = await ownableService.applyIndexedPublicEventSnapshot(
+              entry.chain,
+              snapshot.publicEvents
+            );
+            await syncTrackedPublicEvents(entry.chain.id, replay);
+          } else {
+            await refreshTrackedPublicEvents(entry.chain.id);
+          }
 
           latestBlocks.push(
             snapshot.publicEvents.reduce(
@@ -509,7 +513,14 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       publicEventsStreamRef.current?.close();
       publicEventsStreamRef.current = null;
     };
-  }, [hub, ownableIdsKey, ownables, ownableService, syncTrackedPublicEvents]);
+  }, [
+    hub,
+    ownableIdsKey,
+    ownables,
+    ownableService,
+    refreshTrackedPublicEvents,
+    syncTrackedPublicEvents,
+  ]);
 
   const getExplorerUrl = (txHash: string, currentChainId: number) => {
     switch (currentChainId) {
