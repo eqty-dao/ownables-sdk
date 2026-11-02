@@ -22,5 +22,5 @@ Feature: Transfer and import through Hub
     And the page does not contain button "Import Robot"
     When the Hub indexes the pending transfer upload
     Then the recipient observes button "Import Robot" through the availability stream without another snapshot
-    When I click button "Import Robot"
+    When I import the transferred ownable
     Then heading "Robot" is visible

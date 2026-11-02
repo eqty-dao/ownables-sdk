@@ -1,4 +1,4 @@
-import { expect, type Page, type Request as PlaywrightRequest, type Response } from '@playwright/test';
+import { expect, type Locator, type Page, type Request as PlaywrightRequest, type Response } from '@playwright/test';
 import { loadE2ERuntimeEnvironment } from './e2e-runtime.ts';
 
 loadE2ERuntimeEnvironment();
@@ -18,6 +18,13 @@ interface EventSourceTrace {
   availableOwnableHandlerInvocations: AvailabilityEventTrace[];
 }
 
+interface AvailableOwnableStreamPayload {
+  owner?: unknown;
+  entry?: {
+    id?: unknown;
+  };
+}
+
 interface PendingUpload {
   status: number;
   body: unknown;
@@ -31,6 +38,7 @@ export interface TransferImportWorld {
   __transferImportRecipientSnapshots?: number;
   __transferImportRecipientStreams?: number;
   __transferImportSnapshotBaseline?: number;
+  __transferImportUploadedOwnableId?: string;
   __transferImportEventSourceTrackingInstalled?: boolean;
 }
 
@@ -161,8 +169,25 @@ function isRecipientTrace(trace: AvailabilityEventTrace): boolean {
 }
 
 function expectRecipientOwner(data: string): void {
-  const payload = JSON.parse(data) as { owner?: unknown };
+  const payload = JSON.parse(data) as AvailableOwnableStreamPayload;
   expect(payload.owner).toBe(`eip155:84532:${RECIPIENT_ADDRESS}`);
+}
+
+function parseAvailableOwnablePayload(data: string): AvailableOwnableStreamPayload {
+  return JSON.parse(data) as AvailableOwnableStreamPayload;
+}
+
+function transferredOwnableImportButton(
+  world: TransferImportWorld,
+  buttonName: string
+): Locator {
+  const uploadedOwnableId = world.__transferImportUploadedOwnableId;
+  if (!uploadedOwnableId) {
+    throw new Error('The pending transfer upload did not record an ownable ID');
+  }
+  return world.page
+    .locator(`[data-ownable-id=${JSON.stringify(uploadedOwnableId)}]`)
+    .getByRole('button', { name: buttonName });
 }
 
 export async function resetTransferImportProof(world: TransferImportWorld): Promise<void> {
@@ -176,6 +201,7 @@ export async function resetTransferImportProof(world: TransferImportWorld): Prom
   world.__transferImportRecipientSnapshots = 0;
   world.__transferImportRecipientStreams = 0;
   world.__transferImportSnapshotBaseline = undefined;
+  world.__transferImportUploadedOwnableId = undefined;
 
   if (world.__transferImportRequestHandler || world.__transferImportResponseHandler) return;
 
@@ -214,6 +240,7 @@ export async function expectPendingTransferUpload(world: TransferImportWorld): P
   expect((body?.ownableId as string).trim()).not.toBe('');
   expect(body?.expiresAt).toEqual(expect.any(String));
   expect(Number.isNaN(Date.parse(body?.expiresAt as string))).toBe(false);
+  world.__transferImportUploadedOwnableId = body?.ownableId as string;
 }
 
 export async function expectRecipientDiscoveryReady(world: TransferImportWorld): Promise<void> {
@@ -247,6 +274,10 @@ export async function expectAvailableThroughStream(
   if (baseline === undefined) {
     throw new Error('Recipient discovery baseline was not established before Hub indexing');
   }
+  const uploadedOwnableId = world.__transferImportUploadedOwnableId;
+  if (!uploadedOwnableId) {
+    throw new Error('The pending transfer upload did not record an ownable ID');
+  }
 
   const frame = await waitFor(
     async () => {
@@ -256,6 +287,7 @@ export async function expectAvailableThroughStream(
     'recipient availability stream frame'
   );
   expectRecipientOwner(frame.data);
+  expect(parseAvailableOwnablePayload(frame.data).entry?.id).toBe(uploadedOwnableId);
 
   const handlerInvocation = await waitFor(
     async () => {
@@ -265,8 +297,16 @@ export async function expectAvailableThroughStream(
     'recipient availability stream handler invocation'
   );
   expectRecipientOwner(handlerInvocation.data);
+  expect(parseAvailableOwnablePayload(handlerInvocation.data).entry?.id).toBe(uploadedOwnableId);
 
-  await expect(world.page.getByRole('button', { name: buttonName })).toBeVisible({ timeout: 20_000 });
+  await expect(
+    transferredOwnableImportButton(world, buttonName)
+  ).toBeVisible({ timeout: 20_000 });
+  expect(world.__transferImportPendingUploads).toHaveLength(1);
   expect(world.__transferImportRecipientStreams).toBeGreaterThan(0);
   expect(world.__transferImportRecipientSnapshots).toBe(baseline);
+}
+
+export async function importTransferredOwnable(world: TransferImportWorld): Promise<void> {
+  await transferredOwnableImportButton(world, 'Import Robot').click();
 }

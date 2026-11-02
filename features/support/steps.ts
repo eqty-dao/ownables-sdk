@@ -42,6 +42,7 @@ import {
   expectAvailableThroughStream,
   expectPendingTransferUpload,
   expectRecipientDiscoveryReady,
+  importTransferredOwnable,
   resetTransferImportProof,
   type TransferImportWorld,
 } from './utils/transfer-import-harness.ts';
@@ -72,6 +73,10 @@ Then(
     await expectAvailableThroughStream(this as TransferImportWorld, buttonName);
   }
 );
+
+When('I import the transferred ownable', async function () {
+  await importTransferredOwnable(this as TransferImportWorld);
+});
 
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
