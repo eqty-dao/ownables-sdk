@@ -64,12 +64,14 @@ const DB_PORT = process.env.HUB_DB_PORT || "54329";
 const DB_NAME = `ownables_hub_sdk_verify_${process.pid}`;
 const DATABASE_URL = `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
+const HUB_STORAGE_URL = `file://${HUB_STORAGE_DIR}`;
 const RUNTIME_ENV_PATH = join(ROOT, ".e2e-runtime.json");
 let cleaningUp = false;
 
 function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
   return {
     DATABASE_URL,
+    OWNABLES_STORAGE: HUB_STORAGE_URL,
     HUB_NETWORK_PROFILE: "testnet",
     TESTNET_CHAIN_ID: "84532",
     TESTNET_RPC_URL: RPC_URL,
@@ -439,7 +441,7 @@ async function main() {
   const hubRuntimeEnv = {
     ...indexerRuntimeEnv,
     NODE_ENV: process.env.NODE_ENV || "development",
-    OWNABLES_STORAGE: `file://${HUB_STORAGE_DIR}`,
+    OWNABLES_STORAGE: HUB_STORAGE_URL,
     CORS_ORIGINS: APP_URL,
     PORT: HUB_PORT,
     PUBLIC_BASE_URL: HUB_URL,
@@ -538,7 +540,15 @@ async function main() {
 }
 
 if (process.argv.includes("--validate-paths")) {
-  console.log(JSON.stringify({ HUB_ROOT, CONTRACTS_ROOT, DB_CONTAINER, databaseStrategy: "docker-exec" }));
+  const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress: "0xanchor", anchorStartBlock: 0 });
+  console.log(JSON.stringify({
+    HUB_ROOT,
+    CONTRACTS_ROOT,
+    DB_CONTAINER,
+    databaseStrategy: "docker-exec",
+    indexerStorage: indexerRuntimeEnv.OWNABLES_STORAGE,
+    hubStorage: HUB_STORAGE_URL,
+  }));
 } else {
   await main();
 }

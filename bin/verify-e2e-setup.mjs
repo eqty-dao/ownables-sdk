@@ -17,12 +17,15 @@ test("resolves EQTY repositories and Docker Postgres from a linked worktree", ()
     { cwd: process.cwd(), encoding: "utf8" }
   ).trim();
   const eqtyRoot = dirname(dirname(commonDir));
-  assert.deepEqual(JSON.parse(result.stdout), {
+  const { indexerStorage, hubStorage, ...paths } = JSON.parse(result.stdout);
+  assert.deepEqual(paths, {
     HUB_ROOT: join(eqtyRoot, "ownables-hub"),
     CONTRACTS_ROOT: join(eqtyRoot, "eqty-contracts"),
     DB_CONTAINER: process.env.HUB_DB_CONTAINER || "ownables-hub-postgres",
     databaseStrategy: "docker-exec",
   });
+  assert.match(indexerStorage, /^file:\/\//);
+  assert.equal(indexerStorage, hubStorage);
 });
 
 test("uses an explicit existing Hub worktree override", () => {
@@ -41,10 +44,13 @@ test("uses an explicit existing Hub worktree override", () => {
   });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(JSON.parse(result.stdout), {
+  const { indexerStorage, hubStorage, ...paths } = JSON.parse(result.stdout);
+  assert.deepEqual(paths, {
     HUB_ROOT: selectedHubRoot,
     CONTRACTS_ROOT: join(eqtyRoot, "eqty-contracts"),
     DB_CONTAINER: process.env.HUB_DB_CONTAINER || "ownables-hub-postgres",
     databaseStrategy: "docker-exec",
   });
+  assert.match(indexerStorage, /^file:\/\//);
+  assert.equal(indexerStorage, hubStorage);
 });
