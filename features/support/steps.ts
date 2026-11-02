@@ -20,6 +20,13 @@ Given('I switch the controlled E2E wallet to address index {int}', async functio
   );
   await this.page.reload({ waitUntil: 'domcontentloaded' });
 });
+
+Given('the controlled E2E wallet is ready', async function () {
+  await expect(this.page.getByText('Testnet', { exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(
+    this.page.getByText('Please switch to Base Sepolia network to use this application.', { exact: true })
+  ).toBeHidden({ timeout: 10_000 });
+});
 import {
   captureVisiblePublicEventView,
   confirmLatestPendingPublicEvent,

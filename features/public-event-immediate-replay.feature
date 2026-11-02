@@ -4,6 +4,7 @@ Feature: Apply submitted public events before Hub confirmation
   Scenario: Keep locally applied public events visible while Hub confirmation is held
     Given the Hub transport verifier backend is reset
     And I'm on the homepage
+    And the controlled E2E wallet is ready
     When I click button "menu"
     And I enable anchoring and close the settings sidebar
     And I click button "Issue an Ownable"
