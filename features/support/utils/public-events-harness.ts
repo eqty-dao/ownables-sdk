@@ -66,6 +66,15 @@ export interface PublicEventsWorld {
 }
 
 function resolveHubProjectRoot(): string {
+  const configuredHubRoot = process.env.E2E_HUB_ROOT?.trim();
+  if (configuredHubRoot) {
+    const hubRoot = path.resolve(configuredHubRoot);
+    if (!existsSync(path.join(hubRoot, 'package.json'))) {
+      throw new Error(`E2E_HUB_ROOT is not an ownables-hub repository: ${hubRoot}`);
+    }
+    return hubRoot;
+  }
+
   const result = spawnSync(
     'git',
     ['rev-parse', '--path-format=absolute', '--git-common-dir'],
@@ -207,7 +216,7 @@ function runtimeEnvironment(variable: string): Record<string, string> {
   return runtimeEnv;
 }
 
-function runHubIndexer(): void {
+export function runHubIndexer(): void {
   const runtimeEnv = runtimeEnvironment('E2E_HUB_INDEXER_ENV_JSON');
 
   const result = spawnSync('yarn', ['indexer:run'], {
@@ -215,18 +224,22 @@ function runHubIndexer(): void {
     env: { ...process.env, ...runtimeEnv },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 60_000,
   });
 
   if (result.error) {
-    throw result.error;
+    throw new Error(
+      `yarn indexer:run failed: ${result.error.message}\nstdout:\n${result.stdout?.trim() ?? ''}\nstderr:\n${result.stderr?.trim() ?? ''}`
+    );
   }
 
   if (result.status !== 0) {
     const stderr = result.stderr?.trim();
+    const stdout = result.stdout?.trim();
     throw new Error(
       stderr
-        ? `yarn indexer:run failed:\n${stderr}`
-        : `yarn indexer:run failed with code ${String(result.status)}`
+        ? `yarn indexer:run failed:\n${stderr}\nstdout:\n${stdout ?? ''}`
+        : `yarn indexer:run failed with code ${String(result.status)}\nstdout:\n${stdout ?? ''}\nstderr:\n`
     );
   }
 

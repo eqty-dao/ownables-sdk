@@ -6,6 +6,7 @@ import { LogProgress } from "@/contexts/Progress.context";
 import { useService } from "./useService";
 import { useProgress } from "@/contexts/Progress.context";
 import { enqueueSnackbar } from "notistack";
+import type { HubUploadResult } from "@ownables/platform-browser";
 
 type ExecuteFn = (msg: TypedDict, onProgress?: LogProgress, submitAnchors?: boolean) => Promise<void>;
 
@@ -42,11 +43,21 @@ export function useOwnableTransfer(
       const zip = await ownables.zip(chain);
       const content = await zip.generateAsync({ type: "uint8array" });
 
-      await hub.uploadOwnable(content, `${chain.id}.zip`, onProgress as any);
+      const uploadResult: HubUploadResult = await hub.uploadOwnable(
+        content,
+        `${chain.id}.zip`,
+        onProgress as any
+      );
       await ownables.submitAnchors(onProgress as any);
       onTransferred?.();
 
-      enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
+      if (uploadResult.status === "pending") {
+        enqueueSnackbar("Ownable transferred. Hub verification is pending.", {
+          variant: "info",
+        });
+      } else {
+        enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
+      }
 
       ctrl.close();
     } catch (error) {

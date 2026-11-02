@@ -34,13 +34,44 @@ import {
   rememberCurrentOwnableId,
   repeatCurrentOwnablePublicEventStream,
   resetHubTransport,
+  runHubIndexer,
   startRecordingWidgetActionMessages,
   type PublicEventsWorld,
 } from './utils/public-events-harness.ts';
+import {
+  expectAvailableThroughStream,
+  expectPendingTransferUpload,
+  expectRecipientDiscoveryReady,
+  resetTransferImportProof,
+  type TransferImportWorld,
+} from './utils/transfer-import-harness.ts';
 
 Given('the Hub transport verifier backend is reset', function () {
   resetHubTransport(this as PublicEventsWorld);
 });
+
+Given('the transfer and import proof is reset', function () {
+  resetTransferImportProof(this as TransferImportWorld);
+});
+
+Then('the Hub upload response is pending for the transfer', async function () {
+  await expectPendingTransferUpload(this as TransferImportWorld);
+});
+
+Then('recipient discovery has its initial snapshot and availability stream', async function () {
+  await expectRecipientDiscoveryReady(this as TransferImportWorld);
+});
+
+When('the Hub indexes the pending transfer upload', function () {
+  runHubIndexer();
+});
+
+Then(
+  'the recipient observes button {string} through the availability stream without another snapshot',
+  async function (buttonName: string) {
+    await expectAvailableThroughStream(this as TransferImportWorld, buttonName);
+  }
+);
 
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);

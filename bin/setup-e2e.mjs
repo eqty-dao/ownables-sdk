@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   createPublicClient,
   createWalletClient,
@@ -23,18 +23,24 @@ import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
 
-function resolveEqtyRepositories(root = ROOT) {
+function resolveEqtyRepositories(root = ROOT, hubRootOverride = process.env.E2E_HUB_ROOT) {
   const commonDir = runSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
     cwd: root,
   });
   const eqtyRoot = dirname(dirname(commonDir));
-  const hubRoot = join(eqtyRoot, "ownables-hub");
+  const hubRoot = hubRootOverride?.trim()
+    ? resolve(hubRootOverride)
+    : join(eqtyRoot, "ownables-hub");
   const contractsRoot = join(eqtyRoot, "eqty-contracts");
 
   for (const [name, path] of [["ownables-hub", hubRoot], ["eqty-contracts", contractsRoot]]) {
     if (!existsSync(path)) {
       fail(`Unable to resolve ${name} from Git common directory ${commonDir}: expected ${path}`);
     }
+  }
+
+  if (!existsSync(join(hubRoot, "package.json"))) {
+    fail(`The selected ownables-hub root is not a repository: ${hubRoot}`);
   }
 
   return { hubRoot, contractsRoot };
@@ -519,6 +525,7 @@ async function main() {
         VITE_OWNABLE_EXAMPLES_URL: "/ownables",
         E2E_HUB_INDEXER_ENV_JSON: JSON.stringify(indexerRuntimeEnv),
         E2E_HUB_RUNTIME_ENV_JSON: JSON.stringify(hubRuntimeEnv),
+        E2E_HUB_ROOT: HUB_ROOT,
         E2E_HUB_PROCESS_ID: String(hub.pid),
       },
       null,
