@@ -4,11 +4,13 @@ Feature: Transfer and import through Hub
   Scenario: Transfer an Ownable to a controlled recipient and import it
     Given the transfer and import proof is reset
     And I'm on the homepage
-    When I click button "Issue an Ownable"
+    When I click button "menu"
+    And I check switch "Anchor events"
+    And I click button "Close settings"
+    And I click button "Issue an Ownable"
     And I click button "Robot An adorable robot companion"
     Then heading "Robot" is visible
     And the ownable widget is ready
-    And I check switch "Anchor events"
     When I click button "More options"
     And I click menuitem "Transfer"
     And I set field "Recipient address" to "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
