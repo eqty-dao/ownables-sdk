@@ -5,8 +5,7 @@ Feature: Apply submitted public events before Hub confirmation
     Given the Hub transport verifier backend is reset
     And I'm on the homepage
     When I click button "menu"
-    And I check switch "Anchor events"
-    And I close the settings sidebar
+    And I enable anchoring and close the settings sidebar
     And I click button "Issue an Ownable"
     And I click button "Block Stack Stack seven crooked public blocks"
     And the ownable widget is ready

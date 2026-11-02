@@ -83,11 +83,19 @@ When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
 });
 
-When('I close the settings sidebar', async function () {
+When('I enable anchoring and close the settings sidebar', async function () {
+  const anchoringToggle = this.page.getByRole('switch', { name: 'Anchor events' });
   const closeButton = this.page.getByRole('button', { name: 'Close settings' });
 
-  await expect(closeButton).toBeVisible({ timeout: 10_000 });
-  await closeButton.click();
+  await expect(anchoringToggle).toBeVisible({ timeout: 10_000 });
+  if ((await anchoringToggle.getAttribute('aria-checked')) !== 'true') {
+    await anchoringToggle.click({ timeout: 10_000 });
+  }
+  await expect(anchoringToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
+
+  if (await closeButton.isVisible()) {
+    await closeButton.click({ timeout: 10_000 });
+  }
   await expect(closeButton).toBeHidden({ timeout: 10_000 });
 });
 
