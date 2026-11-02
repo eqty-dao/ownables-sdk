@@ -693,6 +693,40 @@ describe("main-list discovery verifier", () => {
     );
   });
 
+  it("accepts canonical Hub discovery updates for a checksummed E2E wallet", async () => {
+    const canonicalRecipientAccount = "eip155:84532:0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
+    e2eState.enabled = true;
+    e2eState.address = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    accountState.address = undefined as unknown as string;
+    accountState.isConnected = false;
+    const { discoveryStream } = configureBaseServices();
+    serviceMap.hub.listAvailableOwnables = vi.fn().mockResolvedValue({
+      owner: canonicalRecipientAccount,
+      entries: [],
+    });
+
+    render(<MainListHarness />);
+
+    await waitFor(() => {
+      expect(serviceMap.hub.watchAvailableOwnables).toHaveBeenCalledWith(
+        canonicalRecipientAccount,
+        expect.objectContaining({
+          onEvent: expect.any(Function),
+        })
+      );
+    });
+
+    await act(async () => {
+      discoveryStream.emit({
+        owner: canonicalRecipientAccount,
+        entry: AVAILABLE_ENTRY_B,
+      });
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText("Elixir")).toBeTruthy();
+  });
+
   it("applies live discovery updates from the wallet-scoped SSE stream", async () => {
     const { discoveryStream } = configureBaseServices();
 
