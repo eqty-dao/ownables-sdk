@@ -133,7 +133,12 @@ describe("transfer upload lifecycle", () => {
   it("does not report transfer success when upload fails", async () => {
     const user = userEvent.setup();
     const onTransferred = vi.fn();
-    const { submitAnchors } = configureServices(Promise.reject(new Error("upload failed")));
+    const { submitAnchors, uploadOwnable } = configureServices(Promise.resolve({
+      status: "available",
+      ownableId: "ownable-available",
+      cid: "bafyavailable",
+    }));
+    uploadOwnable.mockRejectedValue(new Error("upload failed"));
 
     render(<TransferHarness execute={vi.fn().mockResolvedValue(undefined)} onTransferred={onTransferred} />);
     await user.click(screen.getByRole("button", { name: "Transfer" }));
