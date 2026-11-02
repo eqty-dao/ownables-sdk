@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   createPublicClient,
   createWalletClient,
@@ -23,18 +23,24 @@ import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
 
-function resolveEqtyRepositories(root = ROOT) {
+function resolveEqtyRepositories(root = ROOT, hubRootOverride = process.env.E2E_HUB_ROOT) {
   const commonDir = runSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
     cwd: root,
   });
   const eqtyRoot = dirname(dirname(commonDir));
-  const hubRoot = join(eqtyRoot, "ownables-hub");
+  const hubRoot = hubRootOverride?.trim()
+    ? resolve(hubRootOverride)
+    : join(eqtyRoot, "ownables-hub");
   const contractsRoot = join(eqtyRoot, "eqty-contracts");
 
   for (const [name, path] of [["ownables-hub", hubRoot], ["eqty-contracts", contractsRoot]]) {
     if (!existsSync(path)) {
       fail(`Unable to resolve ${name} from Git common directory ${commonDir}: expected ${path}`);
     }
+  }
+
+  if (!existsSync(join(hubRoot, "package.json"))) {
+    fail(`The selected ownables-hub root is not a repository: ${hubRoot}`);
   }
 
   return { hubRoot, contractsRoot };
@@ -58,12 +64,14 @@ const DB_PORT = process.env.HUB_DB_PORT || "54329";
 const DB_NAME = `ownables_hub_sdk_verify_${process.pid}`;
 const DATABASE_URL = `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
+const HUB_STORAGE_URL = `file://${HUB_STORAGE_DIR}`;
 const RUNTIME_ENV_PATH = join(ROOT, ".e2e-runtime.json");
 let cleaningUp = false;
 
 function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
   return {
     DATABASE_URL,
+    OWNABLES_STORAGE: HUB_STORAGE_URL,
     HUB_NETWORK_PROFILE: "testnet",
     TESTNET_CHAIN_ID: "84532",
     TESTNET_RPC_URL: RPC_URL,
@@ -433,7 +441,7 @@ async function main() {
   const hubRuntimeEnv = {
     ...indexerRuntimeEnv,
     NODE_ENV: process.env.NODE_ENV || "development",
-    OWNABLES_STORAGE: `file://${HUB_STORAGE_DIR}`,
+    OWNABLES_STORAGE: HUB_STORAGE_URL,
     CORS_ORIGINS: APP_URL,
     PORT: HUB_PORT,
     PUBLIC_BASE_URL: HUB_URL,
@@ -519,6 +527,7 @@ async function main() {
         VITE_OWNABLE_EXAMPLES_URL: "/ownables",
         E2E_HUB_INDEXER_ENV_JSON: JSON.stringify(indexerRuntimeEnv),
         E2E_HUB_RUNTIME_ENV_JSON: JSON.stringify(hubRuntimeEnv),
+        E2E_HUB_ROOT: HUB_ROOT,
         E2E_HUB_PROCESS_ID: String(hub.pid),
       },
       null,
@@ -531,7 +540,15 @@ async function main() {
 }
 
 if (process.argv.includes("--validate-paths")) {
-  console.log(JSON.stringify({ HUB_ROOT, CONTRACTS_ROOT, DB_CONTAINER, databaseStrategy: "docker-exec" }));
+  const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress: "0xanchor", anchorStartBlock: 0 });
+  console.log(JSON.stringify({
+    HUB_ROOT,
+    CONTRACTS_ROOT,
+    DB_CONTAINER,
+    databaseStrategy: "docker-exec",
+    indexerStorage: indexerRuntimeEnv.OWNABLES_STORAGE,
+    hubStorage: HUB_STORAGE_URL,
+  }));
 } else {
   await main();
 }

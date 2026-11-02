@@ -72,6 +72,13 @@ export default function Ownable(props: OwnableProps) {
   );
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
+  const transferAfterLoad = useCallback(
+    async (address: string) => {
+      await onLoad();
+      await transfer(address);
+    },
+    [onLoad, transfer]
+  );
   const { showConfirm } = useDialogs();
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -233,7 +240,7 @@ export default function Ownable(props: OwnableProps) {
 
   useEffect(() => {
     if (!pkg || !pkg.isDynamic || pkg.hasWidgetState) return;
-    void onLoad();
+    void onLoad().catch(() => {});
   }, [pkg, onLoad]);
 
   if (!ownables || !packages || !idb || !eventChains || !pkg) return <></>;
@@ -269,13 +276,15 @@ export default function Ownable(props: OwnableProps) {
         onRestore={props.onRestore}
         iframeRef={iframeRef}
         onBack={props.onBack}
-        onLoad={() => onLoad()}
+        onLoad={() => {
+          void onLoad().catch(() => {});
+        }}
         onAddFiles={onAddFiles}
         onConsume={() => !!info && props.onConsume(info)}
         onDownloadAttachment={onDownloadAttachment}
         onCloseOwnable={onCloseOwnable}
         onDelete={props.onDelete}
-        onTransfer={(address) => transfer(address)}
+        onTransfer={transferAfterLoad}
         onLock={onLock}
         onUnlock={onUnlock}
       />

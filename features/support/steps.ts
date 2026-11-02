@@ -19,6 +19,7 @@ Given('I switch the controlled E2E wallet to address index {int}', async functio
   );
   await this.page.reload({ waitUntil: 'domcontentloaded' });
 });
+
 import {
   captureVisiblePublicEventView,
   confirmLatestPendingPublicEvent,
@@ -34,12 +35,48 @@ import {
   rememberCurrentOwnableId,
   repeatCurrentOwnablePublicEventStream,
   resetHubTransport,
+  runHubIndexer,
   startRecordingWidgetActionMessages,
   type PublicEventsWorld,
 } from './utils/public-events-harness.ts';
+import {
+  expectAvailableThroughStream,
+  expectPendingTransferUpload,
+  expectRecipientDiscoveryReady,
+  importTransferredOwnable,
+  resetTransferImportProof,
+  type TransferImportWorld,
+} from './utils/transfer-import-harness.ts';
 
 Given('the Hub transport verifier backend is reset', function () {
   resetHubTransport(this as PublicEventsWorld);
+});
+
+Given('the transfer and import proof is reset', async function () {
+  await resetTransferImportProof(this as TransferImportWorld);
+});
+
+Then('the Hub upload response is pending for the transfer', async function () {
+  await expectPendingTransferUpload(this as TransferImportWorld);
+});
+
+Then('recipient discovery has its initial snapshot and availability stream', async function () {
+  await expectRecipientDiscoveryReady(this as TransferImportWorld);
+});
+
+When('the Hub indexes the pending transfer upload', function () {
+  runHubIndexer();
+});
+
+Then(
+  'the recipient observes button {string} through the availability stream without another snapshot',
+  async function (buttonName: string) {
+    await expectAvailableThroughStream(this as TransferImportWorld, buttonName);
+  }
+);
+
+When('I import the transferred ownable', async function () {
+  await importTransferredOwnable(this as TransferImportWorld);
 });
 
 When('the ownable widget is ready', async function () {

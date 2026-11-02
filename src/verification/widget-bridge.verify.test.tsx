@@ -33,6 +33,15 @@ vi.mock("wagmi", () => ({
   useAccount: () => accountState,
 }));
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+
+  return { promise, resolve };
+}
+
 describe("widget bridge verification", () => {
   let messageHandler: ((event: MessageEvent) => Promise<void>) | undefined;
 
@@ -63,6 +72,7 @@ describe("widget bridge verification", () => {
     onPublicEventsChanged,
     emitPublicEventImpl,
     listTrackedPublicEvents,
+    pendingChainEvent = false,
   }: {
     archived?: boolean;
     pkg?: TypedPackage;
@@ -71,11 +81,19 @@ describe("widget bridge verification", () => {
     onPublicEventsChanged?: (entryId: string, replay: any) => void | Promise<void>;
     emitPublicEventImpl?: (...args: any[]) => Promise<any>;
     listTrackedPublicEvents?: () => Promise<any[]>;
+    pendingChainEvent?: boolean;
   } = {}) {
     const chain = EventChain.create(
       "0x0000000000000000000000000000000000000abc",
       84532
     );
+    if (pendingChainEvent) {
+      vi.spyOn(chain, "startingAfter").mockReturnValue({
+        events: [{}],
+        isSigned: () => true,
+        state: chain.state,
+      } as unknown as EventChain);
+    }
     const onError = vi.fn();
     const execute = vi.fn().mockResolvedValue([]);
     const defaultEmitReplay = {
@@ -182,9 +200,68 @@ describe("widget bridge verification", () => {
       onError,
       query,
       rpc,
+      result: render.result,
       widgetWindow,
     };
   }
+
+  it("shares one dynamic initialization across concurrent load calls", async () => {
+    const pkg = {
+      title: "Block Stack",
+      name: "ownable-block-stack",
+      description: "Stack seven crooked public blocks",
+      cid: "bafy-test",
+      versions: [],
+      isDynamic: true,
+      hasMetadata: true,
+      hasWidgetState: true,
+      hasAttachments: false,
+      isClosable: false,
+      isConsumable: false,
+      isConsumer: false,
+      isLockable: false,
+      isTransferable: true,
+    } satisfies TypedPackage;
+    const initialization = deferred<void>();
+    const { result, getStateDump, query } = setupHook({ pkg, staleStateDump: [] });
+    serviceMap.ownables.init = vi.fn(() => initialization.promise);
+
+    const first = result.current.onLoad();
+    const second = result.current.onLoad();
+
+    expect(second).toBe(first);
+    expect(serviceMap.ownables.init).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      initialization.resolve();
+      await first;
+    });
+
+    expect(getStateDump).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenCalledWith({ get_widget_state: {} }, []);
+  });
+
+  it("waits for initialization before applying pending chain events", () => {
+    const pkg = {
+      title: "Block Stack",
+      name: "ownable-block-stack",
+      description: "Stack seven crooked public blocks",
+      cid: "bafy-test",
+      versions: [],
+      isDynamic: true,
+      hasMetadata: true,
+      hasWidgetState: true,
+      hasAttachments: false,
+      isClosable: false,
+      isConsumable: false,
+      isConsumer: false,
+      isLockable: false,
+      isTransferable: true,
+    } satisfies TypedPackage;
+    const { getStateDump } = setupHook({ pkg, pendingChainEvent: true });
+
+    expect(getStateDump).not.toHaveBeenCalled();
+  });
 
   it("keeps execute messages on the private execute path", async () => {
     const { chain, execute, emitPublicEvent, messageHandler, widgetWindow } = setupHook();
