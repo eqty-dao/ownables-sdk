@@ -5,6 +5,9 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { request as httpRequest } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToAccount } from 'viem/accounts';
+import { loadE2ERuntimeEnvironment } from './e2e-runtime.ts';
+
+loadE2ERuntimeEnvironment();
 
 const DEFAULT_E2E_MNEMONIC =
   'test test test test test test test test test test test junk';

@@ -1,4 +1,7 @@
 import { expect, type Page, type Request as PlaywrightRequest, type Response } from '@playwright/test';
+import { loadE2ERuntimeEnvironment } from './e2e-runtime.ts';
+
+loadE2ERuntimeEnvironment();
 
 const RECIPIENT_ADDRESS = '0x70997970c51812dc3a010c7d01b50e0d17dc79c8';
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
