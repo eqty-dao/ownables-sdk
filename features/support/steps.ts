@@ -1,5 +1,4 @@
 import { Given, Then, When } from '@letsrunit/bdd';
-import { expect } from '@playwright/test';
 import { uploadFile } from './utils/file-upload.ts';
 import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 import { expectWalletEmpty } from './utils/wallet.ts';
@@ -21,12 +20,6 @@ Given('I switch the controlled E2E wallet to address index {int}', async functio
   await this.page.reload({ waitUntil: 'domcontentloaded' });
 });
 
-Given('the controlled E2E wallet is ready', async function () {
-  await expect(this.page.getByText('Testnet', { exact: true })).toBeVisible({ timeout: 10_000 });
-  await expect(
-    this.page.getByText('Please switch to Base Sepolia network to use this application.', { exact: true })
-  ).toBeHidden({ timeout: 10_000 });
-});
 import {
   captureVisiblePublicEventView,
   confirmLatestPendingPublicEvent,
@@ -88,22 +81,6 @@ When('I import the transferred ownable', async function () {
 
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
-});
-
-When('I enable anchoring and close the settings sidebar', async function () {
-  const anchoringToggle = this.page.getByRole('switch', { name: 'Anchor events' });
-  const closeButton = this.page.getByRole('button', { name: 'Close settings' });
-
-  await expect(anchoringToggle).toBeVisible({ timeout: 10_000 });
-  if ((await anchoringToggle.getAttribute('aria-checked')) !== 'true') {
-    await anchoringToggle.click({ timeout: 10_000 });
-  }
-  await expect(anchoringToggle).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
-
-  if (await closeButton.isVisible()) {
-    await closeButton.click({ timeout: 10_000 });
-  }
-  await expect(closeButton).toBeHidden({ timeout: 10_000 });
 });
 
 When('I start recording widget action messages', async function () {
