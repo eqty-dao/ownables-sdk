@@ -402,10 +402,9 @@ describe("main-list discovery verifier", () => {
 
     expect(await screen.findByText("Potion")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Import Potion" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Import Potion" }).closest("[data-ownable-id]")).toHaveAttribute(
-      "data-ownable-id",
-      AVAILABLE_ENTRY.id
-    );
+    expect(
+      screen.getByRole("button", { name: "Import Potion" }).closest("[data-ownable-id]")?.getAttribute("data-ownable-id")
+    ).toBe(AVAILABLE_ENTRY.id);
     expect(screen.queryByText("Let's get started!")).toBeNull();
     expect(screen.queryByText("Notifications")).toBeNull();
     expect(screen.queryByText("Available from Hub")).toBeNull();
