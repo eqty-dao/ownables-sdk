@@ -2291,44 +2291,44 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ownables/adapter-viem@npm:0.13.0":
-  version: 0.13.0
-  resolution: "@ownables/adapter-viem@npm:0.13.0"
+"@ownables/adapter-viem@npm:0.14.0":
+  version: 0.14.0
+  resolution: "@ownables/adapter-viem@npm:0.14.0"
   dependencies:
-    "@ownables/core": "npm:0.13.0"
+    "@ownables/core": "npm:0.14.0"
     eqty-core: "npm:^1.1.1"
     viem: "npm:^2.47.4"
-  checksum: 10c0/cd6b591fbd721166ee20c61912c80b3a846f9cc2606c36814da2e599f0da749f073317c01b3ffdcb2759c601a5cb1dd577e906a7ba56e918a5b8c0201239e61a
+  checksum: 10c0/1182fcc2ed8666363c7695edd91045f181d3c97b6182c75b10ec1465773275c15e501355cb408f142b431fed639bfa2c1a926d418aecf93f771ad7ec08dd11b1
   languageName: node
   linkType: hard
 
-"@ownables/builder@npm:0.13.0":
-  version: 0.13.0
-  resolution: "@ownables/builder@npm:0.13.0"
+"@ownables/builder@npm:0.14.0":
+  version: 0.14.0
+  resolution: "@ownables/builder@npm:0.14.0"
   dependencies:
-    "@ownables/core": "npm:0.13.0"
-  checksum: 10c0/9f862c83ffed2fa6ea1c13f3e53992e96754970c218d12316be4d5bb249334c0c2e312ce32a8d479d9810515b165e0e12be941ff405f03d3a9d953920b95c186
+    "@ownables/core": "npm:0.14.0"
+  checksum: 10c0/e995cd189257323f09c6823e34070451ab31391c12587367c4dc2f893a7c0304925a3ab45c5b84812f5854cc89eb5d5d4c260cec4e6dba9406f010d12f5ae99d
   languageName: node
   linkType: hard
 
-"@ownables/core@npm:0.13.0":
-  version: 0.13.0
-  resolution: "@ownables/core@npm:0.13.0"
+"@ownables/core@npm:0.14.0":
+  version: 0.14.0
+  resolution: "@ownables/core@npm:0.14.0"
   dependencies:
     blockstore-core: "npm:^6.1.2"
     cbor-x: "npm:^1.6.0"
     eqty-core: "npm:^1.1.1"
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
-  checksum: 10c0/5bb90fcb7d42650ce3d9fd76fb9a3e83557638c4bee300a43e71e39d59639c5a1f53bf1e58227e102665dea9c95bd8fb6314d991d79f62e088a97e80279648ef
+  checksum: 10c0/83218dd790444c398348fe76a75170a2c9b63753a0747b09533f6c7c1313e1c1b601ad3f8251c65d90f77a2a9e18370eefb01558294fea7b7d5a6532a40e2f04
   languageName: node
   linkType: hard
 
-"@ownables/platform-browser@npm:0.13.0":
-  version: 0.13.0
-  resolution: "@ownables/platform-browser@npm:0.13.0"
+"@ownables/platform-browser@npm:0.14.0":
+  version: 0.14.0
+  resolution: "@ownables/platform-browser@npm:0.14.0"
   dependencies:
-    "@ownables/core": "npm:0.13.0"
+    "@ownables/core": "npm:0.14.0"
     axios: "npm:^1.13.6"
     blockstore-core: "npm:^6.1.2"
     buffer: "npm:^6.0.3"
@@ -2336,7 +2336,7 @@ __metadata:
     ipfs-unixfs-importer: "npm:^16.1.4"
     jszip: "npm:^3.10.1"
     mime: "npm:^4.1.0"
-  checksum: 10c0/91735d309be25b66f514432436e518eca6c937e28f06a786ffc77f557c5ce7264f090d4904ebaa7802416b151ec9298a7148a6c6a1c60bb895d1f6ab8b822ff2
+  checksum: 10c0/6cbed0b6167b8b4df514b96139db12b8185ae2ed3adc257f8a92d223c4ab4ae6c505ce32761274036fb106c619c200f79f8fd57c44fbf9c74273aa94535a2cb0
   languageName: node
   linkType: hard
 
@@ -2354,10 +2354,10 @@ __metadata:
     "@letsrunit/cli": "npm:^0.24.1"
     "@letsrunit/cucumber": "npm:^0.24.1"
     "@letsrunit/mcp-server": "npm:^0.24.1"
-    "@ownables/adapter-viem": "npm:0.13.0"
-    "@ownables/builder": "npm:0.13.0"
-    "@ownables/core": "npm:0.13.0"
-    "@ownables/platform-browser": "npm:0.13.0"
+    "@ownables/adapter-viem": "npm:0.14.0"
+    "@ownables/builder": "npm:0.14.0"
+    "@ownables/core": "npm:0.14.0"
+    "@ownables/platform-browser": "npm:0.14.0"
     "@playwright/test": "npm:1.58.2"
     "@rainbow-me/rainbowkit": "npm:^2.2.10"
     "@tailwindcss/postcss": "npm:^4.2.1"
