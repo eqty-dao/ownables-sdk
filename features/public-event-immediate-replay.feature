@@ -1,4 +1,4 @@
-@story-1
+@requires-hub @story-1
 Feature: Apply submitted public events before Hub confirmation
 
   Scenario: Keep locally applied public events visible while Hub confirmation is held
