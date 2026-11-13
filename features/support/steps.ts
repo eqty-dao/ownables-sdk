@@ -19,8 +19,11 @@ Given('I switch the controlled E2E wallet to address index {int}', async functio
   );
   await this.page.reload({ waitUntil: 'domcontentloaded' });
 });
+
 import {
+  captureVisiblePublicEventView,
   confirmLatestPendingPublicEvent,
+  expectCapturedPublicEventView,
   expectHubSnapshotRequest,
   expectHubStreamRequest,
   expectLatestHubStreamQuery,
@@ -28,14 +31,52 @@ import {
   expectLaterHubStreamRequest,
   expectTrackedPublicEventCount,
   expectTrackedPublicEventStatus,
+  expectVisiblePublicEventRows,
   rememberCurrentOwnableId,
+  repeatCurrentOwnablePublicEventStream,
   resetHubTransport,
+  runHubIndexer,
   startRecordingWidgetActionMessages,
   type PublicEventsWorld,
 } from './utils/public-events-harness.ts';
+import {
+  expectAvailableThroughStream,
+  expectPendingTransferUpload,
+  expectRecipientDiscoveryReady,
+  importTransferredOwnable,
+  resetTransferImportProof,
+  type TransferImportWorld,
+} from './utils/transfer-import-harness.ts';
 
 Given('the Hub transport verifier backend is reset', function () {
   resetHubTransport(this as PublicEventsWorld);
+});
+
+Given('the transfer and import proof is reset', async function () {
+  await resetTransferImportProof(this as TransferImportWorld);
+});
+
+Then('the Hub upload response is pending for the transfer', async function () {
+  await expectPendingTransferUpload(this as TransferImportWorld);
+});
+
+Then('recipient discovery has its initial snapshot and availability stream', async function () {
+  await expectRecipientDiscoveryReady(this as TransferImportWorld);
+});
+
+When('the Hub indexes the pending transfer upload', function () {
+  runHubIndexer();
+});
+
+Then(
+  'the recipient observes button {string} through the availability stream without another snapshot',
+  async function (buttonName: string) {
+    await expectAvailableThroughStream(this as TransferImportWorld, buttonName);
+  }
+);
+
+When('I import the transferred ownable', async function () {
+  await importTransferredOwnable(this as TransferImportWorld);
 });
 
 When('the ownable widget is ready', async function () {
@@ -77,7 +118,7 @@ Then(
 );
 
 Then(
-  'the latest Hub public-events stream request uses only repeated {string} params plus {string}',
+  'the latest Hub public-events stream request uses only repeated {string} params and optional {string}',
   function (idParamName: string, fromParamName: string) {
     expectLatestHubStreamQuery(
       this as PublicEventsWorld,
@@ -100,6 +141,43 @@ Then(
     await expectTrackedPublicEventCount(this.page, countText, eventType);
   }
 );
+
+Then(
+  'there are exactly {string} visible {string} public event rows for {string}',
+  async function (
+    countText: string,
+    status: 'pending' | 'confirmed',
+    eventType: string
+  ) {
+    await expectVisiblePublicEventRows(this.page, countText, eventType, status);
+  }
+);
+
+When(
+  'I capture the visible {string} public event rows for {string}',
+  async function (
+    countText: string,
+    eventType: string
+  ) {
+    await captureVisiblePublicEventView(
+      this as PublicEventsWorld,
+      countText,
+      eventType,
+      'pending'
+    );
+  }
+);
+
+Then(
+  'the captured public event rows remain in place and become {string} for {string}',
+  async function (status: 'pending' | 'confirmed', eventType: string) {
+    await expectCapturedPublicEventView(this as PublicEventsWorld, eventType, status);
+  }
+);
+
+When('the Hub repeats the current ownable public-event stream', async function () {
+  await repeatCurrentOwnablePublicEventStream(this as PublicEventsWorld);
+});
 
 When(
   'I upload the file {string} into the {string} file input',

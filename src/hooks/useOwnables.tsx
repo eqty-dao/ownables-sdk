@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import type { ReplayAttemptResult } from "@ownables/core";
+import type { ReconciledPublicEvent, ReplayAttemptResult } from "@ownables/core";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "./useService";
 import { type LogProgress, type ProgressController, useProgress } from "@/contexts/Progress.context";
@@ -92,6 +92,9 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const [publicEventReplayById, setPublicEventReplayById] = useState<
     Record<string, ReplayAttemptResult | undefined>
   >({});
+  const [trackedPublicEventsByOwnableId, setTrackedPublicEventsByOwnableId] = useState<
+    Record<string, ReconciledPublicEvent[] | undefined>
+  >({});
 
   const ownableService = useService("ownables");
   const packageService = useService("packages");
@@ -104,16 +107,17 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const chainId = useChainId();
   const { address, isConnected } = useEffectiveWallet();
   const account = address ? `eip155:${chainId}:${address}` : null;
+  const discoveryAccount = account?.toLowerCase() ?? null;
   const archivedStorageKey = account ? `ownables:archived:${account}` : null;
   const legacyArchivedStorageKey = account ? `hub-available:dismissed:${account}` : null;
   const deletedAvailableStorageKey = account ? `hub-available:deleted:${account}` : null;
-  const discoveryEnabled = !!hub?.isConfigured && !!account && isConnected;
+  const discoveryEnabled = !!hub?.isConfigured && !!discoveryAccount && isConnected;
   const availableStreamRef = useRef<{ close(): void } | null>(null);
   const publicEventsStreamRef = useRef<{ close(): void } | null>(null);
   const mountedRef = useRef(true);
   const activeProgressRef = useRef<ProgressController | null>(null);
   const ownablesRef = useRef(ownables);
-  const accountRef = useRef(account);
+  const accountRef = useRef(discoveryAccount);
   const ownableIdsKey = useMemo(
     () => ownables.map((entry) => entry.chain.id).sort().join("|"),
     [ownables]
@@ -124,8 +128,8 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   }, [ownables]);
 
   useEffect(() => {
-    accountRef.current = account;
-  }, [account]);
+    accountRef.current = discoveryAccount;
+  }, [discoveryAccount]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -258,11 +262,11 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     setAvailableLoaded(false);
     setAvailableLoadedAccount(null);
     setAvailableOwnables([]);
-    setAvailableOwnablesAccount(account);
+    setAvailableOwnablesAccount(discoveryAccount);
 
-    if (!discoveryEnabled || !hub || !account) {
+    if (!discoveryEnabled || !hub || !discoveryAccount) {
       setAvailableLoaded(true);
-      setAvailableLoadedAccount(account);
+      setAvailableLoadedAccount(discoveryAccount);
       return;
     }
 
@@ -270,7 +274,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
     const connect = async () => {
       try {
-        const response = await hub.listAvailableOwnables(account);
+        const response = await hub.listAvailableOwnables(discoveryAccount);
         if (cancelled) {
           return;
         }
@@ -283,9 +287,9 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         }
       } finally {
         if (!cancelled) {
-          setAvailableOwnablesAccount(account);
+          setAvailableOwnablesAccount(discoveryAccount);
           setAvailableLoaded(true);
-          setAvailableLoadedAccount(account);
+          setAvailableLoadedAccount(discoveryAccount);
         }
       }
 
@@ -294,7 +298,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       }
 
       try {
-        availableStreamRef.current = hub.watchAvailableOwnables(account, {
+        availableStreamRef.current = hub.watchAvailableOwnables(discoveryAccount, {
           onEvent: ({ owner, entry }) => {
             if (owner !== accountRef.current) {
               return;
@@ -321,7 +325,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       availableStreamRef.current?.close();
       availableStreamRef.current = null;
     };
-  }, [account, discoveryEnabled, hub]);
+  }, [discoveryAccount, discoveryEnabled, hub]);
 
   const visibleImportedOwnables = useMemo(() => {
     const archivedIds = new Set(archivedOwnableIds);
@@ -329,7 +333,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   }, [archivedOwnableIds, ownables]);
 
   const visibleAvailableOwnables = useMemo(() => {
-    if (availableOwnablesAccount !== account) {
+    if (availableOwnablesAccount !== discoveryAccount) {
       return [];
     }
 
@@ -344,7 +348,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         !importedOwnableIds.has(entry.id)
     );
   }, [
-    account,
+    discoveryAccount,
     archivedOwnableIds,
     availableOwnables,
     availableOwnablesAccount,
@@ -358,7 +362,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   );
 
   const archivedAvailableOwnables = useMemo(() => {
-    if (availableOwnablesAccount !== account) {
+    if (availableOwnablesAccount !== discoveryAccount) {
       return [];
     }
 
@@ -373,7 +377,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
         !importedOwnableIds.has(entry.id)
     );
   }, [
-    account,
+    discoveryAccount,
     archivedOwnableIds,
     availableOwnables,
     availableOwnablesAccount,
@@ -401,17 +405,32 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
   const mainListLoaded =
     loaded &&
-    (!discoveryEnabled || (availableLoaded && availableLoadedAccount === account));
+    (!discoveryEnabled || (availableLoaded && availableLoadedAccount === discoveryAccount));
+
+  const refreshTrackedPublicEvents = useCallback(
+    async (entryId: string) => {
+      if (!ownableService) return;
+
+      const trackedPublicEvents = await ownableService.listTrackedPublicEvents(entryId);
+      setTrackedPublicEventsByOwnableId((current) => ({
+        ...current,
+        [entryId]: trackedPublicEvents,
+      }));
+    },
+    [ownableService]
+  );
 
   const syncTrackedPublicEvents = useCallback(
     async (entryId: string, replay: ReplayAttemptResult) => {
-      if (!ownableService || !replayTouchesTrackedPublicEvents(replay)) {
-        return;
+      if (!ownableService) return;
+
+      if (replayTouchesTrackedPublicEvents(replay)) {
+        setPublicEventReplayById((current) => ({ ...current, [entryId]: replay }));
       }
 
-      setPublicEventReplayById((current) => ({ ...current, [entryId]: replay }));
+      await refreshTrackedPublicEvents(entryId);
     },
-    [ownableService]
+    [ownableService, refreshTrackedPublicEvents]
   );
 
   useEffect(() => {
@@ -435,11 +454,15 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
             return;
           }
 
-          const replay = await ownableService.applyIndexedPublicEventSnapshot(
-            entry.chain,
-            snapshot.publicEvents
-          );
-          await syncTrackedPublicEvents(entry.chain.id, replay);
+          if (snapshot.publicEvents.length > 0) {
+            const replay = await ownableService.applyIndexedPublicEventSnapshot(
+              entry.chain,
+              snapshot.publicEvents
+            );
+            await syncTrackedPublicEvents(entry.chain.id, replay);
+          } else {
+            await refreshTrackedPublicEvents(entry.chain.id);
+          }
 
           latestBlocks.push(
             snapshot.publicEvents.reduce(
@@ -506,7 +529,14 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       publicEventsStreamRef.current?.close();
       publicEventsStreamRef.current = null;
     };
-  }, [hub, ownableIdsKey, ownables, ownableService, syncTrackedPublicEvents]);
+  }, [
+    hub,
+    ownableIdsKey,
+    ownables,
+    ownableService,
+    refreshTrackedPublicEvents,
+    syncTrackedPublicEvents,
+  ]);
 
   const getExplorerUrl = (txHash: string, currentChainId: number) => {
     switch (currentChainId) {
@@ -799,6 +829,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     mainListEntries,
     mainListLoaded,
     publicEventReplayById,
+    trackedPublicEventsByOwnableId,
     setOwnables,
     loaded,
     setLoaded,

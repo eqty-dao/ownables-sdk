@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, NFT_ITEM, OWNABLE_INFO, PACKAGE_CID};
+use crate::state::{CONFIG, Config, METADATA, NETWORK_ID, OWNABLE_INFO, PACKAGE_CID};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cosmwasm_std::{Binary, to_json_binary};
@@ -42,9 +42,6 @@ pub fn instantiate(
 
     NETWORK_ID.save(deps.storage, &msg.network_id)?;
     CONFIG.save(deps.storage, &Config {})?;
-    if let Some(nft) = msg.nft {
-        NFT_ITEM.save(deps.storage, &nft)?;
-    }
     METADATA.save(deps.storage, &metadata)?;
     OWNABLE_INFO.save(deps.storage, &ownable_info)?;
     PACKAGE_CID.save(deps.storage, &msg.package)?;
@@ -130,12 +127,10 @@ fn query_ownable_widget_state(deps: Deps) -> StdResult<Binary> {
 }
 
 fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
-    let nft = NFT_ITEM.may_load(deps.storage)?;
     let ownable_info = OWNABLE_INFO.load(deps.storage)?;
     to_json_binary(&InfoResponse {
         owner: ownable_info.owner,
         issuer: ownable_info.issuer,
-        nft,
         ownable_type: ownable_info.ownable_type,
     })
 }

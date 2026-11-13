@@ -55,6 +55,8 @@ export function useOwnableState(
   const mountedRef = useRef(true);
   const activeProgressRef = useRef<ProgressController | null>(null);
   const appliedRef = useRef<any>(new EventChain(chain.id).latestHash);
+  const initializedRef = useRef(false);
+  const initializationRef = useRef<Promise<void> | null>(null);
 
   const [initialized, setInitialized] = useState(false);
   const [applied, setApplied] = useState<any>(appliedRef.current);
@@ -284,7 +286,7 @@ export function useOwnableState(
         if (!shouldUpdate()) return;
         if (onPublicEventsChanged) {
           void Promise.resolve(onPublicEventsChanged(chain.id, replay)).catch((error) => {
-            console.warn("Unable to sync tracked public events after emit", error);
+            console.warn("Unable to refresh tracked public events after emit", error);
           });
         }
       } catch (e) {
@@ -303,31 +305,53 @@ export function useOwnableState(
     [applyPublicEventReplay, archived, chain, onError, onPublicEventsChanged, ownables]
   );
 
-  const onLoad = useCallback(async (): Promise<void> => {
-    if (!ownables || !pkg || initialized) return;
+  const onLoad = useCallback((): Promise<void> => {
+    if (!ownables || !pkg || initializedRef.current) return Promise.resolve();
+    if (initializationRef.current) return initializationRef.current;
 
-    if (!pkg.isDynamic) {
-      await ownables.initStore(chain, pkg.cid, pkg.uniqueMessageHash);
-      return;
-    }
+    const initialization = (async () => {
+      try {
+        if (!pkg.isDynamic) {
+          await ownables.initStore(chain, pkg.cid, pkg.uniqueMessageHash);
+        } else {
+          await ownables.init(chain, pkg.cid, pkg.uniqueMessageHash);
+          ownables.setWidgetWindow(
+            chain.id,
+            archived ? null : iframeRef.current?.contentWindow ?? null
+          );
+          if (eventChains) {
+            const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
+            if (nextStateDump) {
+              setStateDump(nextStateDump);
+              appliedRef.current = chain.latestHash;
+              setApplied(chain.latestHash);
+              await refresh(nextStateDump);
+            }
+          }
+        }
+        initializedRef.current = true;
+        setInitialized(true);
+      } catch (e) {
+        onError("Failed to forge Ownable", ownableErrorMessage(e));
+        throw e;
+      }
+    })();
 
-    try {
-      await ownables.init(chain, pkg.cid, pkg.uniqueMessageHash);
-      ownables.setWidgetWindow(chain.id, archived ? null : iframeRef.current?.contentWindow ?? null);
-      if (eventChains) {
-        const nextStateDump = await eventChains.getStateDump(chain.id, chain.state.hex);
-        if (nextStateDump) {
-          setStateDump(nextStateDump);
-          appliedRef.current = chain.latestHash;
-          setApplied(chain.latestHash);
-          await refresh(nextStateDump);
+    initializationRef.current = initialization;
+    void initialization.then(
+      () => {
+        if (initializationRef.current === initialization) {
+          initializationRef.current = null;
+        }
+      },
+      () => {
+        if (initializationRef.current === initialization) {
+          initializationRef.current = null;
         }
       }
-      setInitialized(true);
-    } catch (e) {
-      onError("Failed to forge Ownable", ownableErrorMessage(e));
-    }
-  }, [archived, chain, eventChains, initialized, ownables, pkg, onError, refresh]);
+    );
+    return initialization;
+  }, [archived, chain, eventChains, ownables, pkg, onError, refresh]);
 
   // Window message handler for widget-triggered actions
   const windowMessageHandler = useCallback(
@@ -418,7 +442,7 @@ export function useOwnableState(
   const chainEventCount = chain.events.length;
   const prev = useRef({ initialized, appliedHex: applied.hex });
   useEffect(() => {
-    if (isApplying || isExecuting || error) return;
+    if (!initialized || isApplying || isExecuting || error) return;
 
     const partial = chain.startingAfter(appliedRef.current);
     if (partial.events.length > 0 && !partial.isSigned()) {

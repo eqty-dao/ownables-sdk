@@ -1,5 +1,4 @@
 use cosmwasm_std::Addr;
-use ownable_std::NFT;
 use ownable_std_macros::{
     ownables_instantiate_msg, ownables_query_info, ownables_query_metadata,
     ownables_query_widget_state, ownables_transfer,

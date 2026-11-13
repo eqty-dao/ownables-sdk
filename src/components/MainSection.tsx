@@ -1,5 +1,5 @@
 import { EventChain } from "eqty-core";
-import type { ReplayAttemptResult } from "@ownables/core";
+import type { ReconciledPublicEvent, ReplayAttemptResult } from "@ownables/core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { cva } from "class-variance-authority";
@@ -57,6 +57,7 @@ interface MainSectionProps {
   onCreate: () => void;
   packageRefreshToken?: number;
   publicEventReplayById?: Record<string, ReplayAttemptResult | undefined>;
+  trackedPublicEventsByOwnableId?: Record<string, ReconciledPublicEvent[] | undefined>;
   onOwnablePublicEventsChanged?: (
     entryId: string,
     replay: ReplayAttemptResult
@@ -87,6 +88,7 @@ export default function MainSection({
   onCreate,
   packageRefreshToken = 0,
   publicEventReplayById = {},
+  trackedPublicEventsByOwnableId = {},
   onOwnablePublicEventsChanged,
 }: MainSectionProps) {
   const selectedOwnable = ownables.find(({ chain }) => chain.id === selectedEntryId);
@@ -120,6 +122,7 @@ export default function MainSection({
           archived={isArchivedSelected}
           isHubAvailable={isHubAvailable ?? true}
           publicEventReplay={publicEventReplayById[selectedOwnable.chain.id]}
+          trackedPublicEvents={trackedPublicEventsByOwnableId[selectedOwnable.chain.id]}
           onArchive={() => onArchive(selectedOwnable.chain.id)}
           onRestore={() => onRestore(selectedOwnable.chain.id)}
           onDelete={() => onDelete(selectedOwnable.chain.id, selectedOwnable.package)}

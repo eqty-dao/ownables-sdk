@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
-import type { ReplayAttemptResult } from "@ownables/core";
+import type { ReconciledPublicEvent, ReplayAttemptResult } from "@ownables/core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { TypedPackage } from "@/interfaces/TypedPackage";
 import { useService } from "@/hooks/useService";
@@ -22,6 +22,7 @@ interface OwnableProps {
   archived?: boolean;
   isHubAvailable?: boolean;
   publicEventReplay?: ReplayAttemptResult;
+  trackedPublicEvents?: ReconciledPublicEvent[];
   onBack: () => void;
   onArchive: () => void;
   onRestore: () => void;
@@ -71,6 +72,13 @@ export default function Ownable(props: OwnableProps) {
   );
 
   const { transfer } = useOwnableTransfer(chain, pkg, execute, props.onTransferred);
+  const transferAfterLoad = useCallback(
+    async (address: string) => {
+      await onLoad();
+      await transfer(address);
+    },
+    [onLoad, transfer]
+  );
   const { showConfirm } = useDialogs();
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -232,7 +240,7 @@ export default function Ownable(props: OwnableProps) {
 
   useEffect(() => {
     if (!pkg || !pkg.isDynamic || pkg.hasWidgetState) return;
-    void onLoad();
+    void onLoad().catch(() => {});
   }, [pkg, onLoad]);
 
   if (!ownables || !packages || !idb || !eventChains || !pkg) return <></>;
@@ -261,19 +269,22 @@ export default function Ownable(props: OwnableProps) {
         isLockable={pkg.isLockable}
         isLocked={isLocked}
         isTransferred={isTransferred}
+        trackedPublicEvents={props.trackedPublicEvents}
         archived={props.archived}
         isHubAvailable={props.isHubAvailable}
         onArchive={props.onArchive}
         onRestore={props.onRestore}
         iframeRef={iframeRef}
         onBack={props.onBack}
-        onLoad={() => onLoad()}
+        onLoad={() => {
+          void onLoad().catch(() => {});
+        }}
         onAddFiles={onAddFiles}
         onConsume={() => !!info && props.onConsume(info)}
         onDownloadAttachment={onDownloadAttachment}
         onCloseOwnable={onCloseOwnable}
         onDelete={props.onDelete}
-        onTransfer={(address) => transfer(address)}
+        onTransfer={transferAfterLoad}
         onLock={onLock}
         onUnlock={onUnlock}
       />

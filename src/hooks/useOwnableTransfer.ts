@@ -11,6 +11,7 @@ import {
   WALLET_REJECTION_MESSAGE,
   default as ownableErrorMessage,
 } from "@/utils/ownableErrorMessage";
+import type { HubUploadResult } from "@ownables/platform-browser";
 
 type ExecuteFn = (
   msg: TypedDict,
@@ -80,7 +81,11 @@ export function useOwnableTransfer(
 
       ctrl.setActive(1);
       activeStepIndex = 1;
-      await hub.uploadOwnable(content, `${chain.id}.zip`, trackedProgress as any);
+      const uploadResult: HubUploadResult = await hub.uploadOwnable(
+        content,
+        `${chain.id}.zip`,
+        trackedProgress as any
+      );
       if (!isCurrentAction()) return;
       if (ownables.anchoring) {
         ctrl.setActive(2);
@@ -90,7 +95,13 @@ export function useOwnableTransfer(
       if (!isCurrentAction()) return;
       onTransferred?.();
 
-      enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
+      if (uploadResult.status === "pending") {
+        enqueueSnackbar("Ownable transferred. Hub verification is pending.", {
+          variant: "info",
+        });
+      } else {
+        enqueueSnackbar("Ownable transferred through Hub", { variant: "success" });
+      }
 
       ctrl.close();
     } catch (error) {

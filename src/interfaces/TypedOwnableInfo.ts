@@ -2,14 +2,6 @@ export interface TypedOwnableInfo {
   owner: string;
   issuer: string;
   ownable_type?: string;
-  nft?: NftObject;
-}
-
-export interface NftObject {
-  address: string;
-  id: string;
-  lock_service?: any;
-  network: string;
 }
 
 export interface TypedMetadata {

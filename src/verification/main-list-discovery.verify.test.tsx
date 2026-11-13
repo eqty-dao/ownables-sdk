@@ -410,6 +410,9 @@ describe("main-list discovery verifier", () => {
 
     expect(await screen.findByText("Potion")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Import Potion" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Import Potion" }).closest("[data-ownable-id]")?.getAttribute("data-ownable-id")
+    ).toBe(AVAILABLE_ENTRY.id);
     expect(screen.queryByText("Let's get started!")).toBeNull();
     expect(screen.queryByText("Notifications")).toBeNull();
     expect(screen.queryByText("Available from Hub")).toBeNull();
@@ -701,6 +704,40 @@ describe("main-list discovery verifier", () => {
     );
   });
 
+  it("accepts canonical Hub discovery updates for a checksummed E2E wallet", async () => {
+    const canonicalRecipientAccount = "eip155:84532:0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
+    e2eState.enabled = true;
+    e2eState.address = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    accountState.address = undefined as unknown as string;
+    accountState.isConnected = false;
+    const { discoveryStream } = configureBaseServices();
+    serviceMap.hub.listAvailableOwnables = vi.fn().mockResolvedValue({
+      owner: canonicalRecipientAccount,
+      entries: [],
+    });
+
+    render(<MainListHarness />);
+
+    await waitFor(() => {
+      expect(serviceMap.hub.watchAvailableOwnables).toHaveBeenCalledWith(
+        canonicalRecipientAccount,
+        expect.objectContaining({
+          onEvent: expect.any(Function),
+        })
+      );
+    });
+
+    await act(async () => {
+      discoveryStream.emit({
+        owner: canonicalRecipientAccount,
+        entry: AVAILABLE_ENTRY_B,
+      });
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText("Elixir")).toBeTruthy();
+  });
+
   it("applies live discovery updates from the wallet-scoped SSE stream", async () => {
     const { discoveryStream } = configureBaseServices();
 
@@ -805,7 +842,7 @@ describe("main-list discovery verifier", () => {
     });
   });
 
-  it("uses the ownables-scoped discovery route", async () => {
+  it("uses the account-scoped discovery route", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ owner: ACCOUNT, entries: [] }), {
         status: 200,
@@ -818,12 +855,12 @@ describe("main-list discovery verifier", () => {
     await hub.listAvailableOwnables(ACCOUNT);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `https://hub.example/ownables/available?owner=${encodeURIComponent(ACCOUNT)}`,
+      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables`,
       undefined
     );
   });
 
-  it("uses the wallet-scoped discovery SSE route", async () => {
+  it("uses the account-scoped discovery SSE route", async () => {
     const streams: string[] = [];
     const hub = new HubService(
       "https://hub.example",
@@ -844,7 +881,7 @@ describe("main-list discovery verifier", () => {
     });
 
     expect(streams).toEqual([
-      `https://hub.example/ownables/available/stream?owner=${encodeURIComponent(ACCOUNT)}`,
+      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables/events`,
     ]);
   });
 

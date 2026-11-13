@@ -355,8 +355,8 @@ async function verifyEmitPublicEventFlow() {
   assert.equal(eqty.emitted.length, 1, "emit flow must publish through EQTY");
   assert.equal(
     rpc.calls.register.length,
-    0,
-    "emit flow must not register the public event until Hub confirmation arrives"
+    1,
+    "emit flow must apply the submitted public event before Hub confirmation arrives"
   );
   assert.deepEqual(
     Array.from(eqty.emitted[0].data),
@@ -365,12 +365,17 @@ async function verifyEmitPublicEventFlow() {
   );
   assert.deepEqual(
     replay.appliedReplayKeys,
-    [],
-    "emit flow must not report immediate replay application"
+    ["0x" + "44".repeat(32) + ":1"],
+    "emit flow must report the locally applied replay key"
   );
   assert.equal(replay.pendingPublicEvents.length, 1, "emit flow must create one pending replay record");
   assert.equal(replay.pendingPublicEvents[0].status, "pending");
   assert.deepEqual(replay.pendingPublicEvents[0].sources, ["local"]);
+  assert.equal(
+    replay.pendingPublicEvents[0].localApplicationState,
+    "applied",
+    "the pending record must record that its state transition was applied locally"
+  );
   assert.deepEqual(
     await service.listTrackedPublicEvents(chain.id),
     replay.pendingPublicEvents,
@@ -586,7 +591,7 @@ async function verifyEqtyAllowanceManagement() {
   assert.deepEqual(approveInput.args, [verifiedAnchorContractAddress, 42n]);
 }
 
-async function main() {
+export async function verifyExternalEventsRuntime() {
   await verifyReplayContexts();
   await verifyConsumeFlow();
   await verifyRegisterPublicEventFlow();
@@ -596,11 +601,5 @@ async function main() {
   await verifyServiceContainerInjectsAnchorConfig();
   await verifyServiceContainerInjectsHubConfig();
   await verifyEqtyAllowanceManagement();
-  console.log("external-events runtime verification passed");
+  return "external-events runtime verification passed";
 }
-
-main().catch((error) => {
-  console.error("external-events runtime verification failed");
-  console.error(error);
-  process.exit(1);
-});

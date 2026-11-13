@@ -117,6 +117,7 @@ export default function OwnableListItem(props: OwnableListItemProps) {
       <Box
         role="button"
         tabIndex={0}
+        data-ownable-id={props.id}
         className={cn(itemCard({ kind: "available", selected: !!props.isSelected }))}
         onClick={props.onClick}
         onKeyDown={(event) => {
