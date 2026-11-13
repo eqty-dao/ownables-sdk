@@ -42,7 +42,6 @@ function resolveEqtyRepositories(root = ROOT, hubRootOverride = process.env.E2E_
   if (!existsSync(join(hubRoot, "package.json"))) {
     fail(`The selected ownables-hub root is not a repository: ${hubRoot}`);
   }
-
   return { hubRoot, contractsRoot };
 }
 
@@ -158,6 +157,16 @@ function ensureProofInputs() {
       fail(
         `Missing ${zipPath}. Build the accepted ownables before running the public-events proof.`
       );
+    }
+  }
+
+  for (const name of ["robot", "paint"]) {
+    const zipPath = join(ROOT, "ownables", `${name}.zip`);
+    if (!existsSync(zipPath)) {
+      runSync("yarn", ["ownables:build", name], { cwd: ROOT });
+    }
+    if (!existsSync(zipPath)) {
+      fail(`Missing ${zipPath} after building the ${name} example`);
     }
   }
 }

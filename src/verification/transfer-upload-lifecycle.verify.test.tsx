@@ -62,7 +62,11 @@ function configureServices(uploadResult: Promise<HubUploadResult>) {
     isAvailable: vi.fn().mockResolvedValue(true),
     uploadOwnable,
   };
-  progressOpen.mockReturnValue([{ close: closeProgress }, vi.fn()]);
+  progressOpen.mockReturnValue([{
+    close: closeProgress,
+    setActive: vi.fn(),
+    setError: vi.fn(),
+  }, vi.fn()]);
 
   return { submitAnchors, uploadOwnable };
 }

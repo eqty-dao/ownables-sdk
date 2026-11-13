@@ -41,7 +41,7 @@ const {
   AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE: string;
 };
 
-const { serviceMap, accountState, e2eState, enqueueSnackbar, progressOpen, progressClose, disconnectMock } = vi.hoisted(() => ({
+const { serviceMap, accountState, e2eState, enqueueSnackbar, progressOpen, progressClose, progressController, disconnectMock } = vi.hoisted(() => ({
   serviceMap: {} as Record<string, any>,
   accountState: {
     address: "0xabc",
@@ -55,6 +55,13 @@ const { serviceMap, accountState, e2eState, enqueueSnackbar, progressOpen, progr
   enqueueSnackbar: vi.fn(),
   progressOpen: vi.fn(),
   progressClose: vi.fn(),
+  progressController: {
+    close: vi.fn(),
+    setActive: vi.fn(),
+    setDone: vi.fn(),
+    setError: vi.fn(),
+    updateStep: vi.fn(),
+  },
   disconnectMock: vi.fn(),
 }));
 
@@ -388,7 +395,8 @@ describe("main-list discovery verifier", () => {
     accountState.isConnecting = false;
     e2eState.enabled = false;
     e2eState.address = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
-    progressOpen.mockReturnValue([{ close: progressClose }, vi.fn()]);
+    progressController.close.mockImplementation(progressClose);
+    progressOpen.mockReturnValue([progressController, vi.fn()]);
   });
 
   afterEach(() => {
@@ -978,7 +986,7 @@ describe("main-list discovery verifier", () => {
     const onError = vi.fn();
     const init = vi.fn().mockResolvedValue(undefined);
     const setWidgetWindow = vi.fn();
-    const pkg = {
+    const archivedPackage = {
       cid: "bafy",
       uniqueMessageHash: "message-hash",
       isDynamic: true,
@@ -995,7 +1003,7 @@ describe("main-list discovery verifier", () => {
     const { result } = renderHook(() =>
       useOwnableState(
         chain,
-        pkg,
+        archivedPackage,
         onError,
         true
       )
@@ -1039,7 +1047,10 @@ describe("main-list discovery verifier", () => {
       expect(execute).toHaveBeenCalledWith(
         { transfer: { to: "0xdef" } },
         expect.any(Function),
-        false
+        false,
+        [],
+        false,
+        expect.any(Function)
       );
     });
 

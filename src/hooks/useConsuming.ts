@@ -1,13 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EventChain } from "eqty-core";
 import { TypedOwnableInfo } from "@/interfaces/TypedOwnableInfo";
 import { useService } from "./useService";
-import { useProgress } from "@/contexts/Progress.context";
+import { type LogProgress, type ProgressController, useProgress } from "@/contexts/Progress.context";
 import { useDialogs } from "@/contexts/Dialogs.context";
 import { useOverlay } from "@/contexts/Overlay.context";
 import { useBreakpoint } from "./useBreakpoint";
 import { enqueueSnackbar } from "notistack";
-import ownableErrorMessage from "@/utils/ownableErrorMessage";
+import {
+  isWalletRejection,
+  WALLET_REJECTION_MESSAGE,
+  default as ownableErrorMessage,
+} from "@/utils/ownableErrorMessage";
 import { OwnableEntry } from "./useOwnables";
 
 interface ConsumingState {
@@ -24,12 +28,23 @@ interface UseConsumingOptions {
 export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
   const [consuming, setConsuming] = useState<ConsumingState | null>(null);
   const [consumeEligibility, setConsumeEligibility] = useState<Record<string, boolean>>({});
+  const mountedRef = useRef(true);
+  const activeProgressRef = useRef<ProgressController | null>(null);
 
   const ownableService = useService("ownables");
   const progress = useProgress();
   const { showError } = useDialogs();
   const overlay = useOverlay();
   const isLg = useBreakpoint("lg");
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activeProgressRef.current?.close();
+      activeProgressRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!consuming) { setConsumeEligibility({}); return; }
@@ -59,7 +74,7 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
     overlay.hide();
   }, [overlay]);
 
-  const consume = useCallback((consumer: EventChain, consumable: EventChain) => {
+  const consume = useCallback(async (consumer: EventChain, consumable: EventChain) => {
     if (consumer.id === consumable.id) return;
     if (!ownableService) throw new Error("Ownable service not ready");
     const steps = [
@@ -68,17 +83,41 @@ export function useConsuming({ ownables, onConsumed }: UseConsumingOptions) {
     ];
     if (ownableService.anchoring) steps.push({ id: "anchor", label: "Anchor both events" });
     const [ctrl, onProgress] = progress.open({ title: "Consuming Ownable", steps });
-    ownableService
-      .consume(consumer, consumable, onProgress as any)
-      .then(() => {
-        setConsuming(null);
-        overlay.hide();
-        onConsumed(consumable.id);
-        enqueueSnackbar("Consumed", { variant: "success" });
-        ctrl.close();
-      })
-      .catch((error) => showError("Consume failed", ownableErrorMessage(error)));
-  }, [ownableService, progress, onConsumed, showError]);
+    activeProgressRef.current = ctrl;
+    let activeStepIndex = 0;
+    const isCurrentAction = () => mountedRef.current && activeProgressRef.current === ctrl;
+    try {
+      const trackedProgress: LogProgress = (stepId, meta) => {
+        const completedIndex = steps.findIndex((step) => step.id === stepId);
+        if (completedIndex >= 0) {
+          activeStepIndex = Math.min(completedIndex + 1, steps.length - 1);
+        }
+        onProgress(stepId, meta);
+      };
+      await ownableService.consume(consumer, consumable, trackedProgress);
+      if (!isCurrentAction()) return;
+      setConsuming(null);
+      overlay.hide();
+      onConsumed(consumable.id);
+      enqueueSnackbar("Consumed", { variant: "success" });
+      ctrl.close();
+    } catch (error) {
+      if (!isCurrentAction()) return;
+      const cancelled = isWalletRejection(error);
+      ctrl.setError(
+        activeStepIndex,
+        cancelled ? WALLET_REJECTION_MESSAGE : ownableErrorMessage(error)
+      );
+      ctrl.close();
+      if (cancelled) {
+        enqueueSnackbar("Consume cancelled", { variant: "info" });
+      } else {
+        showError("Consume failed", ownableErrorMessage(error));
+      }
+    } finally {
+      if (activeProgressRef.current === ctrl) activeProgressRef.current = null;
+    }
+  }, [ownableService, progress, onConsumed, showError, overlay]);
 
   return { consuming, consumeEligibility, startConsuming, cancelConsuming, consume };
 }

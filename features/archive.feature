@@ -4,12 +4,12 @@ Feature: Archive
     Given I'm on the homepage
     When I click button "Issue an Ownable"
     And I click button "Robot An adorable robot companion"
-    And I click `main button:nth-of-type(2)`
+    And I click button "More options"
     And I click menuitem "Archive"
     Then the page contains button "Archived 1"
     When I click button "Archived 1"
     And I click button "Robot"
-    And I click `main button:nth-of-type(2)`
+    And I click button "More options"
     Then the page contains menuitem "Restore"
     When I click menuitem "Restore"
     Then the page does not contain button "Archived 1"
@@ -19,11 +19,11 @@ Feature: Archive
     Given I'm on the homepage
     When I click button "Issue an Ownable"
     And I click button "Robot An adorable robot companion"
-    And I click `main button:nth-of-type(2)`
+    And I click button "More options"
     And I click menuitem "Archive"
     And I click button "Archived 1"
     And I click button "Robot"
-    And I click `main button:nth-of-type(2)`
+    And I click button "More options"
     Then the page contains menuitem "Delete"
     When I click menuitem "Delete"
     Then the page contains button "Delete"
