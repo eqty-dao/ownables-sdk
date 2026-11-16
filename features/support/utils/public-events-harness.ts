@@ -16,6 +16,7 @@ const E2E_CHAIN_ID = 84532; // Base Sepolia
 const E2E_ADDRESS = resolveE2EAddress();
 const IDB_PREFIX = `ownables:${E2E_CHAIN_ID}:`;
 const IDB_NAME = `ownables:${E2E_CHAIN_ID}:${E2E_ADDRESS}`;
+export const PUBLIC_EVENT_STREAM_EVENT_TYPES = ['message', 'public-event'] as const;
 const PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -199,6 +200,46 @@ function boundedPush<T>(items: T[], value: T, limit = 100): void {
   if (items.length > limit) items.splice(0, items.length - limit);
 }
 
+export function installPublicEventStreamCapture(eventTypes: readonly string[]): void {
+  const win = window as typeof window & {
+    __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
+    __ownablesPublicEventStreamDisconnectCount?: number;
+    __ownablesPublicEventSourceWrapped?: boolean;
+  };
+  if (win.__ownablesPublicEventSourceWrapped) return;
+
+  win.__ownablesPublicEventSourceWrapped = true;
+  win.__ownablesPublicEventStreamMessages = [];
+  win.__ownablesPublicEventStreamDisconnectCount = 0;
+  const NativeEventSource = window.EventSource;
+  window.EventSource = class extends NativeEventSource {
+    constructor(url: string | URL, configuration?: EventSourceInit) {
+      super(url, configuration);
+      const rawUrl = String(url);
+      if (new URL(rawUrl, window.location.href).pathname === '/public-events') {
+        const recordStreamEvent = (event: Event) => {
+          let data: unknown = (event as MessageEvent).data;
+          try {
+            data = JSON.parse(event.data);
+          } catch {
+            // Keep malformed payloads for failure evidence.
+          }
+          const messages = win.__ownablesPublicEventStreamMessages ?? [];
+          messages.push({ url: rawUrl, data });
+          if (messages.length > 100) messages.splice(0, messages.length - 100);
+        };
+        for (const eventType of eventTypes) {
+          this.addEventListener(eventType, recordStreamEvent);
+        }
+        this.addEventListener('error', () => {
+          win.__ownablesPublicEventStreamDisconnectCount =
+            (win.__ownablesPublicEventStreamDisconnectCount ?? 0) + 1;
+        });
+      }
+    }
+  } as typeof EventSource;
+}
+
 async function installPublicEventDiagnostics(world: PublicEventsWorld): Promise<void> {
   if (world.__publicEventDiagnosticsInstalled) return;
 
@@ -209,36 +250,9 @@ async function installPublicEventDiagnostics(world: PublicEventsWorld): Promise<
     streamMessages: [],
   };
 
-  await world.page.addInitScript(() => {
-    const win = window as typeof window & {
-      __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
-      __ownablesPublicEventSourceWrapped?: boolean;
-    };
-    if (win.__ownablesPublicEventSourceWrapped) return;
-
-    win.__ownablesPublicEventSourceWrapped = true;
-    win.__ownablesPublicEventStreamMessages = [];
-    const NativeEventSource = window.EventSource;
-    window.EventSource = class extends NativeEventSource {
-      constructor(url: string | URL, configuration?: EventSourceInit) {
-        super(url, configuration);
-        const rawUrl = String(url);
-        if (new URL(rawUrl, window.location.href).pathname === '/public-events') {
-          this.addEventListener('message', (event) => {
-            let data: unknown = event.data;
-            try {
-              data = JSON.parse(event.data);
-            } catch {
-              // Keep malformed payloads for failure evidence.
-            }
-            const messages = win.__ownablesPublicEventStreamMessages ?? [];
-            messages.push({ url: rawUrl, data });
-            if (messages.length > 100) messages.splice(0, messages.length - 100);
-          });
-        }
-      }
-    } as typeof EventSource;
-  });
+  const eventTypes = [...PUBLIC_EVENT_STREAM_EVENT_TYPES];
+  await world.page.addInitScript(installPublicEventStreamCapture, eventTypes);
+  await world.page.evaluate(installPublicEventStreamCapture, eventTypes);
 
   world.page.on('console', (message) => {
     boundedPush(world.__publicEventBrowserDiagnostics!.console, {
@@ -265,6 +279,33 @@ async function readPublicEventStreamMessages(page: Page): Promise<PublicEventStr
     };
     return win.__ownablesPublicEventStreamMessages ?? [];
   });
+}
+
+async function publicEventStreamDisconnectCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const win = window as typeof window & {
+      __ownablesPublicEventStreamDisconnectCount?: number;
+    };
+    return win.__ownablesPublicEventStreamDisconnectCount ?? 0;
+  });
+}
+
+export async function waitForPublicEventStreamDisconnect(
+  page: Page,
+  initialCount: number,
+  timeoutMs = 10_000,
+  pollIntervalMs = 200
+): Promise<void> {
+  await waitFor(
+    async () => {
+      const count = await publicEventStreamDisconnectCount(page);
+      return count > initialCount ? count : null;
+    },
+    Boolean,
+    'browser public-events stream disconnect after Hub shutdown',
+    timeoutMs,
+    pollIntervalMs
+  );
 }
 
 function ensureHubRequestRecorder(world: PublicEventsWorld) {
@@ -495,8 +536,10 @@ export async function resetHubTransport(world: PublicEventsWorld) {
   await world.page.evaluate(() => {
     const win = window as typeof window & {
       __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
+      __ownablesPublicEventStreamDisconnectCount?: number;
     };
     win.__ownablesPublicEventStreamMessages = [];
+    win.__ownablesPublicEventStreamDisconnectCount = 0;
   });
   if (world.__publicEventBrowserDiagnostics) {
     world.__publicEventBrowserDiagnostics.console = [];
@@ -796,6 +839,20 @@ async function waitForHubListenerShutdown(label: string): Promise<void> {
   );
 }
 
+function signalHubProcess(processId: number, signal: NodeJS.Signals): boolean {
+  try {
+    if (testAdapters?.killProcess) {
+      testAdapters.killProcess(processId, signal);
+    } else {
+      process.kill(processId, signal);
+    }
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    throw error;
+  }
+}
+
 function initialHubProcess(): ActiveHubProcess {
   if (activeHub) return activeHub;
 
@@ -861,16 +918,11 @@ async function stopActiveHub(): Promise<void> {
     return;
   }
 
-  try {
-    if (testAdapters?.killProcess) {
-      testAdapters.killProcess(hub.processId, 'SIGTERM');
-    } else {
-      process.kill(hub.processId, 'SIGTERM');
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-  }
+  signalHubProcess(hub.processId, 'SIGTERM');
   await waitForHubListenerShutdown(`ownables-hub listener ${hub.processId} shutdown`);
+  // Hub graceful shutdown closes its listener before it closes existing SSE sockets.
+  // The setup-owned runtime must be forcefully terminated before its replacement starts.
+  signalHubProcess(hub.processId, 'SIGKILL');
 }
 
 function installProcessExitFallback(): void {
@@ -884,13 +936,19 @@ function installProcessExitFallback(): void {
   });
 }
 
-export async function restartHubForPublicEventReplay(): Promise<void> {
+export async function restartHubForPublicEventReplay(page?: Page): Promise<void> {
   if (!hubOrigin()) {
     throw new Error('VITE_HUB is required for the real-Hub proof lane');
   }
 
+  const initialDisconnectCount = page
+    ? await publicEventStreamDisconnectCount(page)
+    : undefined;
   initialHubProcess();
   await stopActiveHub();
+  if (page && initialDisconnectCount !== undefined) {
+    await waitForPublicEventStreamDisconnect(page, initialDisconnectCount);
+  }
 
   const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
   const hub = testAdapters?.createReplacementHub?.() ?? spawn(
@@ -968,7 +1026,7 @@ export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsW
   }
   const initialRequestCount = world.__hubRequests?.publicEventStreams.length ?? 0;
   const initialMessageCount = (await readPublicEventStreamMessages(world.page)).length;
-  await restartHubForPublicEventReplay();
+  await restartHubForPublicEventReplay(world.page);
 
   const reconnect = await waitFor(
     async () => {

@@ -8,9 +8,12 @@ import type { Page } from '@playwright/test';
 import {
   capturePublicEventFailure,
   configurePublicEventHarnessForTest,
+  installPublicEventStreamCapture,
   matchesPublicEventIdentity,
+  PUBLIC_EVENT_STREAM_EVENT_TYPES,
   restartHubForPublicEventReplay,
   stopActiveReplacementHub,
+  waitForPublicEventStreamDisconnect,
   waitForRepeatedPublicEventDelivery,
   type PublicEventsWorld,
 } from './public-events-harness.ts';
@@ -57,7 +60,60 @@ function replacementHub(processId: number, stop: (processId: number) => void): C
   return child;
 }
 
+class FakeEventSource {
+  private readonly listeners = new Map<string, EventListenerOrEventListenerObject[]>();
+
+  constructor(_url: string | URL, _configuration?: EventSourceInit) {}
+
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject | null): void {
+    if (listener === null) return;
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  dispatch(type: string, data: string): void {
+    const event = { data } as MessageEvent;
+    for (const listener of this.listeners.get(type) ?? []) {
+      if (typeof listener === 'function') {
+        listener(event);
+      } else {
+        listener.handleEvent(event);
+      }
+    }
+  }
+}
+
 describe('public-event stream duplicate identity', () => {
+  it('captures the Hub named public-event SSE frames as replay evidence', () => {
+    const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    const testWindow = {
+      EventSource: FakeEventSource,
+      location: { href: 'http://127.0.0.1:3300' },
+    };
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: testWindow });
+
+    try {
+      installPublicEventStreamCapture(PUBLIC_EVENT_STREAM_EVENT_TYPES);
+      const source = new testWindow.EventSource('/public-events') as FakeEventSource;
+      source.dispatch('public-event', JSON.stringify({ event }));
+      source.dispatch('error', '');
+
+      expect((testWindow as typeof testWindow & {
+        __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
+      }).__ownablesPublicEventStreamMessages).toEqual([
+        { url: '/public-events', data: { event } },
+      ]);
+      expect((testWindow as typeof testWindow & {
+        __ownablesPublicEventStreamDisconnectCount?: number;
+      }).__ownablesPublicEventStreamDisconnectCount).toBe(1);
+    } finally {
+      if (windowDescriptor) {
+        Object.defineProperty(globalThis, 'window', windowDescriptor);
+      } else {
+        delete (globalThis as { window?: unknown }).window;
+      }
+    }
+  });
+
   it('recognizes the indexed event when Hub SSE wraps it in a delivery envelope', () => {
     expect(matchesPublicEventIdentity({ type: 'public-event', event }, event)).toBe(true);
   });
@@ -87,6 +143,15 @@ describe('public-event stream duplicate identity', () => {
       'duplicate indexed public event delivered by the reconnected Hub stream'
     );
   });
+
+  it('waits for the browser to observe the old Hub SSE disconnect before replacement', async () => {
+    let reads = 0;
+    const page = {
+      evaluate: vi.fn(async () => (reads++ === 0 ? 0 : 1)),
+    } as unknown as Page;
+
+    await expect(waitForPublicEventStreamDisconnect(page, 0, 100, 1)).resolves.toBeUndefined();
+  });
 });
 
 describe('replacement Hub lifecycle', () => {
@@ -96,12 +161,14 @@ describe('replacement Hub lifecycle', () => {
     process.env.VITE_HUB = 'http://127.0.0.1:3311';
     const listening = new Set([7001]);
     const staleSetupProcesses = new Set([7001]);
-    const stopped: number[] = [];
+    const signals: Array<[number, NodeJS.Signals]> = [];
+    const signalsWhenReplacementStarts: Array<Array<[number, NodeJS.Signals]>> = [];
     const firstReplacement = replacementHub(7002, (processId) => listening.delete(processId));
     const finalReplacement = replacementHub(7003, (processId) => listening.delete(processId));
     const nextHub = [firstReplacement, finalReplacement];
     configurePublicEventHarnessForTest({
       createReplacementHub: () => {
+        signalsWhenReplacementStarts.push([...signals]);
         const hub = nextHub.shift();
         if (!hub?.pid) throw new Error('No replacement Hub prepared');
         listening.add(hub.pid);
@@ -109,9 +176,10 @@ describe('replacement Hub lifecycle', () => {
       },
       hubIsHealthy: async () => listening.size > 0,
       hubListenerIsOpen: async () => listening.size > 0,
-      killProcess: (processId) => {
-        stopped.push(processId);
-        listening.delete(processId);
+      killProcess: (processId, signal) => {
+        signals.push([processId, signal]);
+        if (signal === 'SIGTERM') listening.delete(processId);
+        if (signal === 'SIGKILL') staleSetupProcesses.delete(processId);
       },
     });
 
@@ -119,8 +187,9 @@ describe('replacement Hub lifecycle', () => {
     await restartHubForPublicEventReplay();
     await stopActiveReplacementHub();
 
-    expect(stopped).toEqual([7001]);
-    expect(staleSetupProcesses).toContain(7001);
+    expect(signals).toEqual([[7001, 'SIGTERM'], [7001, 'SIGKILL']]);
+    expect(signalsWhenReplacementStarts[0]).toEqual([[7001, 'SIGTERM'], [7001, 'SIGKILL']]);
+    expect(staleSetupProcesses).not.toContain(7001);
     expect(firstReplacement.kill).toHaveBeenCalledWith('SIGTERM');
     expect(finalReplacement.kill).toHaveBeenCalledWith('SIGTERM');
     expect(nextHub).toHaveLength(0);
