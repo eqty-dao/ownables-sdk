@@ -1,5 +1,5 @@
 import { expect, type Page, type Request as PlaywrightRequest } from '@playwright/test';
-import { existsSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { request as httpRequest } from 'node:http';
@@ -22,7 +22,16 @@ const PROJECT_ROOT = path.resolve(
   '..'
 );
 const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
+const ARTIFACT_DIR = process.env.E2E_ARTIFACT_DIR?.trim();
 let hubProjectRoot: string | undefined;
+
+interface ActiveHubProcess {
+  child?: ChildProcess;
+  processId: number;
+}
+
+let activeHub: ActiveHubProcess | undefined;
+let exitFallbackInstalled = false;
 
 interface TrackedPublicEventRecord {
   replayKey: string;
@@ -53,6 +62,19 @@ interface CapturedPublicEventView {
   widgetId: string;
   url: string;
   rowTestIds: string[];
+  confirmedEvent?: Pick<TrackedPublicEventRecord['event'], 'transactionHash' | 'logIndex' | 'blockNumber'>;
+}
+
+interface PublicEventStreamMessage {
+  data: unknown;
+  url: string;
+}
+
+interface PublicEventBrowserDiagnostics {
+  console: Array<{ type: string; text: string }>;
+  pageErrors: string[];
+  requestFailures: Array<{ url: string; failure: string }>;
+  streamMessages: PublicEventStreamMessage[];
 }
 
 export interface PublicEventsWorld {
@@ -65,7 +87,8 @@ export interface PublicEventsWorld {
   rememberedOwnableIds?: Record<string, string>;
   latestPublicEventStreamRequest?: PublicEventStreamRequest;
   capturedPublicEventView?: CapturedPublicEventView;
-  replacementHub?: ChildProcess;
+  __publicEventBrowserDiagnostics?: PublicEventBrowserDiagnostics;
+  __publicEventDiagnosticsInstalled?: boolean;
 }
 
 function resolveHubProjectRoot(): string {
@@ -142,6 +165,79 @@ async function waitFor<T>(
   throw new Error(
     `${label} timed out${lastValue === null ? '' : `: ${debugString(lastValue)}`}`
   );
+}
+
+function boundedPush<T>(items: T[], value: T, limit = 100): void {
+  items.push(value);
+  if (items.length > limit) items.splice(0, items.length - limit);
+}
+
+async function installPublicEventDiagnostics(world: PublicEventsWorld): Promise<void> {
+  if (world.__publicEventDiagnosticsInstalled) return;
+
+  world.__publicEventBrowserDiagnostics = {
+    console: [],
+    pageErrors: [],
+    requestFailures: [],
+    streamMessages: [],
+  };
+
+  await world.page.addInitScript(() => {
+    const win = window as typeof window & {
+      __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
+      __ownablesPublicEventSourceWrapped?: boolean;
+    };
+    if (win.__ownablesPublicEventSourceWrapped) return;
+
+    win.__ownablesPublicEventSourceWrapped = true;
+    win.__ownablesPublicEventStreamMessages = [];
+    const NativeEventSource = window.EventSource;
+    window.EventSource = class extends NativeEventSource {
+      constructor(url: string | URL, configuration?: EventSourceInit) {
+        super(url, configuration);
+        const rawUrl = String(url);
+        if (new URL(rawUrl, window.location.href).pathname === '/public-events') {
+          this.addEventListener('message', (event) => {
+            let data: unknown = event.data;
+            try {
+              data = JSON.parse(event.data);
+            } catch {
+              // Keep malformed payloads for failure evidence.
+            }
+            const messages = win.__ownablesPublicEventStreamMessages ?? [];
+            messages.push({ url: rawUrl, data });
+            if (messages.length > 100) messages.splice(0, messages.length - 100);
+          });
+        }
+      }
+    } as typeof EventSource;
+  });
+
+  world.page.on('console', (message) => {
+    boundedPush(world.__publicEventBrowserDiagnostics!.console, {
+      type: message.type(),
+      text: message.text(),
+    });
+  });
+  world.page.on('pageerror', (error) => {
+    boundedPush(world.__publicEventBrowserDiagnostics!.pageErrors, error.stack ?? error.message);
+  });
+  world.page.on('requestfailed', (request) => {
+    boundedPush(world.__publicEventBrowserDiagnostics!.requestFailures, {
+      url: request.url(),
+      failure: request.failure()?.errorText ?? 'unknown request failure',
+    });
+  });
+  world.__publicEventDiagnosticsInstalled = true;
+}
+
+async function readPublicEventStreamMessages(page: Page): Promise<PublicEventStreamMessage[]> {
+  return page.evaluate(() => {
+    const win = window as typeof window & {
+      __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
+    };
+    return win.__ownablesPublicEventStreamMessages ?? [];
+  });
 }
 
 function ensureHubRequestRecorder(world: PublicEventsWorld) {
@@ -366,7 +462,20 @@ async function publicEventDiagnostics(page: Page, ownableId: string) {
     directRecords: summarize(directRecords),
   };
 }
-export function resetHubTransport(world: PublicEventsWorld) {
+export async function resetHubTransport(world: PublicEventsWorld) {
+  await installPublicEventDiagnostics(world);
+  await world.page.evaluate(() => {
+    const win = window as typeof window & {
+      __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
+    };
+    win.__ownablesPublicEventStreamMessages = [];
+  });
+  if (world.__publicEventBrowserDiagnostics) {
+    world.__publicEventBrowserDiagnostics.console = [];
+    world.__publicEventBrowserDiagnostics.pageErrors = [];
+    world.__publicEventBrowserDiagnostics.requestFailures = [];
+    world.__publicEventBrowserDiagnostics.streamMessages = [];
+  }
   ensureHubRequestRecorder(world);
   world.__hubRequests = {
     publicEventSnapshots: [],
@@ -564,6 +673,22 @@ export async function expectCapturedPublicEventView(
     status
   );
   expect(currentRowTestIds).toEqual(captured.rowTestIds);
+
+  if (status === 'confirmed') {
+    const record = [...(await trackedPublicEvents(world.page, captured.ownableId))]
+      .reverse()
+      .find((candidate) =>
+        candidate.status === 'confirmed' && candidate.event.eventType === eventType
+      );
+    if (!record) {
+      throw new Error(`No confirmed ${eventType} replay record was found for ${captured.ownableId}`);
+    }
+    captured.confirmedEvent = {
+      transactionHash: record.event.transactionHash,
+      logIndex: record.event.logIndex,
+      blockNumber: record.event.blockNumber,
+    };
+  }
 }
 
 async function waitForHubHealth() {
@@ -622,33 +747,100 @@ function processIsRunning(processId: number): boolean {
   }
 }
 
-async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
-  if (!HUB_ORIGIN) {
-    throw new Error('VITE_HUB is required for the real-Hub proof lane');
-  }
+function initialHubProcess(): ActiveHubProcess {
+  if (activeHub) return activeHub;
 
   const processId = Number.parseInt(process.env.E2E_HUB_PROCESS_ID ?? '', 10);
   if (!Number.isSafeInteger(processId) || processId <= 0) {
     throw new Error('E2E_HUB_PROCESS_ID must contain the running Hub process id');
   }
+  activeHub = { processId };
+  return activeHub;
+}
 
-  try {
-    process.kill(processId, 'SIGKILL');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
-      throw error;
+function appendHubRestartLog(message: string): void {
+  if (ARTIFACT_DIR) {
+    appendFileSync(path.join(ARTIFACT_DIR, 'hub-restarts.log'), `${message}\n`);
+  }
+}
+
+function mirrorReplacementHubOutput(hub: ChildProcess): void {
+  const output = (chunk: Buffer) => {
+    process.stdout.write(chunk);
+    appendHubRestartLog(chunk.toString());
+  };
+  hub.stdout?.on('data', output);
+  hub.stderr?.on('data', (chunk: Buffer) => {
+    process.stderr.write(chunk);
+    appendHubRestartLog(chunk.toString());
+  });
+}
+
+async function waitForChildExit(hub: ChildProcess, label: string): Promise<void> {
+  if (hub.exitCode !== null || hub.signalCode !== null) return;
+
+  const exited = new Promise<void>((resolve) => hub.once('exit', () => resolve()));
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 5_000));
+  await Promise.race([exited, timeout]);
+  if (hub.exitCode === null && hub.signalCode === null) {
+    hub.kill('SIGKILL');
+    await Promise.race([exited, new Promise<void>((resolve) => setTimeout(resolve, 5_000))]);
+  }
+  if (hub.exitCode === null && hub.signalCode === null) {
+    throw new Error(`${label} did not terminate`);
+  }
+}
+
+async function stopActiveHub(): Promise<void> {
+  const hub = activeHub;
+  if (!hub) return;
+
+  activeHub = undefined;
+  if (hub.child) {
+    if (hub.child.exitCode === null && hub.child.signalCode === null) {
+      appendHubRestartLog(`Stopping replacement Hub process ${hub.processId}`);
+      hub.child.kill('SIGTERM');
     }
+    await waitForChildExit(hub.child, `replacement ownables-hub process ${hub.processId}`);
+    return;
   }
 
+  try {
+    process.kill(hub.processId, 'SIGTERM');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+    return;
+  }
   await waitFor(
-    async () => (!processIsRunning(processId) ? true : null),
+    async () => (!processIsRunning(hub.processId) ? true : null),
     Boolean,
-    'original ownables-hub process shutdown'
+    `ownables-hub process ${hub.processId} shutdown`,
+    10_000
   );
+}
+
+function installProcessExitFallback(): void {
+  if (exitFallbackInstalled) return;
+  exitFallbackInstalled = true;
+  process.once('exit', () => {
+    const hub = activeHub?.child;
+    if (hub && hub.exitCode === null && hub.signalCode === null) {
+      hub.kill('SIGTERM');
+    }
+  });
+}
+
+async function restartHubForPublicEventReplay() {
+  if (!HUB_ORIGIN) {
+    throw new Error('VITE_HUB is required for the real-Hub proof lane');
+  }
+
+  initialHubProcess();
+  await stopActiveHub();
   await waitFor(
     async () => (!(await hubIsHealthy()) ? true : null),
     Boolean,
-    'original ownables-hub listener shutdown'
+    'previous ownables-hub listener shutdown'
   );
 
   const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
@@ -658,39 +850,81 @@ async function restartHubForPublicEventReplay(world: PublicEventsWorld) {
     {
       cwd: hubProjectRootForRealProof(),
       env: { ...process.env, ...runtimeEnv },
-      stdio: 'ignore',
+      stdio: ['ignore', 'pipe', 'pipe'],
     }
   );
-  world.replacementHub = hub;
-  hub.unref();
+  if (!hub.pid) {
+    throw new Error('replacement ownables-hub runtime did not expose a process id');
+  }
+  activeHub = { child: hub, processId: hub.pid };
+  installProcessExitFallback();
+  mirrorReplacementHubOutput(hub);
+  hub.once('error', (error) => appendHubRestartLog(`Replacement Hub failed: ${error.message}`));
+  appendHubRestartLog(`Started replacement Hub process ${hub.pid}`);
 
-  process.once('exit', () => stopReplacementHub(world));
   await waitForHubHealth();
 }
 
-export function stopReplacementHub(world: PublicEventsWorld) {
-  const hub = world.replacementHub;
-  if (!hub) {
-    return;
-  }
+export async function stopActiveReplacementHub(): Promise<void> {
+  if (!activeHub?.child) return;
+  await stopActiveHub();
+}
 
-  world.replacementHub = undefined;
-  if (!hub.killed) {
-    hub.kill('SIGTERM');
+export function matchesPublicEventIdentity(
+  value: unknown,
+  expected: NonNullable<CapturedPublicEventView['confirmedEvent']>,
+  depth = 0
+): boolean {
+  if (!value || typeof value !== 'object' || depth > 5) return false;
+  if (Array.isArray(value)) {
+    return value.some((entry) => matchesPublicEventIdentity(entry, expected, depth + 1));
   }
+  const record = value as Record<string, unknown>;
+  const logIndex = record.logIndex ?? record.log_index;
+  if (
+    record.transactionHash === expected.transactionHash &&
+    Number(logIndex) === expected.logIndex &&
+    Number(record.blockNumber ?? record.block_number) === expected.blockNumber
+  ) {
+    return true;
+  }
+  return Object.values(record).some((entry) => matchesPublicEventIdentity(entry, expected, depth + 1));
 }
 
 export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
+  const captured = world.capturedPublicEventView;
+  if (!captured?.confirmedEvent) {
+    throw new Error('The confirmed public event must be captured before restarting the Hub stream');
+  }
   const initialRequestCount = world.__hubRequests?.publicEventStreams.length ?? 0;
-  await restartHubForPublicEventReplay(world);
+  const initialMessageCount = (await readPublicEventStreamMessages(world.page)).length;
+  await restartHubForPublicEventReplay();
 
-  await waitFor(
+  const reconnect = await waitFor(
     async () => {
       const requests = world.__hubRequests?.publicEventStreams ?? [];
-      return requests.length > initialRequestCount ? requests.at(-1) ?? null : null;
+      return requests.length > initialRequestCount
+        ? [...requests].reverse().find((request) =>
+            request.ids.includes(captured.ownableId) &&
+            (request.fromBlock === undefined || request.fromBlock <= captured.confirmedEvent!.blockNumber)
+          ) ?? null
+        : null;
     },
     Boolean,
     'reconnected public-events stream request after Hub restart',
+    20_000
+  );
+  world.latestPublicEventStreamRequest = reconnect;
+
+  await waitFor(
+    async () => {
+      const messages = await readPublicEventStreamMessages(world.page);
+      return messages
+        .slice(initialMessageCount)
+        .find((message) => matchesPublicEventIdentity(message.data, captured.confirmedEvent!)) ?? null;
+    },
+    Boolean,
+    'duplicate indexed public event delivered by the reconnected Hub stream',
     20_000
   );
 }
@@ -840,4 +1074,148 @@ export async function expectTrackedPublicEventCount(
     `${expectedCount} tracked public events for ${eventType}`,
     20_000
   );
+}
+
+function artifactSafeTimestamp(): string {
+  return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+function tailArtifactLog(filename: string, maxLength = 12_000): string | undefined {
+  if (!ARTIFACT_DIR) return undefined;
+  const filePath = path.join(ARTIFACT_DIR, filename);
+  if (!existsSync(filePath)) return undefined;
+  const contents = readFileSync(filePath, 'utf8');
+  return contents.length > maxLength ? contents.slice(-maxLength) : contents;
+}
+
+function runServerDiagnostic(command: string, args: string[]): Record<string, unknown> {
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 10_000,
+  });
+  return {
+    command: [command, ...args],
+    status: result.status,
+    error: result.error?.message,
+    stdout: result.stdout?.slice(-12_000),
+    stderr: result.stderr?.slice(-12_000),
+  };
+}
+
+async function rpcDiagnostic(method: string, params: unknown[] = []): Promise<unknown> {
+  const rpcUrl = process.env.E2E_RPC_URL?.trim();
+  if (!rpcUrl) return { error: 'E2E_RPC_URL is unavailable' };
+  try {
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    });
+    const payload = await response.json();
+    return payload.error ?? payload.result;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function serverFailureDiagnostics(
+  confirmedEvent: CapturedPublicEventView['confirmedEvent']
+): Promise<Record<string, unknown>> {
+  const container = process.env.E2E_DATABASE_CONTAINER?.trim();
+  const user = process.env.E2E_DATABASE_USER?.trim();
+  const database = process.env.E2E_DATABASE_NAME?.trim();
+  const databaseDiagnostics = container && user && database
+    ? {
+        indexedPublicEvents: runServerDiagnostic('docker', [
+          'exec', '-i', container, 'psql', '-U', user, '-d', database, '-At', '-c',
+          'SELECT row_to_json(event) FROM (SELECT * FROM indexed_public_events ORDER BY block_number DESC, log_index DESC LIMIT 50) event',
+        ]),
+        indexerCursors: runServerDiagnostic('docker', [
+          'exec', '-i', container, 'psql', '-U', user, '-d', database, '-At', '-c',
+          'SELECT row_to_json(cursor) FROM (SELECT * FROM indexer_cursors ORDER BY 1 LIMIT 50) cursor',
+        ]),
+      }
+    : { error: 'E2E database coordinates are unavailable' };
+
+  const anchorAddress = process.env.VITE_BASE_SEPOLIA_ANCHOR_ADDRESS?.trim();
+  const fromBlock = confirmedEvent?.blockNumber;
+  const anchorLogs = anchorAddress && Number.isInteger(fromBlock)
+    ? await rpcDiagnostic('eth_getLogs', [{
+        address: anchorAddress,
+        fromBlock: `0x${fromBlock!.toString(16)}`,
+        toBlock: `0x${fromBlock!.toString(16)}`,
+      }])
+    : { error: 'No confirmed public event block is available for Anchor log diagnostics' };
+
+  return {
+    hubHealth: await hubIsHealthy(),
+    database: databaseDiagnostics,
+    chain: {
+      blockNumber: await rpcDiagnostic('eth_blockNumber'),
+      anchorLogs,
+    },
+    logs: {
+      hub: tailArtifactLog('hub.log'),
+      hubRestarts: tailArtifactLog('hub-restarts.log'),
+      setup: tailArtifactLog('setup.log'),
+    },
+  };
+}
+
+export async function capturePublicEventFailure(
+  world: PublicEventsWorld,
+  failure: unknown
+): Promise<void> {
+  if (!ARTIFACT_DIR || !world.__hubRequests) return;
+
+  try {
+    mkdirSync(ARTIFACT_DIR, { recursive: true });
+    const suffix = artifactSafeTimestamp();
+    const screenshotPath = path.join(ARTIFACT_DIR, `failure-${suffix}.png`);
+    const htmlPath = path.join(ARTIFACT_DIR, `failure-${suffix}.html`);
+    const reportPath = path.join(ARTIFACT_DIR, `failure-${suffix}.json`);
+
+    const [html, streamMessages] = await Promise.all([
+      world.page.content().catch((error) => `<!-- unable to capture HTML: ${String(error)} -->`),
+      readPublicEventStreamMessages(world.page).catch(() => []),
+      world.page.screenshot({ path: screenshotPath, fullPage: true }).catch((error) => {
+        appendHubRestartLog(`Unable to capture failure screenshot: ${String(error)}`);
+      }),
+    ]);
+    writeFileSync(htmlPath, html);
+
+    const ownableId = world.capturedPublicEventView?.ownableId ?? await currentOwnableId(world.page).catch(() => undefined);
+    const replay = ownableId
+      ? await publicEventDiagnostics(world.page, ownableId).catch((error) => ({ error: String(error) }))
+      : { error: 'No current ownable could be resolved' };
+    const server = await serverFailureDiagnostics(world.capturedPublicEventView?.confirmedEvent);
+    const browser = world.__publicEventBrowserDiagnostics ?? {
+      console: [], pageErrors: [], requestFailures: [], streamMessages: [],
+    };
+    browser.streamMessages = streamMessages;
+
+    writeFileSync(reportPath, `${JSON.stringify({
+      failure: String(failure),
+      url: world.page.url(),
+      screenshot: screenshotPath,
+      html: htmlPath,
+      runtime: {
+        artifactDirectory: ARTIFACT_DIR,
+        hubUrl: process.env.E2E_HUB_URL,
+        rpcUrl: process.env.E2E_RPC_URL,
+        database: process.env.E2E_DATABASE_NAME,
+      },
+      browser,
+      widgetMessages: await world.page.evaluate(() => {
+        const win = window as typeof window & { __ownableWidgetMessages?: unknown[] };
+        return win.__ownableWidgetMessages ?? [];
+      }).catch(() => []),
+      hubRequests: world.__hubRequests,
+      replay,
+      server,
+    }, null, 2)}\n`);
+  } catch (error) {
+    console.error(`Unable to retain Story #3 failure diagnostics: ${String(error)}`);
+  }
 }

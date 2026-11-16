@@ -48,8 +48,8 @@ import {
   type TransferImportWorld,
 } from './utils/transfer-import-harness.ts';
 
-Given('the Hub transport verifier backend is reset', function () {
-  resetHubTransport(this as PublicEventsWorld);
+Given('the Hub transport verifier backend is reset', async function () {
+  await resetHubTransport(this as PublicEventsWorld);
 });
 
 Given('the transfer and import proof is reset', async function () {
