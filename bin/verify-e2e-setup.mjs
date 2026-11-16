@@ -79,3 +79,18 @@ test("uses normal wallet connectors only in opt-in external wallet mode", () => 
   const lifecycle = readLifecycle({ ...process.env, E2E_EXTERNAL_WALLET: "1" });
   assert.equal(lifecycle.viteE2E, "0");
 });
+
+test("proves failure cleanup owns only resources created by its run", () => {
+  const result = spawnSync(process.execPath, ["bin/setup-e2e.mjs", "--verify-cleanup"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    beforeDatabase: "clean",
+    afterDatabase: "cleaned-once",
+    childFailure: "cleaned-once",
+    isolation: "preserved",
+    commandOutput: "stdout-and-stderr",
+  });
+});

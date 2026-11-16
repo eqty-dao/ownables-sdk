@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import {
   appendFileSync,
   cpSync,
@@ -100,6 +101,16 @@ function lifecycleContract() {
   };
 }
 
+function commandFailure(cmd, args, result) {
+  const stdout = result.stdout?.trim();
+  const stderr = result.stderr?.trim();
+  return [
+    `${cmd} ${args.join(" ")} failed with exit code ${result.status}`,
+    stdout && `stdout:\n${stdout}`,
+    stderr && `stderr:\n${stderr}`,
+  ].filter(Boolean).join("\n");
+}
+
 function runSync(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, {
     encoding: "utf8",
@@ -122,13 +133,7 @@ function runSync(cmd, args, options = {}) {
   }
 
   if (result.status !== 0) {
-    const stdout = result.stdout?.trim();
-    const stderr = result.stderr?.trim();
-    const message = [
-      `${cmd} ${args.join(" ")} failed with exit code ${result.status}`,
-      stdout && `stdout:\n${stdout}`,
-      stderr && `stderr:\n${stderr}`,
-    ].filter(Boolean).join("\n");
+    const message = commandFailure(cmd, args, result);
     if (existsSync(ARTIFACT_DIR)) appendLog(join(ARTIFACT_DIR, "setup.log"), message);
     throw new Error(message);
   }
@@ -356,7 +361,18 @@ function childExit(child) {
 }
 
 class SetupResources {
-  constructor() {
+  constructor({
+    runtimePath = RUNTIME_ENV_PATH,
+    storageDir = HUB_STORAGE_DIR,
+    dropDatabase = dropVerificationDatabase,
+    remove = rmSync,
+    exists = existsSync,
+  } = {}) {
+    this.runtimePath = runtimePath;
+    this.storageDir = storageDir;
+    this.dropDatabase = dropDatabase;
+    this.remove = remove;
+    this.exists = exists;
     this.children = [];
     this.databaseCreated = false;
     this.storageCreated = false;
@@ -414,9 +430,9 @@ class SetupResources {
         if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
         await childExit(child);
       }));
-      if (this.runtimeWritten || existsSync(RUNTIME_ENV_PATH)) rmSync(RUNTIME_ENV_PATH, { force: true });
-      if (this.storageCreated) rmSync(HUB_STORAGE_DIR, { recursive: true, force: true });
-      if (this.databaseCreated) dropVerificationDatabase();
+      if (this.runtimeWritten || this.exists(this.runtimePath)) this.remove(this.runtimePath, { force: true });
+      if (this.storageCreated) this.remove(this.storageDir, { recursive: true, force: true });
+      if (this.databaseCreated) this.dropDatabase();
     })();
     return this.cleanupPromise;
   }
@@ -426,6 +442,85 @@ class SetupResources {
       if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
     }
   }
+}
+
+async function withSetupResources(resources, action) {
+  try {
+    return await action();
+  } finally {
+    await resources.cleanup();
+  }
+}
+
+function fakeChild() {
+  const child = new EventEmitter();
+  child.exitCode = null;
+  child.signalCode = null;
+  child.killCalls = 0;
+  child.kill = (signal) => {
+    child.killCalls += 1;
+    queueMicrotask(() => {
+      child.signalCode = signal;
+      child.emit("exit", null, signal);
+    });
+    return true;
+  };
+  return child;
+}
+
+async function verifyCleanupContract() {
+  const removed = [];
+  const dropped = [];
+  const makeResources = (run) => new SetupResources({
+    runtimePath: `/runtime/${run}.json`,
+    storageDir: `/storage/${run}`,
+    exists: () => false,
+    remove: (path) => removed.push(path),
+    dropDatabase: () => dropped.push(run),
+  });
+
+  const beforeDatabase = makeResources("before-database");
+  await beforeDatabase.cleanup();
+  if (removed.length !== 0 || dropped.length !== 0) {
+    throw new Error("cleanup before database creation touched run resources");
+  }
+
+  const afterDatabase = makeResources("after-database");
+  const child = fakeChild();
+  afterDatabase.storageCreated = true;
+  afterDatabase.databaseCreated = true;
+  afterDatabase.runtimeWritten = true;
+  afterDatabase.children.push({ child, name: "test", logPath: "/logs/test" });
+  const childFailure = withSetupResources(afterDatabase, () => afterDatabase.fatal);
+  afterDatabase.reportFatal(new Error("child exited"));
+  await childFailure.catch(() => {});
+  await afterDatabase.cleanup();
+  if (child.killCalls !== 1) throw new Error(`expected one child cleanup, got ${child.killCalls}`);
+  if (dropped.join(",") !== "after-database") throw new Error("cleanup dropped the wrong database");
+  if (!removed.includes("/runtime/after-database.json") || !removed.includes("/storage/after-database")) {
+    throw new Error("cleanup after database creation did not remove its runtime and storage");
+  }
+
+  const isolated = makeResources("other-run");
+  await isolated.cleanup();
+  if (dropped.length !== 1) throw new Error("an empty cleanup targeted another run database");
+
+  const message = commandFailure("example", ["command"], {
+    status: 17,
+    stdout: "captured stdout",
+    stderr: "captured stderr",
+  });
+  if (!message.includes("captured stdout") || !message.includes("captured stderr")) {
+    throw new Error("command failure omitted captured output");
+  }
+
+  return {
+    beforeDatabase: "clean",
+    afterDatabase: "cleaned-once",
+    childFailure: "cleaned-once",
+    isolation: "preserved",
+    commandOutput: "stdout-and-stderr",
+  };
 }
 
 function ensureVerificationDatabase(onCreated) {
@@ -509,7 +604,7 @@ async function main() {
   process.once("SIGTERM", () => void stopForSignal(143));
   process.once("exit", () => resources.cleanupSynchronously());
 
-  try {
+  return withSetupResources(resources, async () => {
     ensureProofInputs();
     syncOwnableZips();
     mkdirSync(HUB_STORAGE_DIR, { recursive: true });
@@ -519,7 +614,7 @@ async function main() {
       resources.databaseCreated = true;
     });
 
-  const anvil = resources.spawn("anvil", "anvil", [
+  resources.spawn("anvil", "anvil", [
     "--chain-id",
     "84532",
     "--host",
@@ -589,7 +684,7 @@ async function main() {
     MAINNET_ANCHOR_START_BLOCK: "999999999",
   };
 
-  const app = resources.spawn(
+  resources.spawn(
     "vite",
     "yarn",
     ["start", "--host", "127.0.0.1", "--port", APP_PORT, "--strictPort"],
@@ -634,12 +729,12 @@ async function main() {
 
   console.log(`E2E stack ready: app=${APP_URL} hub=${HUB_URL} rpc=${RPC_URL} artifacts=${ARTIFACT_DIR}`);
   await Promise.race([new Promise(() => {}), resources.fatal]);
-  } finally {
-    await resources.cleanup();
-  }
+  });
 }
 
-if (process.argv.includes("--validate-lifecycle")) {
+if (process.argv.includes("--verify-cleanup")) {
+  console.log(JSON.stringify(await verifyCleanupContract()));
+} else if (process.argv.includes("--validate-lifecycle")) {
   console.log(JSON.stringify(lifecycleContract()));
 } else if (process.argv.includes("--validate-paths")) {
   const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress: "0xanchor", anchorStartBlock: 0 });
