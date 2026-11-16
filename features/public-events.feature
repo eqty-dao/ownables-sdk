@@ -1,4 +1,4 @@
-@broken
+@requires-hub @story-3
 Feature: Public events
 
   Scenario: Confirm a pending public event from the Hub transport
@@ -20,8 +20,16 @@ Feature: Public events
     And I click button "Stack one more" within iframe "Ownable widget"
     Then the latest widget action message is an emit for "stack"
     And the tracked public-event status for the current ownable becomes "pending" for "stack"
+    When I click button "More information"
+    Then there are exactly "1" visible "pending" public event rows for "stack"
+    When I capture the visible "1" public event rows for "stack"
     When the Hub confirms the latest pending public event for the current ownable
     Then the tracked public-event status for the current ownable becomes "confirmed" for "stack"
+    And the captured public event rows remain in place and become "confirmed" for "stack"
+    And there is exactly "1" tracked public event for "stack" on the current ownable
+    And text "2 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    When the Hub repeats the current ownable public-event stream
+    Then the captured public event rows remain in place and become "confirmed" for "stack"
     And there is exactly "1" tracked public event for "stack" on the current ownable
     And text "2 of 7 blocks stacked" within iframe "Ownable widget" is visible
 

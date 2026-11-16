@@ -48,7 +48,19 @@ yarn test:e2e:setup
 
 The setup command starts Anvil, deploys and configures the test contracts,
 starts a PostgreSQL-backed Hub, and starts Vite. All scenarios use this same
-environment. Scenarios tagged `@broken` are skipped by the Cucumber config.
+environment. Each setup run writes process and setup logs under
+`artifacts/e2e/<run-id>/` and prints that directory when the stack is ready.
+The directory remains after cleanup to diagnose failures.
+
+For the headed manual wallet pass, start the same shared stack with normal
+wallet connectors instead of the controlled E2E wallet:
+
+```bash
+E2E_EXTERNAL_WALLET=1 yarn test:e2e:setup
+```
+
+This mode sets `VITE_E2E=0`; it does not create a second stack or change the
+Hub, Anvil, contract, or database setup.
 
 ### `yarn verify:main-list-discovery`
 

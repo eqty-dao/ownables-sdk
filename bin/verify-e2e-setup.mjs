@@ -4,6 +4,16 @@ import { existsSync } from "node:fs";
 import { test } from "node:test";
 import { dirname, join } from "node:path";
 
+function readLifecycle(env = process.env) {
+  const result = spawnSync(process.execPath, ["bin/setup-e2e.mjs", "--validate-lifecycle"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
+
 test("resolves EQTY repositories and Docker Postgres from a linked worktree", () => {
   const result = spawnSync(process.execPath, ["bin/setup-e2e.mjs", "--validate-paths"], {
     cwd: process.cwd(),
@@ -53,4 +63,34 @@ test("uses an explicit existing Hub worktree override", () => {
   });
   assert.match(indexerStorage, /^file:\/\//);
   assert.equal(indexerStorage, hubStorage);
+});
+
+test("declares per-run diagnostics and cleanup without secrets", () => {
+  const lifecycle = readLifecycle();
+  assert.match(lifecycle.artifactDirectory, /artifacts\/e2e\//);
+  assert.equal(lifecycle.viteE2E, "1");
+  assert.deepEqual(lifecycle.cleanup, ["children", "runtime-file", "storage", "database"]);
+  assert.equal(lifecycle.database.user, process.env.HUB_DB_USER || "ownables");
+  assert.equal("password" in lifecycle.database, false);
+  assert.equal("mnemonic" in lifecycle, false);
+});
+
+test("uses normal wallet connectors only in opt-in external wallet mode", () => {
+  const lifecycle = readLifecycle({ ...process.env, E2E_EXTERNAL_WALLET: "1" });
+  assert.equal(lifecycle.viteE2E, "0");
+});
+
+test("proves failure cleanup owns only resources created by its run", () => {
+  const result = spawnSync(process.execPath, ["bin/setup-e2e.mjs", "--verify-cleanup"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    beforeDatabase: "clean",
+    afterDatabase: "cleaned-once",
+    childFailure: "cleaned-once",
+    isolation: "preserved",
+    commandOutput: "stdout-and-stderr",
+  });
 });
