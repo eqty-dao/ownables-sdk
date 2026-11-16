@@ -163,11 +163,14 @@ describe('replacement Hub lifecycle', () => {
     const staleSetupProcesses = new Set([7001]);
     const signals: Array<[number, NodeJS.Signals]> = [];
     const signalsWhenReplacementStarts: Array<Array<[number, NodeJS.Signals]>> = [];
+    const processExitObservations: boolean[] = [];
+    const lifecycle: string[] = [];
     const firstReplacement = replacementHub(7002, (processId) => listening.delete(processId));
     const finalReplacement = replacementHub(7003, (processId) => listening.delete(processId));
     const nextHub = [firstReplacement, finalReplacement];
     configurePublicEventHarnessForTest({
       createReplacementHub: () => {
+        lifecycle.push('replacement-started');
         signalsWhenReplacementStarts.push([...signals]);
         const hub = nextHub.shift();
         if (!hub?.pid) throw new Error('No replacement Hub prepared');
@@ -177,9 +180,16 @@ describe('replacement Hub lifecycle', () => {
       hubIsHealthy: async () => listening.size > 0,
       hubListenerIsOpen: async () => listening.size > 0,
       killProcess: (processId, signal) => {
+        lifecycle.push(`signal:${signal}`);
         signals.push([processId, signal]);
         if (signal === 'SIGTERM') listening.delete(processId);
         if (signal === 'SIGKILL') staleSetupProcesses.delete(processId);
+      },
+      processIsRunning: (processId) => {
+        const isRunning = staleSetupProcesses.has(processId);
+        lifecycle.push(`exit-observed:${isRunning}`);
+        processExitObservations.push(isRunning);
+        return isRunning;
       },
     });
 
@@ -190,6 +200,13 @@ describe('replacement Hub lifecycle', () => {
     expect(signals).toEqual([[7001, 'SIGTERM'], [7001, 'SIGKILL']]);
     expect(signalsWhenReplacementStarts[0]).toEqual([[7001, 'SIGTERM'], [7001, 'SIGKILL']]);
     expect(staleSetupProcesses).not.toContain(7001);
+    expect(processExitObservations).toEqual([false]);
+    expect(lifecycle.slice(0, 4)).toEqual([
+      'signal:SIGTERM',
+      'signal:SIGKILL',
+      'exit-observed:false',
+      'replacement-started',
+    ]);
     expect(firstReplacement.kill).toHaveBeenCalledWith('SIGTERM');
     expect(finalReplacement.kill).toHaveBeenCalledWith('SIGTERM');
     expect(nextHub).toHaveLength(0);

@@ -38,6 +38,7 @@ interface PublicEventHarnessTestAdapters {
   hubIsHealthy?: () => Promise<boolean>;
   hubListenerIsOpen?: () => Promise<boolean>;
   killProcess?: (processId: number, signal: NodeJS.Signals) => void;
+  processIsRunning?: (processId: number) => boolean;
   serverFailureDiagnostics?: (
     confirmedEvent: CapturedPublicEventView['confirmedEvent']
   ) => Promise<Record<string, unknown>>;
@@ -830,12 +831,38 @@ function hubListenerIsOpen(): Promise<boolean> {
   });
 }
 
+function processIsRunning(processId: number): boolean {
+  if (testAdapters?.processIsRunning) return testAdapters.processIsRunning(processId);
+  try {
+    process.kill(processId, 0);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') return true;
+    throw error;
+  }
+
+  const status = spawnSync('ps', ['-o', 'stat=', '-p', String(processId)], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+  return status.status === 0 && !status.stdout.trim().startsWith('Z');
+}
+
 async function waitForHubListenerShutdown(label: string): Promise<void> {
   await waitFor(
     async () => (!(await hubListenerIsOpen()) ? true : null),
     Boolean,
     label,
     10_000
+  );
+}
+
+async function waitForHubProcessExit(processId: number): Promise<void> {
+  await waitFor(
+    async () => (!processIsRunning(processId) ? true : null),
+    Boolean,
+    `ownables-hub process ${processId} exit after SIGKILL`,
+    5_000
   );
 }
 
@@ -923,6 +950,7 @@ async function stopActiveHub(): Promise<void> {
   // Hub graceful shutdown closes its listener before it closes existing SSE sockets.
   // The setup-owned runtime must be forcefully terminated before its replacement starts.
   signalHubProcess(hub.processId, 'SIGKILL');
+  await waitForHubProcessExit(hub.processId);
 }
 
 function installProcessExitFallback(): void {
