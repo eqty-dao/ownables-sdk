@@ -21,8 +21,6 @@ const PROJECT_ROOT = path.resolve(
   '..',
   '..'
 );
-const HUB_ORIGIN = process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
-const ARTIFACT_DIR = process.env.E2E_ARTIFACT_DIR?.trim();
 let hubProjectRoot: string | undefined;
 
 interface ActiveHubProcess {
@@ -32,6 +30,33 @@ interface ActiveHubProcess {
 
 let activeHub: ActiveHubProcess | undefined;
 let exitFallbackInstalled = false;
+
+interface PublicEventHarnessTestAdapters {
+  createReplacementHub?: () => ChildProcess;
+  hubIsHealthy?: () => Promise<boolean>;
+  killProcess?: (processId: number, signal: NodeJS.Signals) => void;
+  processIsRunning?: (processId: number) => boolean;
+  serverFailureDiagnostics?: (
+    confirmedEvent: CapturedPublicEventView['confirmedEvent']
+  ) => Promise<Record<string, unknown>>;
+}
+
+let testAdapters: PublicEventHarnessTestAdapters | undefined;
+
+function hubOrigin(): string {
+  return process.env.VITE_HUB?.trim().replace(/\/$/, '') ?? '';
+}
+
+function artifactDirectory(): string | undefined {
+  return process.env.E2E_ARTIFACT_DIR?.trim();
+}
+
+export function configurePublicEventHarnessForTest(
+  adapters?: PublicEventHarnessTestAdapters
+): void {
+  testAdapters = adapters;
+  activeHub = undefined;
+}
 
 interface TrackedPublicEventRecord {
   replayKey: string;
@@ -146,7 +171,8 @@ async function waitFor<T>(
   getValue: () => Promise<T | null>,
   validate: (value: T) => boolean,
   label: string,
-  timeoutMs = 10_000
+  timeoutMs = 10_000,
+  pollIntervalMs = 200
 ): Promise<T> {
   const started = Date.now();
   let lastValue: T | null = null;
@@ -159,7 +185,7 @@ async function waitFor<T>(
         return value;
       }
     }
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
   }
 
   throw new Error(
@@ -242,7 +268,8 @@ async function readPublicEventStreamMessages(page: Page): Promise<PublicEventStr
 
 function ensureHubRequestRecorder(world: PublicEventsWorld) {
   const page = world.page;
-  if (!page || !HUB_ORIGIN) {
+  const origin = hubOrigin();
+  if (!page || !origin) {
     return;
   }
 
@@ -258,7 +285,7 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
   const handler = (request: PlaywrightRequest) => {
     try {
       const url = new URL(request.url());
-      if (!url.href.startsWith(HUB_ORIGIN)) {
+      if (!url.href.startsWith(origin)) {
         return;
       }
 
@@ -692,7 +719,7 @@ export async function expectCapturedPublicEventView(
 }
 
 async function waitForHubHealth() {
-  if (!HUB_ORIGIN) {
+  if (!hubOrigin()) {
     throw new Error('VITE_HUB is required for the real-Hub proof lane');
   }
 
@@ -705,11 +732,13 @@ async function waitForHubHealth() {
 }
 
 function hubIsHealthy(): Promise<boolean> {
-  if (!HUB_ORIGIN) {
+  if (testAdapters?.hubIsHealthy) return testAdapters.hubIsHealthy();
+  const origin = hubOrigin();
+  if (!origin) {
     return Promise.resolve(false);
   }
 
-  const url = new URL(`${HUB_ORIGIN}/health`);
+  const url = new URL(`${origin}/health`);
   return new Promise((resolve) => {
     const request = httpRequest(
       {
@@ -736,6 +765,7 @@ function hubIsHealthy(): Promise<boolean> {
 }
 
 function processIsRunning(processId: number): boolean {
+  if (testAdapters?.processIsRunning) return testAdapters.processIsRunning(processId);
   try {
     process.kill(processId, 0);
     return true;
@@ -759,8 +789,9 @@ function initialHubProcess(): ActiveHubProcess {
 }
 
 function appendHubRestartLog(message: string): void {
-  if (ARTIFACT_DIR) {
-    appendFileSync(path.join(ARTIFACT_DIR, 'hub-restarts.log'), `${message}\n`);
+  const directory = artifactDirectory();
+  if (directory) {
+    appendFileSync(path.join(directory, 'hub-restarts.log'), `${message}\n`);
   }
 }
 
@@ -806,7 +837,11 @@ async function stopActiveHub(): Promise<void> {
   }
 
   try {
-    process.kill(hub.processId, 'SIGTERM');
+    if (testAdapters?.killProcess) {
+      testAdapters.killProcess(hub.processId, 'SIGTERM');
+    } else {
+      process.kill(hub.processId, 'SIGTERM');
+    }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
     return;
@@ -830,8 +865,8 @@ function installProcessExitFallback(): void {
   });
 }
 
-async function restartHubForPublicEventReplay() {
-  if (!HUB_ORIGIN) {
+export async function restartHubForPublicEventReplay(): Promise<void> {
+  if (!hubOrigin()) {
     throw new Error('VITE_HUB is required for the real-Hub proof lane');
   }
 
@@ -844,7 +879,7 @@ async function restartHubForPublicEventReplay() {
   );
 
   const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
-  const hub = spawn(
+  const hub = testAdapters?.createReplacementHub?.() ?? spawn(
     process.execPath,
     ['--preserve-symlinks', '--env-file-if-exists=.env', 'dist/main.js'],
     {
@@ -868,6 +903,12 @@ async function restartHubForPublicEventReplay() {
 export async function stopActiveReplacementHub(): Promise<void> {
   if (!activeHub?.child) return;
   await stopActiveHub();
+  await waitFor(
+    async () => (!(await hubIsHealthy()) ? true : null),
+    Boolean,
+    'replacement ownables-hub listener shutdown',
+    10_000
+  );
 }
 
 export function matchesPublicEventIdentity(
@@ -889,6 +930,27 @@ export function matchesPublicEventIdentity(
     return true;
   }
   return Object.values(record).some((entry) => matchesPublicEventIdentity(entry, expected, depth + 1));
+}
+
+export async function waitForRepeatedPublicEventDelivery(
+  page: Page,
+  initialMessageCount: number,
+  expected: NonNullable<CapturedPublicEventView['confirmedEvent']>,
+  timeoutMs = 20_000,
+  pollIntervalMs = 200
+): Promise<void> {
+  await waitFor(
+    async () => {
+      const messages = await readPublicEventStreamMessages(page);
+      return messages
+        .slice(initialMessageCount)
+        .find((message) => matchesPublicEventIdentity(message.data, expected)) ?? null;
+    },
+    Boolean,
+    'duplicate indexed public event delivered by the reconnected Hub stream',
+    timeoutMs,
+    pollIntervalMs
+  );
 }
 
 export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsWorld) {
@@ -916,16 +978,10 @@ export async function repeatCurrentOwnablePublicEventStream(world: PublicEventsW
   );
   world.latestPublicEventStreamRequest = reconnect;
 
-  await waitFor(
-    async () => {
-      const messages = await readPublicEventStreamMessages(world.page);
-      return messages
-        .slice(initialMessageCount)
-        .find((message) => matchesPublicEventIdentity(message.data, captured.confirmedEvent!)) ?? null;
-    },
-    Boolean,
-    'duplicate indexed public event delivered by the reconnected Hub stream',
-    20_000
+  await waitForRepeatedPublicEventDelivery(
+    world.page,
+    initialMessageCount,
+    captured.confirmedEvent
   );
 }
 
@@ -1081,11 +1137,16 @@ function artifactSafeTimestamp(): string {
 }
 
 function tailArtifactLog(filename: string, maxLength = 12_000): string | undefined {
-  if (!ARTIFACT_DIR) return undefined;
-  const filePath = path.join(ARTIFACT_DIR, filename);
+  const directory = artifactDirectory();
+  if (!directory) return undefined;
+  const filePath = path.join(directory, filename);
   if (!existsSync(filePath)) return undefined;
   const contents = readFileSync(filePath, 'utf8');
   return contents.length > maxLength ? contents.slice(-maxLength) : contents;
+}
+
+function boundedFailureItems<T>(items: T[], limit = 100): T[] {
+  return items.slice(-limit);
 }
 
 function runServerDiagnostic(command: string, args: string[]): Record<string, unknown> {
@@ -1122,6 +1183,9 @@ async function rpcDiagnostic(method: string, params: unknown[] = []): Promise<un
 async function serverFailureDiagnostics(
   confirmedEvent: CapturedPublicEventView['confirmedEvent']
 ): Promise<Record<string, unknown>> {
+  if (testAdapters?.serverFailureDiagnostics) {
+    return testAdapters.serverFailureDiagnostics(confirmedEvent);
+  }
   const container = process.env.E2E_DATABASE_CONTAINER?.trim();
   const user = process.env.E2E_DATABASE_USER?.trim();
   const database = process.env.E2E_DATABASE_NAME?.trim();
@@ -1167,14 +1231,15 @@ export async function capturePublicEventFailure(
   world: PublicEventsWorld,
   failure: unknown
 ): Promise<void> {
-  if (!ARTIFACT_DIR || !world.__hubRequests) return;
+  const directory = artifactDirectory();
+  if (!directory || !world.__hubRequests) return;
 
   try {
-    mkdirSync(ARTIFACT_DIR, { recursive: true });
+    mkdirSync(directory, { recursive: true });
     const suffix = artifactSafeTimestamp();
-    const screenshotPath = path.join(ARTIFACT_DIR, `failure-${suffix}.png`);
-    const htmlPath = path.join(ARTIFACT_DIR, `failure-${suffix}.html`);
-    const reportPath = path.join(ARTIFACT_DIR, `failure-${suffix}.json`);
+    const screenshotPath = path.join(directory, `failure-${suffix}.png`);
+    const htmlPath = path.join(directory, `failure-${suffix}.html`);
+    const reportPath = path.join(directory, `failure-${suffix}.json`);
 
     const [html, streamMessages] = await Promise.all([
       world.page.content().catch((error) => `<!-- unable to capture HTML: ${String(error)} -->`),
@@ -1189,7 +1254,8 @@ export async function capturePublicEventFailure(
     const replay = ownableId
       ? await publicEventDiagnostics(world.page, ownableId).catch((error) => ({ error: String(error) }))
       : { error: 'No current ownable could be resolved' };
-    const server = await serverFailureDiagnostics(world.capturedPublicEventView?.confirmedEvent);
+    const server = await serverFailureDiagnostics(world.capturedPublicEventView?.confirmedEvent)
+      .catch((error) => ({ error: error instanceof Error ? error.message : String(error) }));
     const browser = world.__publicEventBrowserDiagnostics ?? {
       console: [], pageErrors: [], requestFailures: [], streamMessages: [],
     };
@@ -1201,7 +1267,7 @@ export async function capturePublicEventFailure(
       screenshot: screenshotPath,
       html: htmlPath,
       runtime: {
-        artifactDirectory: ARTIFACT_DIR,
+        artifactDirectory: directory,
         hubUrl: process.env.E2E_HUB_URL,
         rpcUrl: process.env.E2E_RPC_URL,
         database: process.env.E2E_DATABASE_NAME,
@@ -1211,7 +1277,10 @@ export async function capturePublicEventFailure(
         const win = window as typeof window & { __ownableWidgetMessages?: unknown[] };
         return win.__ownableWidgetMessages ?? [];
       }).catch(() => []),
-      hubRequests: world.__hubRequests,
+      hubRequests: {
+        publicEventSnapshots: boundedFailureItems(world.__hubRequests.publicEventSnapshots),
+        publicEventStreams: boundedFailureItems(world.__hubRequests.publicEventStreams),
+      },
       replay,
       server,
     }, null, 2)}\n`);
