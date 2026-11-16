@@ -3,6 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import path from 'node:path';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { request as httpRequest } from 'node:http';
+import { createConnection } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { mnemonicToAccount } from 'viem/accounts';
 import { loadE2ERuntimeEnvironment } from './e2e-runtime.ts';
@@ -34,8 +35,8 @@ let exitFallbackInstalled = false;
 interface PublicEventHarnessTestAdapters {
   createReplacementHub?: () => ChildProcess;
   hubIsHealthy?: () => Promise<boolean>;
+  hubListenerIsOpen?: () => Promise<boolean>;
   killProcess?: (processId: number, signal: NodeJS.Signals) => void;
-  processIsRunning?: (processId: number) => boolean;
   serverFailureDiagnostics?: (
     confirmedEvent: CapturedPublicEventView['confirmedEvent']
   ) => Promise<Record<string, unknown>>;
@@ -764,17 +765,35 @@ function hubIsHealthy(): Promise<boolean> {
   });
 }
 
-function processIsRunning(processId: number): boolean {
-  if (testAdapters?.processIsRunning) return testAdapters.processIsRunning(processId);
-  try {
-    process.kill(processId, 0);
-    return true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ESRCH') {
-      return false;
-    }
-    throw error;
-  }
+function hubListenerIsOpen(): Promise<boolean> {
+  if (testAdapters?.hubListenerIsOpen) return testAdapters.hubListenerIsOpen();
+  const origin = hubOrigin();
+  if (!origin) return Promise.resolve(false);
+
+  const url = new URL(origin);
+  const port = url.port ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
+  return new Promise((resolve) => {
+    let settled = false;
+    const socket = createConnection({ host: url.hostname, port });
+    const finish = (isOpen: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(isOpen);
+    };
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
+    socket.setTimeout(1_000, () => finish(true));
+  });
+}
+
+async function waitForHubListenerShutdown(label: string): Promise<void> {
+  await waitFor(
+    async () => (!(await hubListenerIsOpen()) ? true : null),
+    Boolean,
+    label,
+    10_000
+  );
 }
 
 function initialHubProcess(): ActiveHubProcess {
@@ -833,6 +852,12 @@ async function stopActiveHub(): Promise<void> {
       hub.child.kill('SIGTERM');
     }
     await waitForChildExit(hub.child, `replacement ownables-hub process ${hub.processId}`);
+    await waitForHubListenerShutdown(`replacement ownables-hub listener ${hub.processId} shutdown`);
+    return;
+  }
+
+  if (!(await hubListenerIsOpen())) {
+    appendHubRestartLog(`Setup Hub listener is already closed, not signalling process ${hub.processId}`);
     return;
   }
 
@@ -844,14 +869,8 @@ async function stopActiveHub(): Promise<void> {
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-    return;
   }
-  await waitFor(
-    async () => (!processIsRunning(hub.processId) ? true : null),
-    Boolean,
-    `ownables-hub process ${hub.processId} shutdown`,
-    10_000
-  );
+  await waitForHubListenerShutdown(`ownables-hub listener ${hub.processId} shutdown`);
 }
 
 function installProcessExitFallback(): void {
@@ -872,11 +891,6 @@ export async function restartHubForPublicEventReplay(): Promise<void> {
 
   initialHubProcess();
   await stopActiveHub();
-  await waitFor(
-    async () => (!(await hubIsHealthy()) ? true : null),
-    Boolean,
-    'previous ownables-hub listener shutdown'
-  );
 
   const runtimeEnv = runtimeEnvironment('E2E_HUB_RUNTIME_ENV_JSON');
   const hub = testAdapters?.createReplacementHub?.() ?? spawn(
@@ -903,12 +917,6 @@ export async function restartHubForPublicEventReplay(): Promise<void> {
 export async function stopActiveReplacementHub(): Promise<void> {
   if (!activeHub?.child) return;
   await stopActiveHub();
-  await waitFor(
-    async () => (!(await hubIsHealthy()) ? true : null),
-    Boolean,
-    'replacement ownables-hub listener shutdown',
-    10_000
-  );
 }
 
 export function matchesPublicEventIdentity(

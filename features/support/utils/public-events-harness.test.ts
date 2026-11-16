@@ -90,11 +90,12 @@ describe('public-event stream duplicate identity', () => {
 });
 
 describe('replacement Hub lifecycle', () => {
-  it('stops the setup Hub, then the first replacement, and leaves no listener after final cleanup', async () => {
+  it('restarts after listener closure even if the setup PID remains observable, then cleans up both replacements', async () => {
     process.env.E2E_HUB_PROCESS_ID = '7001';
     process.env.E2E_HUB_RUNTIME_ENV_JSON = '{}';
     process.env.VITE_HUB = 'http://127.0.0.1:3311';
     const listening = new Set([7001]);
+    const staleSetupProcesses = new Set([7001]);
     const stopped: number[] = [];
     const firstReplacement = replacementHub(7002, (processId) => listening.delete(processId));
     const finalReplacement = replacementHub(7003, (processId) => listening.delete(processId));
@@ -107,11 +108,11 @@ describe('replacement Hub lifecycle', () => {
         return hub;
       },
       hubIsHealthy: async () => listening.size > 0,
+      hubListenerIsOpen: async () => listening.size > 0,
       killProcess: (processId) => {
         stopped.push(processId);
         listening.delete(processId);
       },
-      processIsRunning: (processId) => listening.has(processId),
     });
 
     await restartHubForPublicEventReplay();
@@ -119,6 +120,7 @@ describe('replacement Hub lifecycle', () => {
     await stopActiveReplacementHub();
 
     expect(stopped).toEqual([7001]);
+    expect(staleSetupProcesses).toContain(7001);
     expect(firstReplacement.kill).toHaveBeenCalledWith('SIGTERM');
     expect(finalReplacement.kill).toHaveBeenCalledWith('SIGTERM');
     expect(nextHub).toHaveLength(0);
