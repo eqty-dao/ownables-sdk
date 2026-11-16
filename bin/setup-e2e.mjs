@@ -2,7 +2,9 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import {
+  appendFileSync,
   cpSync,
+  createWriteStream,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -22,6 +24,8 @@ import { mnemonicToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 
 const ROOT = process.cwd();
+const RUN_ID = `${new Date().toISOString().replace(/[:.]/g, "-")}-${process.pid}`;
+const ARTIFACT_DIR = join(ROOT, "artifacts", "e2e", RUN_ID);
 
 function resolveEqtyRepositories(root = ROOT, hubRootOverride = process.env.E2E_HUB_ROOT) {
   const commonDir = runSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
@@ -35,12 +39,12 @@ function resolveEqtyRepositories(root = ROOT, hubRootOverride = process.env.E2E_
 
   for (const [name, path] of [["ownables-hub", hubRoot], ["eqty-contracts", contractsRoot]]) {
     if (!existsSync(path)) {
-      fail(`Unable to resolve ${name} from Git common directory ${commonDir}: expected ${path}`);
+      throw new Error(`Unable to resolve ${name} from Git common directory ${commonDir}: expected ${path}`);
     }
   }
 
   if (!existsSync(join(hubRoot, "package.json"))) {
-    fail(`The selected ownables-hub root is not a repository: ${hubRoot}`);
+    throw new Error(`The selected ownables-hub root is not a repository: ${hubRoot}`);
   }
   return { hubRoot, contractsRoot };
 }
@@ -65,7 +69,8 @@ const DATABASE_URL = `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}
 const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
 const HUB_STORAGE_URL = `file://${HUB_STORAGE_DIR}`;
 const RUNTIME_ENV_PATH = join(ROOT, ".e2e-runtime.json");
-let cleaningUp = false;
+const EXTERNAL_WALLET = process.env.E2E_EXTERNAL_WALLET === "1";
+const VITE_E2E = EXTERNAL_WALLET ? "0" : "1";
 
 function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
   return {
@@ -84,9 +89,15 @@ function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
   };
 }
 
-function fail(message) {
-  console.error(message);
-  process.exit(1);
+function lifecycleContract() {
+  return {
+    artifactDirectory: ARTIFACT_DIR,
+    database: { container: DB_CONTAINER, user: DB_USER, name: DB_NAME },
+    hubUrl: HUB_URL,
+    rpcUrl: RPC_URL,
+    viteE2E: VITE_E2E,
+    cleanup: ["children", "runtime-file", "storage", "database"],
+  };
 }
 
 function runSync(cmd, args, options = {}) {
@@ -97,16 +108,29 @@ function runSync(cmd, args, options = {}) {
   });
 
   if (result.error) {
-    fail(`Failed to execute ${cmd}: ${result.error.message}`);
+    throw new Error(`Failed to execute ${cmd}: ${result.error.message}`);
+  }
+
+  if (existsSync(ARTIFACT_DIR)) {
+    const stdout = result.stdout?.trim();
+    const stderr = result.stderr?.trim();
+    appendLog(join(ARTIFACT_DIR, "setup.log"), [
+      `$ ${cmd} ${args.join(" ")}`,
+      stdout,
+      stderr,
+    ].filter(Boolean).join("\n"));
   }
 
   if (result.status !== 0) {
+    const stdout = result.stdout?.trim();
     const stderr = result.stderr?.trim();
-    fail(
-      stderr
-        ? `${cmd} ${args.join(" ")} failed:\n${stderr}`
-        : `${cmd} ${args.join(" ")} failed`
-    );
+    const message = [
+      `${cmd} ${args.join(" ")} failed with exit code ${result.status}`,
+      stdout && `stdout:\n${stdout}`,
+      stderr && `stderr:\n${stderr}`,
+    ].filter(Boolean).join("\n");
+    if (existsSync(ARTIFACT_DIR)) appendLog(join(ARTIFACT_DIR, "setup.log"), message);
+    throw new Error(message);
   }
 
   return result.stdout.trim();
@@ -127,9 +151,9 @@ async function waitFor(check, label, timeoutMs = 30_000) {
   }
 
   if (lastError instanceof Error) {
-    fail(`${label} timed out: ${lastError.message}`);
+    throw new Error(`${label} timed out: ${lastError.message}`);
   }
-  fail(`${label} timed out`);
+  throw new Error(`${label} timed out`);
 }
 
 async function rpc(method, params = []) {
@@ -154,7 +178,7 @@ function ensureProofInputs() {
   for (const zipName of REQUIRED_ZIPS) {
     const zipPath = join(ROOT, "ownables", zipName);
     if (!existsSync(zipPath)) {
-      fail(
+      throw new Error(
         `Missing ${zipPath}. Build the accepted ownables before running the public-events proof.`
       );
     }
@@ -166,7 +190,7 @@ function ensureProofInputs() {
       runSync("yarn", ["ownables:build", name], { cwd: ROOT });
     }
     if (!existsSync(zipPath)) {
-      fail(`Missing ${zipPath} after building the ${name} example`);
+      throw new Error(`Missing ${zipPath} after building the ${name} example`);
     }
   }
 }
@@ -268,7 +292,7 @@ async function bootstrapContracts() {
   });
   const eqtyTokenAddress = eqtyDeployReceipt.contractAddress;
   if (!eqtyTokenAddress) {
-    fail("EQTY deployment did not return a contract address");
+    throw new Error("EQTY deployment did not return a contract address");
   }
 
   const anchorDeployReceipt = await sendAndWait(walletClient, publicClient, {
@@ -277,7 +301,7 @@ async function bootstrapContracts() {
   });
   const anchorAddress = anchorDeployReceipt.contractAddress;
   if (!anchorAddress) {
-    fail("Anchor deployment did not return a contract address");
+    throw new Error("Anchor deployment did not return a contract address");
   }
 
   await sendAndWait(walletClient, publicClient, {
@@ -322,25 +346,89 @@ async function bootstrapContracts() {
   return { anchorAddress, eqtyTokenAddress, anchorStartBlock };
 }
 
-function spawnProcess(cmd, args, options = {}) {
-  const child = spawn(cmd, args, {
-    stdio: "inherit",
-    ...options,
-  });
-
-  child.on("exit", (code, signal) => {
-    if (cleaningUp || signal) {
-      return;
-    }
-    if (code && code !== 0) {
-      fail(`${cmd} ${args.join(" ")} exited with code ${code}`);
-    }
-  });
-
-  return child;
+function appendLog(path, message) {
+  appendFileSync(path, `${message}\n`);
 }
 
-function ensureVerificationDatabase() {
+function childExit(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  return new Promise((resolve) => child.once("exit", resolve));
+}
+
+class SetupResources {
+  constructor() {
+    this.children = [];
+    this.databaseCreated = false;
+    this.storageCreated = false;
+    this.runtimeWritten = false;
+    this.cleaningUp = false;
+    this.cleanupPromise = null;
+    this.fatalError = null;
+    this.rejectFatal = null;
+    this.fatal = new Promise((_, reject) => {
+      this.rejectFatal = reject;
+    });
+    this.fatal.catch(() => {});
+  }
+
+  reportFatal(error) {
+    if (this.cleaningUp || this.fatalError) return;
+    this.fatalError = error;
+    this.rejectFatal(error);
+  }
+
+  spawn(name, cmd, args, options = {}) {
+    const logPath = join(ARTIFACT_DIR, `${name}.log`);
+    const stream = createWriteStream(logPath, { flags: "a" });
+    const child = spawn(cmd, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      ...options,
+    });
+    const mirror = (output) => {
+      output.on("data", (chunk) => {
+        process.stdout.write(chunk);
+        stream.write(chunk);
+      });
+    };
+    mirror(child.stdout);
+    child.stderr.on("data", (chunk) => {
+      process.stderr.write(chunk);
+      stream.write(chunk);
+    });
+    child.on("error", (error) => this.reportFatal(new Error(`${cmd} failed to start: ${error.message}`)));
+    child.on("exit", (code, signal) => {
+      stream.end();
+      if (!this.cleaningUp && !signal && code !== 0) {
+        this.reportFatal(new Error(`${cmd} ${args.join(" ")} exited with code ${code}; see ${logPath}`));
+      }
+    });
+    this.children.push({ child, logPath, name });
+    return child;
+  }
+
+  async cleanup() {
+    if (this.cleanupPromise) return this.cleanupPromise;
+    this.cleanupPromise = (async () => {
+      this.cleaningUp = true;
+      await Promise.all(this.children.map(async ({ child }) => {
+        if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+        await childExit(child);
+      }));
+      if (this.runtimeWritten || existsSync(RUNTIME_ENV_PATH)) rmSync(RUNTIME_ENV_PATH, { force: true });
+      if (this.storageCreated) rmSync(HUB_STORAGE_DIR, { recursive: true, force: true });
+      if (this.databaseCreated) dropVerificationDatabase();
+    })();
+    return this.cleanupPromise;
+  }
+
+  cleanupSynchronously() {
+    for (const { child } of this.children) {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+    }
+  }
+}
+
+function ensureVerificationDatabase(onCreated) {
   runSync("docker", [
     "exec",
     DB_CONTAINER,
@@ -367,6 +455,7 @@ function ensureVerificationDatabase() {
     "-c",
     `CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\"`,
   ]);
+  onCreated();
 
   runSync("yarn", ["db:migrate:up"], {
     cwd: HUB_ROOT,
@@ -406,35 +495,31 @@ function dropVerificationDatabase() {
 }
 
 async function main() {
-  ensureProofInputs();
-  syncOwnableZips();
-  mkdirSync(HUB_STORAGE_DIR, { recursive: true });
-  runSync("yarn", ["db:start"], { cwd: HUB_ROOT });
-  ensureVerificationDatabase();
-
-  const children = [];
-  const cleanup = async () => {
-    cleaningUp = true;
-    for (const child of children) {
-      if (!child.killed) {
-        child.kill("SIGTERM");
-      }
-    }
-    rmSync(RUNTIME_ENV_PATH, { force: true });
-    dropVerificationDatabase();
+  const resources = new SetupResources();
+  mkdirSync(ARTIFACT_DIR, { recursive: true });
+  for (const filename of ["setup.log", "anvil.log", "hub.log", "vite.log", "hub-restarts.log"]) {
+    writeFileSync(join(ARTIFACT_DIR, filename), "");
+  }
+  appendLog(join(ARTIFACT_DIR, "setup.log"), `Starting E2E run ${RUN_ID}`);
+  const stopForSignal = async (code) => {
+    await resources.cleanup();
+    process.exit(code);
   };
+  process.once("SIGINT", () => void stopForSignal(130));
+  process.once("SIGTERM", () => void stopForSignal(143));
+  process.once("exit", () => resources.cleanupSynchronously());
 
-  process.on("exit", () => {
-    void cleanup();
-  });
-  process.on("SIGINT", () => {
-    void cleanup().finally(() => process.exit(130));
-  });
-  process.on("SIGTERM", () => {
-    void cleanup().finally(() => process.exit(143));
-  });
+  try {
+    ensureProofInputs();
+    syncOwnableZips();
+    mkdirSync(HUB_STORAGE_DIR, { recursive: true });
+    resources.storageCreated = true;
+    runSync("yarn", ["db:start"], { cwd: HUB_ROOT });
+    ensureVerificationDatabase(() => {
+      resources.databaseCreated = true;
+    });
 
-  const anvil = spawnProcess("anvil", [
+  const anvil = resources.spawn("anvil", "anvil", [
     "--chain-id",
     "84532",
     "--host",
@@ -442,8 +527,6 @@ async function main() {
     "--port",
     "8545",
   ]);
-  children.push(anvil);
-
   await waitFor(async () => (await rpc("eth_chainId")) === "0x14a34", "anvil RPC");
   const { anchorAddress, eqtyTokenAddress, anchorStartBlock } = await bootstrapContracts();
   const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock });
@@ -467,13 +550,12 @@ async function main() {
   // spawns a grandchild that can outlive this setup process and keep port 3311
   // bound to a dropped database, producing a false-empty discovery response.
   runSync("yarn", ["build"], { cwd: HUB_ROOT, env: hubEnv });
-  const hub = spawnProcess("node", ["--preserve-symlinks", "--env-file-if-exists=.env", "dist/main.js"], {
+  const hub = resources.spawn("hub", "node", ["--preserve-symlinks", "--env-file-if-exists=.env", "dist/main.js"], {
     cwd: HUB_ROOT,
     env: hubEnv,
   });
-  children.push(hub);
   if (!hub.pid) {
-    fail("ownables-hub runtime did not expose a process id");
+    throw new Error("ownables-hub runtime did not expose a process id");
   }
 
   await waitFor(async () => {
@@ -484,7 +566,7 @@ async function main() {
   const appEnv = {
     ...process.env,
     LETSRUNIT_BASE_URL: APP_URL,
-    VITE_E2E: "1",
+    VITE_E2E,
     VITE_E2E_RPC_URL: RPC_URL,
     VITE_BASE_SEPOLIA_RPC_URL: RPC_URL,
     VITE_BASE_SEPOLIA_ANCHOR_ADDRESS: anchorAddress,
@@ -507,7 +589,8 @@ async function main() {
     MAINNET_ANCHOR_START_BLOCK: "999999999",
   };
 
-  const app = spawnProcess(
+  const app = resources.spawn(
+    "vite",
     "yarn",
     ["start", "--host", "127.0.0.1", "--port", APP_PORT, "--strictPort"],
     {
@@ -515,8 +598,6 @@ async function main() {
       env: appEnv,
     }
   );
-  children.push(app);
-
   await waitFor(async () => {
     const response = await fetch(APP_URL);
     return response.ok;
@@ -527,7 +608,7 @@ async function main() {
     `${JSON.stringify(
       {
         LETSRUNIT_BASE_URL: APP_URL,
-        VITE_E2E: "1",
+        VITE_E2E,
         VITE_E2E_RPC_URL: RPC_URL,
         VITE_BASE_SEPOLIA_RPC_URL: RPC_URL,
         VITE_BASE_SEPOLIA_ANCHOR_ADDRESS: anchorAddress,
@@ -538,17 +619,29 @@ async function main() {
         E2E_HUB_RUNTIME_ENV_JSON: JSON.stringify(hubRuntimeEnv),
         E2E_HUB_ROOT: HUB_ROOT,
         E2E_HUB_PROCESS_ID: String(hub.pid),
+        E2E_ARTIFACT_DIR: ARTIFACT_DIR,
+        E2E_DATABASE_CONTAINER: DB_CONTAINER,
+        E2E_DATABASE_USER: DB_USER,
+        E2E_DATABASE_NAME: DB_NAME,
+        E2E_HUB_URL: HUB_URL,
+        E2E_RPC_URL: RPC_URL,
       },
       null,
       2
     )}\n`
   );
+  resources.runtimeWritten = true;
 
-  console.log(`E2E stack ready: app=${APP_URL} hub=${HUB_URL} rpc=${RPC_URL}`);
-  await new Promise(() => {});
+  console.log(`E2E stack ready: app=${APP_URL} hub=${HUB_URL} rpc=${RPC_URL} artifacts=${ARTIFACT_DIR}`);
+  await Promise.race([new Promise(() => {}), resources.fatal]);
+  } finally {
+    await resources.cleanup();
+  }
 }
 
-if (process.argv.includes("--validate-paths")) {
+if (process.argv.includes("--validate-lifecycle")) {
+  console.log(JSON.stringify(lifecycleContract()));
+} else if (process.argv.includes("--validate-paths")) {
   const indexerRuntimeEnv = hubIndexerRuntimeEnv({ anchorAddress: "0xanchor", anchorStartBlock: 0 });
   console.log(JSON.stringify({
     HUB_ROOT,
@@ -559,5 +652,12 @@ if (process.argv.includes("--validate-paths")) {
     hubStorage: HUB_STORAGE_URL,
   }));
 } else {
-  await main();
+  try {
+    await main();
+  } catch (error) {
+    const message = error instanceof Error ? error.stack || error.message : String(error);
+    if (existsSync(ARTIFACT_DIR)) appendLog(join(ARTIFACT_DIR, "setup.log"), message);
+    console.error(message);
+    process.exitCode = 1;
+  }
 }
