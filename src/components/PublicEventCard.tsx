@@ -11,11 +11,11 @@ export default function PublicEventCard({ record }: PublicEventCardProps) {
   const eventName = record.event.eventType || "Public event";
 
   return (
-    <Box className="flex flex-col" data-testid={`public-event-${record.replayKey}`}>
+    <Box className="my-3 flex flex-col" data-testid={`public-event-${record.replayKey}`}>
       <Card
         className={cn(
-          "mb-3 overflow-x-auto rounded-br-lg rounded-tl-lg border border-sky-200 bg-sky-50 shadow-sm",
-          "dark:border-sky-900/70 dark:bg-sky-950/30 md:mb-0"
+          "overflow-x-auto rounded-br-lg rounded-tl-lg border border-sky-200 bg-sky-50 shadow-sm",
+          "dark:border-sky-900/70 dark:bg-sky-950/30"
         )}
       >
         <CardContent className="space-y-2 p-4 text-xs text-slate-800 dark:text-slate-200">
