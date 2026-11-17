@@ -127,10 +127,12 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             </h2>
             {issuer && (
               <p className="text-meta">
+                by{" "}
                 <Link
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`Issuer: ${issuer}`}
                   className={cn(issuerLink())}
                 >
                   {shortIssuer}

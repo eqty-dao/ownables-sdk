@@ -52,10 +52,12 @@ export default function AvailableOwnableDetail({
             <h2 className="text-section-title mb-0.5 text-lg lg:mb-1 lg:text-xl">{ownable.title}</h2>
             {ownable.issuer ? (
               <p className="text-meta">
+                by{" "}
                 <Link
                   href={`https://basescan.org/address/${ownable.issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`Issuer: ${ownable.issuer}`}
                   className={cn(issuerLink())}
                 >
                   {shortIssuer}

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { TypedPackage, TypedPackageStub } from "@/interfaces/TypedPackage";
 import { Box, Button, IconButton, Skeleton } from "@/components/ui";
-import { ArrowLeft, ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, createLucideIcon, FolderUp, Package } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
 import { PACKAGE_EXAMPLES } from "@/config/examples";
@@ -10,6 +10,14 @@ import selectFile from "@/utils/selectFile";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import Loading from "./Loading";
+
+// Lucide briefcase-plus (ISC), introduced in 1.48.0.
+const BriefcasePlus = createLucideIcon("briefcase-plus", [
+  ["path", { d: "M13.354 20H4a2 2 0 01-2-2V8a2 2 0 012-2h16a2 2 0 012 2v3.354", key: "case" }],
+  ["path", { d: "M16 11.354V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v16", key: "handle" }],
+  ["path", { d: "M16 17h6", key: "horizontal" }],
+  ["path", { d: "M19 14v6", key: "vertical" }],
+]);
 
 const actionButton = cva(
   "inline-flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-gray-200 bg-white px-4 py-4 text-sm font-medium text-slate-900 transition-colors hover:border-indigo-500 hover:shadow-md dark:border-[#333333] dark:bg-[#252525] dark:text-slate-100 dark:hover:border-indigo-500",
@@ -184,8 +192,8 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
               onClick={onCreate}
               disabled={!hasBuilder}
             >
-              <Sparkles size={20} className="text-slate-600 dark:text-slate-400" />
-              <span><span className="hidden md:inline">Ownable </span>Builder</span>
+              <BriefcasePlus aria-hidden="true" size={20} className="text-slate-600 dark:text-slate-400" />
+              <span>Create Dossier</span>
             </Button>
           </div>
 
