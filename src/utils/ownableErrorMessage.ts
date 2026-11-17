@@ -35,12 +35,17 @@ export default function ownableErrorMessage(error: any): string {
   const message = error.message;
   const viemShortMessage = (error as any).shortMessage;
 
-  if (message.match(/^Ownable \w+ failed$/) && error.cause instanceof Error) {
-    console.error(error.cause);
-    return error.cause.message.replace(/^Custom Error val: "(.+)"$/, "$1");
-  }
-
   console.error(error);
+
+  const contractMessage =
+    /^Ownable \w+ failed$/.test(message) && error.cause instanceof Error
+      ? error.cause.message
+      : message;
+  const customError = /^(?:Ownable ABI call failed: \S+ )?Custom Error val: "([\s\S]*)"$/.exec(
+    contractMessage
+  );
+  if (customError) return customError[1];
+  if (contractMessage !== message) return contractMessage;
 
   // Handle viem style errors by returning their explicit short summary.
   if (typeof viemShortMessage === "string" && viemShortMessage.trim() !== "") {
