@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { TypedPackage, TypedPackageStub } from "@/interfaces/TypedPackage";
 import { Box, Button, IconButton, Skeleton } from "@/components/ui";
-import { ArrowLeft, ChevronRight, FolderUp, Package, Sparkles } from "lucide-react";
+import { ArrowLeft, BriefcaseMedical, ChevronRight, FolderUp, Package } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
 import { PACKAGE_EXAMPLES } from "@/config/examples";
@@ -184,8 +184,8 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
               onClick={onCreate}
               disabled={!hasBuilder}
             >
-              <Sparkles size={20} className="text-slate-600 dark:text-slate-400" />
-              <span><span className="hidden md:inline">Ownable </span>Builder</span>
+              <BriefcaseMedical aria-hidden="true" size={20} className="text-slate-600 dark:text-slate-400" />
+              <span>Create Dossier</span>
             </Button>
           </div>
 

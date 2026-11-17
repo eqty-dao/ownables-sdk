@@ -3,7 +3,7 @@ Feature: Dossier
   Background:
     Given I'm on the homepage
     When I click button "Issue an Ownable"
-    And I click button "Ownable Builder"
+    And I click button "Create Dossier"
     And I set field "Name *" to "Dossier"
     And I set field "Description" to "A living file dossier"
     And I click button "Create Ownable"

@@ -3,7 +3,7 @@ Feature: Browser Builder
   Scenario: Create and issue a dossier through the browser builder
     Given I'm on the homepage
     When I click button "Issue an Ownable"
-    And I click button "Ownable Builder"
+    And I click button "Create Dossier"
     Then the page does not contain text "Widget HTML"
     When I set field "Name *" to "Incident dossier"
     And I set field "Description" to "A living file dossier"
@@ -20,7 +20,7 @@ Feature: Browser Builder
   Scenario: Browser builder validates required inputs
     Given I'm on the homepage
     When I click button "Issue an Ownable"
-    And I click button "Ownable Builder"
+    And I click button "Create Dossier"
     And I click button "Create Ownable"
     Then the page contains text "Name is required"
     When I set field "Name *" to "Dossier"
