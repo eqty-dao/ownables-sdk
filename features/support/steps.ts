@@ -1,6 +1,6 @@
 import { Given, Then, When } from '@letsrunit/bdd';
 import { uploadFile } from './utils/file-upload.ts';
-import { expectOwnableWidgetReady } from './utils/ownable-widget.ts';
+import { expectBlockStackCubeCount, expectOwnableWidgetReady } from './utils/ownable-widget.ts';
 import { expectWalletEmpty } from './utils/wallet.ts';
 import { mnemonicToAccount } from 'viem/accounts';
 
@@ -81,6 +81,10 @@ When('I import the transferred ownable', async function () {
 
 When('the ownable widget is ready', async function () {
   await expectOwnableWidgetReady(this.page);
+});
+
+Then('the Block Stack widget shows {int} cubes', async function (count: number) {
+  await expectBlockStackCubeCount(this.page, count);
 });
 
 When('I start recording widget action messages', async function () {

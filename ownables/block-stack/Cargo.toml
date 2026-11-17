@@ -1,6 +1,6 @@
 [package]
 name = "ownable-block-stack"
-description = "Stack seven crooked public blocks"
+description = "Stack up to 7 blocks using public events"
 version = "0.1.0"
 authors = ["EQTY <info@eqty.me>"]
 edition = "2024"

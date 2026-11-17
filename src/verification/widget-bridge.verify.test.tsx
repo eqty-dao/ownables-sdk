@@ -139,7 +139,7 @@ describe("widget bridge verification", () => {
       if ("get_metadata" in msg) {
         return {
           name: pkg?.title ?? "Block Stack",
-          description: pkg?.description ?? "Stack seven crooked public blocks",
+          description: pkg?.description ?? "Stack up to 7 blocks using public events",
         };
       }
       return false;
@@ -209,7 +209,7 @@ describe("widget bridge verification", () => {
     const pkg = {
       title: "Block Stack",
       name: "ownable-block-stack",
-      description: "Stack seven crooked public blocks",
+      description: "Stack up to 7 blocks using public events",
       cid: "bafy-test",
       versions: [],
       isDynamic: true,
@@ -245,7 +245,7 @@ describe("widget bridge verification", () => {
     const pkg = {
       title: "Block Stack",
       name: "ownable-block-stack",
-      description: "Stack seven crooked public blocks",
+      description: "Stack up to 7 blocks using public events",
       cid: "bafy-test",
       versions: [],
       isDynamic: true,
@@ -381,7 +381,7 @@ describe("widget bridge verification", () => {
     const pkg = {
       title: "Block Stack",
       name: "ownable-block-stack",
-      description: "Stack seven crooked public blocks",
+      description: "Stack up to 7 blocks using public events",
       cid: "bafy-test",
       versions: [],
       isDynamic: true,

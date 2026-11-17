@@ -55,87 +55,92 @@
       }
 
       .ownable-actions {
-        display: flex;
-        flex-direction: column;
-        border-radius: 5%;
-        height: 19vh;
-        margin: 3vh 0 2vh;
+        box-sizing: border-box;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: clamp(8px, 3vw, 16px);
+        width: min(88%, 22rem);
+        padding: 5px 6px 5px 14px;
+        margin: 2vh auto 0;
+        border: 1px solid #555060;
+        border-radius: 12px;
+        background: linear-gradient(153deg, #2c2b35, #1a1920 70%);
+        box-shadow: 0 4px 12px #15131d38, inset 0 1px #ffffff14;
       }
 
       .ownable-actions button {
-        display: block;
-        margin: 3vh auto;
-        padding: 0;
-        border-width: 0;
-        outline: none;
-        border-radius: 2px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
-        background-color: rgb(25, 118, 210);
-        color: #fff;
-        transition: background-color .3s;
+        box-sizing: border-box;
+        min-height: 44px;
+        padding: 0 clamp(12px, 4vw, 22px);
+        border: 1px solid #a8be55;
+        border-radius: 7px;
+        background: linear-gradient(#dbed92, #b5cd62);
+        color: #242b16;
+        font: 700 0.875rem system-ui, sans-serif;
         cursor: pointer;
-        font-size: 4.2vh;
-        width: 40%;
-        height: 8vh;
-        font-weight: bold;
-      }
-      .ownable-actions button:hover {
-        background-color: rgb(21, 101, 192);
       }
 
-      input[type='range'] {
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
+      .ownable-actions button:hover {
+        background: #e4f3a9;
       }
-      input[type='range']:focus {
-        outline: none;
-      }
-      input[type='range']::-webkit-slider-thumb {
-        -webkit-appearance: none;
-      }
-      input[type='range']::-moz-range-thumb {
-        border: none;
+
+      .ownable-actions button:active {
+        background: #aec45f;
       }
 
       .slider {
+        --fill: 50%;
+        appearance: none;
         display: block;
-        width: 90vw;
-        margin: 1vh auto;
+        width: 100%;
+        height: 44px;
+        margin: 0;
+        background: transparent;
+        cursor: pointer;
       }
+
+      .slider:focus-visible,
+      .ownable-actions button:focus-visible {
+        outline: 2px solid #f5ccff;
+        outline-offset: 2px;
+      }
+
       .slider::-webkit-slider-runnable-track {
-        display: flex;
-        align-items: center;
-        height: 2vh;
-        border-radius: 1vh;
-        box-shadow: inset -2px -2px 8px white, inset 2px 2px 8px rgba(0, 0, 0, 0.5);
+        height: 6px;
+        border-radius: 999px;
+        background: linear-gradient(to right, #e397fb var(--fill), #4d4857 var(--fill));
       }
-      .slider::-webkit-slider-thumb {
-        position: relative;
-        top: -50%;
-        width: 4vh;
-        height: 4vh;
-        background-color: #fff;
-        background-image: linear-gradient(-45deg, rgba(255, 255, 255, 0.8), transparent);
-        border-radius: 50%;
-        box-shadow: -1px -1px 2px white, -2px 2px 2px rgba(0, 0, 0, 0.3);
-      }
+
       .slider::-moz-range-track {
-        display: flex;
-        align-items: center;
-        height: 2vh;
-        border-radius: 1vh;
-        box-shadow: inset -2px -2px 8px white, inset 2px 2px 8px rgba(0, 0, 0, 0.5);
+        height: 6px;
+        border-radius: 999px;
+        background: linear-gradient(to right, #e397fb var(--fill), #4d4857 var(--fill));
       }
+
+      .slider::-webkit-slider-thumb {
+        appearance: none;
+        margin-top: -6px;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #efb7ff;
+        border-radius: 5px;
+        background: #493153;
+        box-shadow: 0 0 6px #d378ee50;
+      }
+
       .slider::-moz-range-thumb {
-        position: relative;
-        top: -50%;
-        width: 4vh;
-        height: 4vh;
-        background-color: #fff;
-        background-image: linear-gradient(-45deg, rgba(255, 255, 255, 0.8), transparent);
-        border-radius: 50%;
-        box-shadow: -1px -1px 2px white, -2px 2px 2px rgba(0, 0, 0, 0.3);
+        box-sizing: border-box;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #efb7ff;
+        border-radius: 5px;
+        background: #493153;
+        box-shadow: 0 0 6px #d378ee50;
+      }
+
+      @media (max-height: 350px) {
+        .potion { height: min(75vh, calc(96vh - 58px)); }
       }
     </style>
   </head>
@@ -150,13 +155,16 @@
       <div class="amount"></div>
     </div>
     <div class="ownable-actions">
-      <div class="drink">
-        <input type="range" class="slider" min="0" max="100" value="50">
-      </div>
+      <input type="range" class="slider" min="0" max="100" value="50" aria-label="Drink amount">
       <button id="drink-button">Drink</button>
     </div>
     <script>
       let ownable_id;
+      const slider = document.querySelector(".slider");
+
+      slider.addEventListener("input", () => {
+        slider.style.setProperty("--fill", slider.value + "%");
+      });
 
       document.getElementById("drink-button").addEventListener('click', () => consume());
 
@@ -176,15 +184,10 @@
         updateTemplate(state.color, state.current_amount)
       });
 
-      function getDrinkAmount() {
-        let stringAmount = document.getElementsByClassName('slider')[0].valueOf().value;
-        return parseInt(stringAmount);
-      }
-
       function consume() {
         let msg = {
           "drink": {
-            "amount": getDrinkAmount(),
+            "amount": slider.valueAsNumber,
           },
         };
 

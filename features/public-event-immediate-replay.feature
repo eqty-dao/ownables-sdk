@@ -8,7 +8,7 @@ Feature: Apply submitted public events before Hub confirmation
     And I check switch "Anchor events"
     And I click button "Close settings"
     And I click button "Issue an Ownable"
-    And I click button "Block Stack Stack seven crooked public blocks"
+    And I click button "Block Stack Stack up to 7 blocks using public events"
     And the ownable widget is ready
     Then the Hub recorded a public-events snapshot request for the current ownable
     And the Hub recorded a public-events stream request for the current ownable set
@@ -16,17 +16,17 @@ Feature: Apply submitted public events before Hub confirmation
     And I click button "Stack one more" within iframe "Ownable widget"
     Then the latest widget action message is an emit for "stack"
     And the tracked public-event status for the current ownable becomes "pending" for "stack"
-    And text "2 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    And the Block Stack widget shows 2 cubes
     When I click button "Stack one more" within iframe "Ownable widget"
     Then the latest widget action message is an emit for "stack"
     And there is exactly "2" tracked public event for "stack" on the current ownable
-    And text "3 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    And the Block Stack widget shows 3 cubes
     When I click button "More information"
     Then there are exactly "2" visible "pending" public event rows for "stack"
     When I capture the visible "2" public event rows for "stack"
     And the Hub confirms the latest pending public event for the current ownable
     Then the captured public event rows remain in place and become "confirmed" for "stack"
-    And text "3 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    And the Block Stack widget shows 3 cubes
     When the Hub repeats the current ownable public-event stream
     Then the captured public event rows remain in place and become "confirmed" for "stack"
-    And text "3 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    And the Block Stack widget shows 3 cubes

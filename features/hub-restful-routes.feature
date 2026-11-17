@@ -13,7 +13,7 @@ Feature: Canonical Hub public event routes
     And I click button "Potion Drink a colorful potion"
     And I remember the current ownable id as "first"
     When I click button "Issue an Ownable Create a new ownable from a package"
-    And I click button "Block Stack Stack seven crooked public blocks"
+    And I click button "Block Stack Stack up to 7 blocks using public events"
     And the ownable widget is ready
     And I remember the current ownable id as "second"
     Then the Hub recorded a public-events snapshot request for the current ownable
