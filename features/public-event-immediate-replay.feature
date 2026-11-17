@@ -8,7 +8,7 @@ Feature: Apply submitted public events before Hub confirmation
     And I check switch "Anchor events"
     And I click button "Close settings"
     And I click button "Issue an Ownable"
-    And I click button "Block Stack Stack seven crooked public blocks"
+    And I click button "Block Stack Stack up to 7 blocks using public events"
     And the ownable widget is ready
     Then the Hub recorded a public-events snapshot request for the current ownable
     And the Hub recorded a public-events stream request for the current ownable set

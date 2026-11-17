@@ -19,7 +19,7 @@ export const PACKAGE_EXAMPLES: TypedPackageStub[] = PACKAGE_EXAMPLE_URL
       {
         title: "Block Stack",
         name: "ownable-block-stack",
-        description: "Stack seven crooked public blocks",
+        description: "Stack up to 7 blocks using public events",
         stub: true,
       },
       {

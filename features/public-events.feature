@@ -8,7 +8,7 @@ Feature: Public events
     And I check switch "Anchor events"
     And I click button "Close settings"
     And I click button "Issue an Ownable"
-    And I click button "Block Stack Stack seven crooked public blocks"
+    And I click button "Block Stack Stack up to 7 blocks using public events"
     And the ownable widget is ready
     And I click button "More information"
     Then the page contains text "Signed by:"
@@ -44,7 +44,7 @@ Feature: Public events
     And I remember the current ownable id as "first"
     Then the Hub recorded a public-events stream request for the current ownable set
     When I click button "Issue an Ownable Create a new ownable from a package"
-    And I click button "Block Stack Stack seven crooked public blocks"
+    And I click button "Block Stack Stack up to 7 blocks using public events"
     And the ownable widget is ready
     And I remember the current ownable id as "second"
     Then the Hub recorded a later public-events stream request for remembered ownables "first,second"
