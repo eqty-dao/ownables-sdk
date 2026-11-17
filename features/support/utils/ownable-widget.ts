@@ -17,3 +17,11 @@ export async function expectOwnableWidgetReady(page: Page) {
     { timeout: 10_000 }
   );
 }
+
+export async function expectBlockStackCubeCount(page: Page, count: number) {
+  const widget = page.frameLocator(WIDGET_SELECTOR).first();
+  await expect(widget.getByTestId('stacked-cube')).toHaveCount(count);
+  const frame = await widget.owner().boundingBox();
+  if (!frame) throw new Error('Block Stack iframe is not visible');
+  expect(frame.width / frame.height).toBeCloseTo(4 / 3, 2);
+}

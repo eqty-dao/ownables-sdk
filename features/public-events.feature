@@ -27,11 +27,11 @@ Feature: Public events
     Then the tracked public-event status for the current ownable becomes "confirmed" for "stack"
     And the captured public event rows remain in place and become "confirmed" for "stack"
     And there is exactly "1" tracked public event for "stack" on the current ownable
-    And text "2 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    And the Block Stack widget shows 2 cubes
     When the Hub repeats the current ownable public-event stream
     Then the captured public event rows remain in place and become "confirmed" for "stack"
     And there is exactly "1" tracked public event for "stack" on the current ownable
-    And text "2 of 7 blocks stacked" within iframe "Ownable widget" is visible
+    And the Block Stack widget shows 2 cubes
 
   Scenario: Reconnect the public-events stream when the watched ownable set changes
     Given the Hub transport verifier backend is reset

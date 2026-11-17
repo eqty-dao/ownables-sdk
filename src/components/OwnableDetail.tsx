@@ -112,6 +112,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
   );
   const showAddFilesAction =
     !archived && !isTransferred && pkg.hasAttachments && !isClosed;
+  const isBlockStack = pkg.name === "ownable-block-stack";
 
   return (
     <Box className="mx-auto lg:max-w-2xl lg:px-8 lg:pt-5">
@@ -162,9 +163,12 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
         {pkg.hasWidgetState ? (
           <Box
-            className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125"
+            className={cn(
+              "relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125",
+              isBlockStack && "[color-scheme:light] dark:[color-scheme:dark]"
+            )}
             style={{
-              aspectRatio: "3 / 4",
+              aspectRatio: isBlockStack ? "4 / 3" : "3 / 4",
               ...(ownableBackgroundColor
                 ? { backgroundColor: ownableBackgroundColor }
                 : {}),
