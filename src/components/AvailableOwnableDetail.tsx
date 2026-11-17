@@ -58,7 +58,7 @@ export default function AvailableOwnableDetail({
                   rel="noopener noreferrer"
                   className={cn(issuerLink())}
                 >
-                  {shortIssuer}
+                  Issuer: {shortIssuer}
                   <ExternalLink size={16} className="ml-1.5 inline" style={{ verticalAlign: "-2px" }} />
                 </Link>
               </p>

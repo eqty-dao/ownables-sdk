@@ -133,7 +133,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   rel="noopener noreferrer"
                   className={cn(issuerLink())}
                 >
-                  {shortIssuer}
+                  Issuer: {shortIssuer}
                   <ExternalLink
                     size={16}
                     className="inline ml-1.5"
