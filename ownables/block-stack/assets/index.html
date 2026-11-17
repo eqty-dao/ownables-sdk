@@ -9,7 +9,7 @@
 
       body {
         margin: 0;
-        color: #34333a;
+        color: #797480;
       }
 
       .widget {
@@ -72,13 +72,13 @@
         display: grid;
         place-items: center;
         color: inherit;
-        border: 1px solid #dedde3;
+        border: 1px solid rgb(121 116 128 / 24%);
         border-radius: 12px;
         background: transparent;
         cursor: pointer;
       }
 
-      button:hover:not(:disabled) { background: #f1f0f5; }
+      button:hover:not(:disabled) { background: rgb(121 116 128 / 10%); }
 
       button:focus-visible {
         outline: 2px solid #7559c1;
@@ -88,12 +88,6 @@
       button:disabled {
         opacity: .32;
         cursor: default;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        body { color: #e4e1eb; }
-        button { border-color: #56525f; }
-        button:hover:not(:disabled) { background: #383440; }
       }
 
       svg {

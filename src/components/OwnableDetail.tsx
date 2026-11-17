@@ -163,10 +163,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
 
         {pkg.hasWidgetState ? (
           <Box
-            className={cn(
-              "relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125",
-              isBlockStack && "[color-scheme:light] dark:[color-scheme:dark]"
-            )}
+            className="relative mx-4 overflow-hidden rounded-2xl lg:mx-auto lg:mb-6 lg:max-w-125"
             style={{
               aspectRatio: isBlockStack ? "4 / 3" : "3 / 4",
               ...(ownableBackgroundColor
