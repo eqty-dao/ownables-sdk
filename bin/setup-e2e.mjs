@@ -23,6 +23,7 @@ import {
 } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
+import examplePackages from "../src/config/example-packages.json" with { type: "json" };
 
 const ROOT = process.cwd();
 const RUN_ID = `${new Date().toISOString().replace(/[:.]/g, "-")}-${process.pid}`;
@@ -56,7 +57,6 @@ const APP_PORT = "3300";
 const HUB_PORT = "3311";
 const APP_URL = `http://127.0.0.1:${APP_PORT}`;
 const HUB_URL = `http://127.0.0.1:${HUB_PORT}`;
-const REQUIRED_ZIPS = ["potion.zip", "block-stack.zip"];
 const PUBLIC_OWNABLES_DIR = join(ROOT, "public", "ownables");
 const DEFAULT_E2E_MNEMONIC =
   "test test test test test test test test test test test junk";
@@ -179,17 +179,9 @@ async function rpc(method, params = []) {
   return body.result;
 }
 
-function ensureProofInputs() {
-  for (const zipName of REQUIRED_ZIPS) {
-    const zipPath = join(ROOT, "ownables", zipName);
-    if (!existsSync(zipPath)) {
-      throw new Error(
-        `Missing ${zipPath}. Build the accepted ownables before running the public-events proof.`
-      );
-    }
-  }
-
-  for (const name of ["robot", "paint"]) {
+function ensureExampleZips() {
+  for (const { name: packageName } of examplePackages) {
+    const name = packageName.replace(/^ownable-/, "");
     const zipPath = join(ROOT, "ownables", `${name}.zip`);
     if (!existsSync(zipPath)) {
       runSync("yarn", ["ownables:build", name], { cwd: ROOT });
@@ -605,7 +597,7 @@ async function main() {
   process.once("exit", () => resources.cleanupSynchronously());
 
   return withSetupResources(resources, async () => {
-    ensureProofInputs();
+    ensureExampleZips();
     syncOwnableZips();
     mkdirSync(HUB_STORAGE_DIR, { recursive: true });
     resources.storageCreated = true;

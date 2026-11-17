@@ -1,58 +1,10 @@
 import type { TypedPackageStub } from "@/interfaces/TypedPackage";
+import examplePackages from "./example-packages.json";
 
 export const PACKAGE_EXAMPLE_URL = import.meta.env.VITE_OWNABLE_EXAMPLES_URL;
 
 export const PACKAGE_EXAMPLES: TypedPackageStub[] = PACKAGE_EXAMPLE_URL
-  ? [
-      {
-        title: "Antenna",
-        name: "ownable-antenna",
-        description: "Add-on for Robot",
-        stub: true,
-      },
-      {
-        title: "Armor",
-        name: "ownable-armor",
-        description: "Add-on for Robot",
-        stub: true,
-      },
-      {
-        title: "Block Stack",
-        name: "ownable-block-stack",
-        description: "Stack up to 7 blocks using public events",
-        stub: true,
-      },
-      {
-        title: "Car",
-        name: "ownable-car",
-        description: "Ride for HODLers",
-        stub: true,
-      },
-      {
-        title: "Paint",
-        name: "ownable-paint",
-        description: "Consumable for Robot",
-        stub: true,
-      },
-      {
-        title: "Potion",
-        name: "ownable-potion",
-        description: "Drink a colorful potion",
-        stub: true,
-      },
-      {
-        title: "Robot",
-        name: "ownable-robot",
-        description: "An adorable robot companion",
-        stub: true,
-      },
-      {
-        title: "Speakers",
-        name: "ownable-speakers",
-        description: "Add-on for Robot",
-        stub: true,
-      },
-    ]
+  ? examplePackages.map((pkg): TypedPackageStub => ({ ...pkg, stub: true }))
   : [];
 
 export const HAS_EXAMPLES = PACKAGE_EXAMPLES.length > 0;
