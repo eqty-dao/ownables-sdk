@@ -46,8 +46,9 @@ Start that stack in a separate terminal first:
 yarn test:e2e:setup
 ```
 
-The setup command starts Anvil, deploys and configures the test contracts,
-starts a PostgreSQL-backed Hub, and starts Vite. All scenarios use this same
+The setup command builds any missing ZIPs for the wallet's example catalog,
+starts Anvil, deploys and configures the test contracts, and starts a
+PostgreSQL-backed Hub and Vite. All scenarios use this same
 environment. Each setup run writes process and setup logs under
 `artifacts/e2e/<run-id>/` and prints that directory when the stack is ready.
 The directory remains after cleanup to diagnose failures.
@@ -156,7 +157,7 @@ Adds speakers to the robot. Only one set of speakers can be added.
 
 #### Armor
 
-Adds armor to the robot. Only one shield can be added.
+Adds a shield to the robot. Select Armor in the wallet to forge it. Only one shield can be added.
 
 ![Armor Ownable](https://user-images.githubusercontent.com/100821/221386885-7fa3d0f4-8a15-44c6-80a4-c76d71120ab7.png)
 

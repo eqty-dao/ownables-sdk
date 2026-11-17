@@ -1,0 +1,42 @@
+[
+  {
+    "title": "Antenna",
+    "name": "ownable-antenna",
+    "description": "Add-on for Robot"
+  },
+  {
+    "title": "Armor",
+    "name": "ownable-armor",
+    "description": "Add-on for Robot"
+  },
+  {
+    "title": "Block Stack",
+    "name": "ownable-block-stack",
+    "description": "Stack up to 7 blocks using public events"
+  },
+  {
+    "title": "Car",
+    "name": "ownable-car",
+    "description": "Ride for HODLers"
+  },
+  {
+    "title": "Paint",
+    "name": "ownable-paint",
+    "description": "Consumable for Robot"
+  },
+  {
+    "title": "Potion",
+    "name": "ownable-potion",
+    "description": "Drink a colorful potion"
+  },
+  {
+    "title": "Robot",
+    "name": "ownable-robot",
+    "description": "An adorable robot companion"
+  },
+  {
+    "title": "Speakers",
+    "name": "ownable-speakers",
+    "description": "Add-on for Robot"
+  }
+]

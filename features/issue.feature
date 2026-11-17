@@ -17,3 +17,18 @@ Feature: Issue
     And I click button "Potion Drink a colorful potion"
     Then the page contains button "Robot"
     And heading "Potion" is visible
+
+  @story-20
+  Scenario Outline: Forge a Robot add-on from the example catalog
+    Given I'm on the homepage
+    When I click button "Issue an Ownable"
+    And I click button "<example> Add-on for Robot"
+    Then heading "<example>" is visible
+    When I click button "More information"
+    Then the page contains text "Signed by:"
+
+    Examples:
+      | example  |
+      | Antenna  |
+      | Armor    |
+      | Speakers |
