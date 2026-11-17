@@ -106,10 +106,7 @@ export default function AnchorAllowanceDialog({
           />
         </div>
       </DialogContent>
-      <DialogActions>
-        <Button variant="ghost" onClick={onClose} disabled={busy}>
-          Close
-        </Button>
+      <DialogActions className="justify-between">
         <Button variant="danger-outlined" onClick={() => void handleReset()} disabled={busy}>
           Reset to zero
         </Button>
