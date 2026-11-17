@@ -8,6 +8,7 @@ import {
   Info,
   Lock,
   LockOpen,
+  Stamp,
   Zap,
 } from "lucide-react";
 import { EventChain } from "eqty-core";
@@ -131,9 +132,12 @@ export default function OwnableDetail(props: OwnableDetailProps) {
                   href={`https://basescan.org/address/${issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title="Issuer"
+                  aria-label={`Issuer: ${issuer}`}
                   className={cn(issuerLink())}
                 >
-                  Issuer: {shortIssuer}
+                  <Stamp aria-hidden="true" size={14} className="mr-1.5 inline align-text-bottom" />
+                  {shortIssuer}
                   <ExternalLink
                     size={16}
                     className="inline ml-1.5"

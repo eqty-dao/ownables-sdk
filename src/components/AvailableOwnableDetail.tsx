@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Link, Tile } from "@/components/ui";
-import { ArrowLeft, Box as BoxIcon, ExternalLink, LoaderCircle } from "lucide-react";
+import { ArrowLeft, Box as BoxIcon, ExternalLink, LoaderCircle, Stamp } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 import shortId from "@/utils/shortId";
@@ -56,9 +56,12 @@ export default function AvailableOwnableDetail({
                   href={`https://basescan.org/address/${ownable.issuer}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title="Issuer"
+                  aria-label={`Issuer: ${ownable.issuer}`}
                   className={cn(issuerLink())}
                 >
-                  Issuer: {shortIssuer}
+                  <Stamp aria-hidden="true" size={14} className="mr-1.5 inline align-text-bottom" />
+                  {shortIssuer}
                   <ExternalLink size={16} className="ml-1.5 inline" style={{ verticalAlign: "-2px" }} />
                 </Link>
               </p>
