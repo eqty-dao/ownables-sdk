@@ -35,7 +35,7 @@ async function importInFreshWallet(
     const page = await context.newPage();
     await page.goto(new URL('/', originalPage.url()).href);
     await expectWalletEmpty(page);
-    await page.getByRole('button', { name: 'Issue an Ownable', exact: true }).click();
+    await page.getByRole('button', { name: /^Issue an Ownable\b/ }).click();
     const [picker] = await Promise.all([
       page.waitForEvent('filechooser'),
       page.getByRole('button', { name: 'Import Ownable', exact: true }).click(),
@@ -45,6 +45,16 @@ async function importInFreshWallet(
   } finally {
     await context.close();
   }
+}
+
+async function expectRejectedArchive(page: Page, archive: ArchiveEntry, message: RegExp) {
+  await importInFreshWallet(page, archive, async (freshPage) => {
+    const dialog = freshPage.getByRole('dialog').filter({
+      has: freshPage.getByRole('heading', { name: 'Failed to import Ownable', exact: true }),
+    });
+    await expect(dialog).toContainText(message, { timeout: 20_000 });
+    await expectWalletEmpty(freshPage);
+  });
 }
 
 When('I download the Ownable archive', async function (this: ConsumptionProofWorld) {
@@ -123,9 +133,12 @@ Then(/^a fresh wallet rejects the Robot with its Paint proof (missing|changed)$/
   }
 
   const buffer = await archive.generateAsync({ type: 'nodebuffer' });
-  await importInFreshWallet(this.page, { ...this.robotArchive, buffer }, async (page) => {
-    const dialog = page.getByRole('dialog', { name: 'Failed to import Ownable' });
-    await expect(dialog).toContainText(message, { timeout: 20_000 });
-    await expectWalletEmpty(page);
-  });
+  await expectRejectedArchive(this.page, { ...this.robotArchive, buffer }, message);
+});
+
+Then('a fresh wallet rejects the Robot without Anchor evidence', async function (
+  this: ConsumptionProofWorld
+) {
+  if (!this.robotArchive) throw new Error('Download the Robot archive first');
+  await expectRejectedArchive(this.page, this.robotArchive, /Missing authoritative anchor/i);
 });
