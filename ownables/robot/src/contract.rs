@@ -110,12 +110,12 @@ fn try_ingest_consume(
     let owner = event.source.owner.clone();
     let issuer = event.source.issuer.clone();
     let ownable_id = event.source.id.clone();
-    let consumed_by = event
-        .attributes
-        .get("consumed_by")
-        .and_then(|value| value.as_str())
-        .unwrap_or_default()
-        .to_string();
+    let missing_legacy_consumed_by = event.target.is_none()
+        && event
+            .attributes
+            .get("consumed_by")
+            .and_then(|value| value.as_str())
+            .is_none_or(str::is_empty);
     let color = event
         .attributes
         .get("color")
@@ -137,7 +137,7 @@ fn try_ingest_consume(
     if ownable_id.is_empty()
         || consumable_type.is_empty()
         || issuer.is_empty()
-        || consumed_by.is_empty()
+        || missing_legacy_consumed_by
         || owner.is_empty()
     {
         return Err(ContractError::InvalidExternalEventArgs {});
@@ -250,7 +250,7 @@ mod tests {
     use crate::state::CONFIG;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{Addr, MessageInfo};
-    use ownable_std::{OwnableEvent, OwnableEventSource, PublicEvent};
+    use ownable_std::{OwnableEvent, PublicEvent};
     use serde_json::json;
 
     fn test_info(sender: &str) -> MessageInfo {
@@ -278,47 +278,63 @@ mod tests {
     }
 
     #[test]
-    fn ingest_consume_updates_robot_config() {
-        let mut deps = mock_dependencies();
-        instantiate(
-            deps.as_mut(),
-            mock_env(),
-            test_info("issuer"),
-            InstantiateMsg {
-                ownable_id: "robot-id".to_string(),
-                package: "pkg".to_string(),
-                network_id: 1,
-                ownable_type: None,
+    fn ingest_consume_updates_robot_config_for_both_wire_formats() {
+        let modern = json!({
+            "type": "consume",
+            "source": {
+                "id": "paint-ownable",
+                "owner": "issuer",
+                "issuer": "issuer",
+                "event": "consume-event-hash"
             },
-        )
-        .unwrap();
-
-        let event = OwnableEvent {
-            source: OwnableEventSource {
-                id: "paint-ownable".to_string(),
-                owner: "issuer".to_string(),
-                issuer: "issuer".to_string(),
+            "target": { "id": "robot-id" },
+            "attributes": {
+                "consumable_type": "paint",
+                "color": "#ff00ff"
+            }
+        });
+        let legacy = json!({
+            "eventType": "consume",
+            "source": {
+                "id": "paint-ownable",
+                "owner": "issuer",
+                "issuer": "issuer"
             },
-            event_type: "consume".to_string(),
-            attributes: json!({
+            "attributes": {
                 "consumed_by": "robot-owner",
                 "consumable_type": "paint",
                 "color": "#ff00ff"
-            }),
-        };
+            }
+        });
 
-        ingest(test_info("wallet"), deps.as_mut(), event).unwrap();
+        for message in [modern, legacy] {
+            let mut deps = mock_dependencies();
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                test_info("issuer"),
+                InstantiateMsg {
+                    ownable_id: "robot-id".to_string(),
+                    package: "pkg".to_string(),
+                    network_id: 1,
+                    ownable_type: None,
+                },
+            )
+            .unwrap();
 
-        let config = CONFIG.load(&deps.storage).unwrap();
-        assert_eq!(config.color, "#ff00ff");
-        assert_eq!(config.consumed_ownable_ids.len(), 1);
-        assert_eq!(
-            config.consumed_ownable_ids[0],
-            Addr::unchecked("paint-ownable")
-        );
-        assert!(!config.has_antenna);
-        assert!(!config.has_armor);
-        assert!(!config.has_speaker);
+            let event: OwnableEvent = serde_json::from_value(message).unwrap();
+            ingest(test_info("wallet"), deps.as_mut(), event).unwrap();
+
+            let config = CONFIG.load(&deps.storage).unwrap();
+            assert_eq!(config.color, "#ff00ff");
+            assert_eq!(
+                config.consumed_ownable_ids,
+                vec![Addr::unchecked("paint-ownable")]
+            );
+            assert!(!config.has_antenna);
+            assert!(!config.has_armor);
+            assert!(!config.has_speaker);
+        }
     }
 
     #[test]
@@ -337,18 +353,15 @@ mod tests {
         )
         .unwrap();
 
-        let event = OwnableEvent {
-            source: OwnableEventSource {
-                id: "".to_string(),
-                owner: "issuer".to_string(),
-                issuer: "issuer".to_string(),
-            },
-            event_type: "consume".to_string(),
-            attributes: json!({
+        let event: OwnableEvent = serde_json::from_value(json!({
+            "eventType": "consume",
+            "source": { "id": "", "owner": "issuer", "issuer": "issuer" },
+            "attributes": {
                 "consumed_by": "robot-owner",
                 "consumable_type": "antenna"
-            }),
-        };
+            }
+        }))
+        .unwrap();
 
         let err = ingest(test_info("wallet"), deps.as_mut(), event).unwrap_err();
         assert_eq!(err.to_string(), "Invalid external event args");

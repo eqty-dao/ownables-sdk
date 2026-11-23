@@ -64,7 +64,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Consume {} => try_consume(info, deps),
+        ExecuteMsg::Consume { consumer_id } => try_consume(info, deps, consumer_id.as_deref()),
         ExecuteMsg::Transfer { to } => try_transfer(info, deps, to),
     }
 }
@@ -97,7 +97,11 @@ pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>,
     })
 }
 
-pub fn try_consume(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
+pub fn try_consume(
+    info: MessageInfo,
+    deps: DepsMut,
+    consumer_id: Option<&str>,
+) -> Result<Response, ContractError> {
     let ownership = OWNABLE_INFO.load(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
     ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
@@ -114,19 +118,23 @@ pub fn try_consume(info: MessageInfo, deps: DepsMut) -> Result<Response, Contrac
     CONFIG.save(deps.storage, &config.clone())?;
 
     let mut event = Event::new("consume".to_string());
+    if consumer_id.is_none() {
+        event = event.add_attributes(vec![
+            Attribute {
+                key: "issuer".to_string(),
+                value: ownership.issuer.to_string(),
+            },
+            Attribute {
+                key: "owner".to_string(),
+                value: ownership.owner.to_string(),
+            },
+            Attribute {
+                key: "consumed_by".to_string(),
+                value: config.consumed_by.unwrap().to_string(),
+            },
+        ]);
+    }
     event = event.add_attributes(vec![
-        Attribute {
-            key: "issuer".to_string(),
-            value: ownership.issuer.to_string(),
-        },
-        Attribute {
-            key: "owner".to_string(),
-            value: ownership.owner.to_string(),
-        },
-        Attribute {
-            key: "consumed_by".to_string(),
-            value: config.consumed_by.unwrap().to_string(),
-        },
         Attribute {
             key: "consumable_type".to_string(),
             value: ownership.ownable_type.unwrap_or("armor".to_string()),
@@ -197,4 +205,73 @@ fn query_ownable_info(deps: Deps) -> StdResult<Binary> {
 fn query_ownable_metadata(deps: Deps) -> StdResult<Binary> {
     let meta = METADATA.load(deps.storage)?;
     to_json_binary(&meta)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CONFIG, ExecuteMsg, InstantiateMsg, execute, instantiate};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use cosmwasm_std::{Addr, MessageInfo, from_json};
+
+    #[test]
+    fn consume_keeps_legacy_replay_and_emits_only_semantic_attributes_for_new_commands() {
+        let info = MessageInfo {
+            sender: Addr::unchecked("wallet-owner"),
+            funds: vec![],
+        };
+        let mut results = Vec::new();
+
+        for command in [
+            r#"{"consume":{}}"#,
+            r#"{"consume":{"consumer_id":"robot-id"}}"#,
+        ] {
+            let mut deps = mock_dependencies();
+            instantiate(
+                deps.as_mut(),
+                mock_env(),
+                info.clone(),
+                InstantiateMsg {
+                    ownable_id: "paint-id".to_string(),
+                    package: "pkg".to_string(),
+                    network_id: 1,
+                    ownable_type: None,
+                },
+            )
+            .unwrap();
+            let message: ExecuteMsg = from_json(command).unwrap();
+            let response = execute(deps.as_mut(), mock_env(), info.clone(), message).unwrap();
+            assert_eq!(response.events.len(), 1);
+            assert_eq!(response.events[0].ty, "consume");
+            results.push((
+                CONFIG.load(&deps.storage).unwrap(),
+                response.events[0].attributes.clone(),
+            ));
+        }
+
+        let [
+            (legacy_state, legacy_attributes),
+            (modern_state, modern_attributes),
+        ] = results.as_slice()
+        else {
+            unreachable!();
+        };
+        assert_eq!(legacy_state, modern_state);
+        assert_eq!(modern_state.consumed_by.as_ref(), Some(&info.sender));
+        assert_eq!(
+            legacy_attributes[..3],
+            [
+                ("issuer", "wallet-owner"),
+                ("owner", "wallet-owner"),
+                ("consumed_by", "wallet-owner"),
+            ]
+        );
+        assert_eq!(modern_attributes, &legacy_attributes[3..]);
+        assert_eq!(
+            modern_attributes.as_slice(),
+            [
+                ("consumable_type", "paint"),
+                ("color", modern_state.color.as_str()),
+            ]
+        );
+    }
 }

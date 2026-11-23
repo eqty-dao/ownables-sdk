@@ -64,7 +64,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Consume {} => try_consume(info, deps),
+        ExecuteMsg::Consume { consumer_id } => try_consume(info, deps, consumer_id.as_deref()),
         ExecuteMsg::Transfer { to } => try_transfer(info, deps, to),
     }
 }
@@ -97,7 +97,11 @@ pub fn encode_public_event(request: EncodePublicEventRequest) -> Result<Vec<u8>,
     })
 }
 
-pub fn try_consume(info: MessageInfo, deps: DepsMut) -> Result<Response, ContractError> {
+pub fn try_consume(
+    info: MessageInfo,
+    deps: DepsMut,
+    consumer_id: Option<&str>,
+) -> Result<Response, ContractError> {
     let ownership = OWNABLE_INFO.load(deps.storage)?;
     let config = CONFIG.load(deps.storage)?;
     ensure_owner(&ownership, &info.sender, || ContractError::Unauthorized {
@@ -114,24 +118,26 @@ pub fn try_consume(info: MessageInfo, deps: DepsMut) -> Result<Response, Contrac
     CONFIG.save(deps.storage, &config.clone())?;
 
     let mut event = Event::new("consume".to_string());
-    event = event.add_attributes(vec![
-        Attribute {
-            key: "issuer".to_string(),
-            value: ownership.issuer.to_string(),
-        },
-        Attribute {
-            key: "owner".to_string(),
-            value: ownership.owner.to_string(),
-        },
-        Attribute {
-            key: "consumed_by".to_string(),
-            value: config.consumed_by.unwrap().to_string(),
-        },
-        Attribute {
-            key: "consumable_type".to_string(),
-            value: ownership.ownable_type.unwrap_or("armor".to_string()),
-        },
-    ]);
+    if consumer_id.is_none() {
+        event = event.add_attributes(vec![
+            Attribute {
+                key: "issuer".to_string(),
+                value: ownership.issuer.to_string(),
+            },
+            Attribute {
+                key: "owner".to_string(),
+                value: ownership.owner.to_string(),
+            },
+            Attribute {
+                key: "consumed_by".to_string(),
+                value: config.consumed_by.unwrap().to_string(),
+            },
+        ]);
+    }
+    event = event.add_attributes(vec![Attribute {
+        key: "consumable_type".to_string(),
+        value: ownership.ownable_type.unwrap_or("armor".to_string()),
+    }]);
 
     Ok(Response::new()
         .add_attribute("method", "try_consume")
