@@ -127,7 +127,6 @@ export default class ServiceContainer {
         const eqty = await c.get("eqty");
         const eventChains = await c.get("eventChains");
         const packages = await c.get("packages");
-        const hub = await c.get("hub");
         const publicClient = isE2E ? createE2EViemClients(c.chainId).publicClient : c.publicClient;
         return new OwnableService({
           stateStore: await c.get("idb"),
@@ -142,11 +141,13 @@ export default class ServiceContainer {
               const file = await packages.findAttachment(cid);
               return file && new Uint8Array(await file.arrayBuffer());
             },
-            async putAttachment(cid, bytes) {
+            async putAttachment(cid, bytes, mediaType) {
               const view = bytes.buffer instanceof ArrayBuffer
                 ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
                 : new Uint8Array(bytes);
-              await packages.storeAttachment(cid, new File([view], cid, { type: "application/zip" }));
+              await packages.storeAttachment(cid, new File([view], cid, {
+                type: mediaType ?? "application/octet-stream",
+              }));
             },
             verifySignature: async (address, domain, types, message, signature) => {
               if (!types.Event) return false;
@@ -163,17 +164,10 @@ export default class ServiceContainer {
                 : verifyTypedData(typedData);
             },
             verifyAnchors(chain) {
-              if (chain.events[0]?.parsedData.network_id !== c.chainId) {
-                throw new Error("Consumption proof belongs to a different network");
-              }
               return eqty.validateOwnableAnchors(chain);
             },
-            async getPublicEvents(chain) {
-              const snapshot = await hub.loadOwnablePublicEvents(chain.id);
-              if (snapshot.ownableId.toLowerCase() !== chain.id.toLowerCase()) {
-                throw new Error("Consumption proof public events belong to a different Ownable");
-              }
-              return snapshot.publicEvents;
+            getPublicEvents(chain, anchorEvidence) {
+              return eqty.getOwnablePublicEvents(chain, anchorEvidence);
             },
           },
         });
