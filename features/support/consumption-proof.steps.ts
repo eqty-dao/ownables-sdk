@@ -47,11 +47,15 @@ async function importInFreshWallet(
   }
 }
 
+function importErrorDialog(page: Page) {
+  return page.getByRole('dialog').filter({
+    has: page.getByRole('heading', { name: 'Failed to import Ownable', exact: true }),
+  });
+}
+
 async function expectRejectedArchive(page: Page, archive: ArchiveEntry, message: RegExp) {
   await importInFreshWallet(page, archive, async (freshPage) => {
-    const dialog = freshPage.getByRole('dialog').filter({
-      has: freshPage.getByRole('heading', { name: 'Failed to import Ownable', exact: true }),
-    });
+    const dialog = importErrorDialog(freshPage);
     await expect(dialog).toContainText(message, { timeout: 20_000 });
     await expectWalletEmpty(freshPage);
   });
@@ -106,7 +110,10 @@ Then('a fresh wallet imports the Robot and renders the verified Paint color', as
   if (!this.robotArchive || !this.paintProof) throw new Error('Inspect the Robot archive first');
   const { color } = this.paintProof;
   await importInFreshWallet(this.page, this.robotArchive, async (page) => {
-    await expect(page.getByRole('heading', { name: 'Robot', exact: true })).toBeVisible({ timeout: 20_000 });
+    const heading = page.getByRole('heading', { name: 'Robot', exact: true });
+    const dialog = importErrorDialog(page);
+    await expect(heading.or(dialog)).toBeVisible({ timeout: 20_000 });
+    if (await dialog.isVisible()) throw new Error(await dialog.innerText());
     const widget = page.frameLocator('iframe[aria-label="Ownable widget"]');
     await expect(widget.locator('#robot circle[cx="80"][cy="90"]')).toHaveAttribute('fill', color);
   });
