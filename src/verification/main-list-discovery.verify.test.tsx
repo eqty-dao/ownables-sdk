@@ -329,7 +329,7 @@ function configureBaseServices(storage = createStorage()) {
   serviceMap.ownables = {
     loadAll: vi.fn().mockResolvedValue([]),
     initWorker: vi.fn().mockResolvedValue(undefined),
-    init: vi.fn().mockResolvedValue(undefined),
+    init: vi.fn(async (chain: EventChain) => chain),
     listTrackedPublicEvents: vi.fn().mockResolvedValue([]),
     applyIndexedPublicEventSnapshot: vi.fn().mockResolvedValue({
       appliedPublicEvents: [],
@@ -827,7 +827,8 @@ describe("main-list discovery verifier", () => {
       );
       expect(serviceMap.ownables.init).toHaveBeenCalledWith(
         importedPackage.chain,
-        importedPackage.cid
+        importedPackage.cid,
+        undefined
       );
     });
 
