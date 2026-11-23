@@ -55,6 +55,7 @@ interface OwnableDetailProps {
   onRestore: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
+  onExport?: () => void;
   onLock: () => void;
   onUnlock: () => void;
 }
@@ -100,6 +101,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
     onRestore,
     onDelete,
     onTransfer,
+    onExport,
     onLock,
     onUnlock,
   } = props;
@@ -159,6 +161,7 @@ export default function OwnableDetail(props: OwnableDetailProps) {
             onRestore={onRestore}
             onDelete={onDelete}
             onTransfer={onTransfer}
+            onExport={onExport}
             onLock={onLock}
           />
         </Box>

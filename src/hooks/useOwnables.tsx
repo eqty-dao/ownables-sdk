@@ -606,25 +606,34 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownableService, progress, chainId, onSelect, showError]);
 
-  const relayImport = useCallback(async (pkg: TypedPackage[] | null, triggerRefresh: boolean) => {
-    if (!pkg || pkg.length === 0) {
+  const addImportedOwnable = useCallback(async (pkg: TypedPackage) => {
+    const { chain, cid, uniqueMessageHash } = pkg;
+    if (!chain) {
+      throw new Error("Imported Ownable is missing its event chain");
+    }
+
+    if (!ownableService) {
+      throw new Error("Ownable service not ready");
+    }
+
+    const current = await ownableService.init(chain, cid, uniqueMessageHash);
+
+    setOwnables((prev) => [
+      ...prev.filter((entry) => entry.chain.id !== chain.id),
+      { chain: current, package: cid, uniqueMessageHash },
+    ]);
+    onSelect(chain.id);
+  }, [onSelect, ownableService]);
+
+  const relayImport = useCallback(async (packages: TypedPackage[] | null, triggerRefresh: boolean) => {
+    if (!packages?.length) {
       enqueueSnackbar("Nothing to Load from relay", { variant: "error" });
       return;
     }
     try {
-      const validPackages = pkg.filter((data) => data.chain && data.cid);
-      setOwnables((prev) => {
-        const next = [
-          ...prev,
-          ...validPackages.map((data) => ({
-            chain: data.chain,
-            package: data.cid,
-            uniqueMessageHash: data.uniqueMessageHash,
-          })),
-        ];
-        if (next.length > 0) onSelect(next[next.length - 1].chain.id);
-        return next;
-      });
+      for (const pkg of packages) {
+        if (pkg.chain && pkg.cid) await addImportedOwnable(pkg);
+      }
       enqueueSnackbar("Ownable successfully loaded", { variant: "success" });
       if (triggerRefresh) {
         showAlert("New Ownables Detected", "New ownables have been detected. Refreshing...");
@@ -633,31 +642,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     } catch (error) {
       showError("Failed to import from relay", ownableErrorMessage(error));
     }
-  }, [onSelect, showAlert, showError]);
-
-  const addImportedOwnable = useCallback(async (pkg: TypedPackage) => {
-    if (!pkg.chain) {
-      throw new Error("Imported Hub package is missing chain state");
-    }
-
-    if (!ownableService) {
-      throw new Error("Ownable service not ready");
-    }
-
-    await ownableService.init(pkg.chain, pkg.cid);
-
-    setOwnables((prev) => {
-      const next = [
-        ...prev.filter((entry) => entry.chain.id !== pkg.chain!.id),
-        {
-          chain: pkg.chain,
-          package: pkg.cid,
-        },
-      ];
-      onSelect(pkg.chain.id);
-      return next;
-    });
-  }, [onSelect, ownableService]);
+  }, [addImportedOwnable, showAlert, showError]);
 
   const archiveOwnable = useCallback((entryId: string) => {
     setArchivedOwnableIds((prev) => {

@@ -18,6 +18,7 @@ interface OwnableActionsProps {
   onRestore?: () => void;
   onDelete: () => void;
   onTransfer: (address: string) => void;
+  onExport?: () => void;
   onLock: () => void;
 }
 
@@ -29,6 +30,7 @@ export default function OwnableActions(props: OwnableActionsProps) {
     onRestore,
     onDelete,
     onTransfer,
+    onExport,
     isTransferable,
     isHubAvailable = true,
     isClosable,
@@ -65,6 +67,11 @@ export default function OwnableActions(props: OwnableActionsProps) {
         onClick={close}
         className="min-w-40"
       >
+        {onExport && (
+          <MenuItem onClick={() => { close(); onExport(); }}>
+            Export Ownable
+          </MenuItem>
+        )}
         {!archived ? (
           <>
             <MenuItem

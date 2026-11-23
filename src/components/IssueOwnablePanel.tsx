@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { TypedPackage, TypedPackageStub } from "@/interfaces/TypedPackage";
 import { Box, Button, IconButton, Skeleton } from "@/components/ui";
-import { ArrowLeft, ChevronRight, createLucideIcon, FolderUp, Package } from "lucide-react";
+import { ArrowLeft, ChevronRight, createLucideIcon, FileArchive, FolderUp, Package } from "lucide-react";
 import { useService } from "@/hooks/useService";
 import { usePackageManager } from "@/hooks/usePackageManager";
 import { PACKAGE_EXAMPLES } from "@/config/examples";
@@ -43,6 +43,7 @@ interface IssueOwnablePanelProps {
   onSelect: (pkg: TypedPackage) => void;
   onError: (title: string, message: string) => void;
   onCreate: () => void;
+  onImportOwnable?: (pkg: TypedPackage) => Promise<void>;
   packageRefreshToken?: number;
 }
 
@@ -51,7 +52,7 @@ export const isInternalPackage = (pkg: TypedPackage | TypedPackageStub): boolean
   (pkg.keywords ?? []).some((keyword) => keyword.toLowerCase() === "internal");
 
 export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
-  const { onBack, onSelect, onError, onCreate, packageRefreshToken = 0 } = props;
+  const { onBack, onSelect, onError, onCreate, onImportOwnable, packageRefreshToken = 0 } = props;
   const {
     packages,
     isLoading,
@@ -94,6 +95,19 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
       enqueueSnackbar("Packages imported successfully", { variant: "success" });
     } catch (error) {
       onError("Failed to import package", (error as Error).message || String(error));
+    }
+  };
+
+  const importOwnable = async () => {
+    if (!packageService || !onImportOwnable) return;
+    try {
+      const [file] = await selectFile({ accept: ".zip" });
+      if (!file) return;
+      const pkg = await packageService.importOwnable(file);
+      await onImportOwnable(pkg);
+      enqueueSnackbar(`${pkg.title} imported`, { variant: "success" });
+    } catch (error) {
+      onError("Failed to import Ownable", error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -195,6 +209,17 @@ export default function IssueOwnablePanel(props: IssueOwnablePanelProps) {
               <BriefcasePlus aria-hidden="true" size={20} className="text-slate-600 dark:text-slate-400" />
               <span>Create Dossier</span>
             </Button>
+            {onImportOwnable && (
+              <Button
+                type="button"
+                className={cn(actionButton({ disabled: !hasPackageService }), "col-span-2")}
+                onClick={importOwnable}
+                disabled={!hasPackageService}
+              >
+                <FileArchive aria-hidden="true" size={20} className="text-slate-600 dark:text-slate-400" />
+                <span>Import Ownable</span>
+              </Button>
+            )}
           </div>
 
           {/* Section label */}

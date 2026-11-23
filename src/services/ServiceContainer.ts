@@ -9,6 +9,7 @@ import {
   RelayService,
 } from "@ownables/platform-browser";
 import type { PublicClient, WalletClient } from "viem";
+import { verifyTypedData } from "viem";
 import { createE2EViemClients } from "@/utils/E2EWallet";
 import { EQTYService } from "@ownables/adapter-viem";
 import { AnchorValidationService, EventChainService, OwnableService, PollingService, PublicEventReplayService } from "@ownables/core";
@@ -122,8 +123,61 @@ export default class ServiceContainer {
 
     this.register(
       "ownables",
-      async (c) =>
-        new OwnableService({ stateStore: await c.get("idb"), eventChains: await c.get("eventChains"), anchorProvider: await c.get("eqty"), packages: await c.get("packages"), runtimeSource: await c.get("runtimeSource"), runtimeRpc: await c.get("runtimeRpc"), replay: await c.get("replay") })
+      async (c) => {
+        const eqty = await c.get("eqty");
+        const eventChains = await c.get("eventChains");
+        const packages = await c.get("packages");
+        const hub = await c.get("hub");
+        const publicClient = isE2E ? createE2EViemClients(c.chainId).publicClient : c.publicClient;
+        return new OwnableService({
+          stateStore: await c.get("idb"),
+          eventChains,
+          anchorProvider: eqty,
+          packages,
+          runtimeSource: await c.get("runtimeSource"),
+          runtimeRpc: await c.get("runtimeRpc"),
+          replay: await c.get("replay"),
+          consumption: {
+            async getAttachment(cid) {
+              const file = await packages.findAttachment(cid);
+              return file && new Uint8Array(await file.arrayBuffer());
+            },
+            async putAttachment(cid, bytes) {
+              const view = bytes.buffer instanceof ArrayBuffer
+                ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+                : new Uint8Array(bytes);
+              await packages.storeAttachment(cid, new File([view], cid, { type: "application/zip" }));
+            },
+            verifySignature: async (address, domain, types, message, signature) => {
+              if (!types.Event) return false;
+              const typedData = {
+                address: address as `0x${string}`,
+                domain,
+                types: { Event: types.Event },
+                primaryType: "Event" as const,
+                message,
+                signature: signature as `0x${string}`,
+              };
+              return publicClient
+                ? publicClient.verifyTypedData(typedData)
+                : verifyTypedData(typedData);
+            },
+            verifyAnchors(chain) {
+              if (chain.events[0]?.parsedData.network_id !== c.chainId) {
+                throw new Error("Consumption proof belongs to a different network");
+              }
+              return eqty.validateOwnableAnchors(chain);
+            },
+            async getPublicEvents(chain) {
+              const snapshot = await hub.loadOwnablePublicEvents(chain.id);
+              if (snapshot.ownableId.toLowerCase() !== chain.id.toLowerCase()) {
+                throw new Error("Consumption proof public events belong to a different Ownable");
+              }
+              return snapshot.publicEvents;
+            },
+          },
+        });
+      }
     );
 
     this.register(

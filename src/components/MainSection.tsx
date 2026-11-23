@@ -51,6 +51,7 @@ interface MainSectionProps {
   onDelete: (id: string, packageCid: string) => void;
   onDeleteArchived: (entryId: string) => void;
   onImportAvailable: (entryId: string) => void | Promise<void>;
+  onImportOwnable?: (pkg: TypedPackage) => Promise<void>;
   onArchiveAvailable: (entryId: string) => void;
   onError: (title: string, message: string) => void;
   onForge: (pkg: TypedPackage) => void;
@@ -82,6 +83,7 @@ export default function MainSection({
   onDelete,
   onDeleteArchived,
   onImportAvailable,
+  onImportOwnable,
   onArchiveAvailable,
   onError,
   onForge,
@@ -105,6 +107,7 @@ export default function MainSection({
       {showIssuePanel && (
         <IssueOwnablePanel
           onSelect={onForge}
+          onImportOwnable={onImportOwnable}
           onError={onError}
           onCreate={onCreate}
           packageRefreshToken={packageRefreshToken}

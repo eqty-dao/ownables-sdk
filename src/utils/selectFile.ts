@@ -10,9 +10,8 @@ export default async function selectFile(props: SelectFileProps = {}): Promise<F
     input.accept = props.accept || '';
     input.multiple = !!props.multiple;
 
-    input.onchange = () => {
-      resolve(input.files || new FileList());
-    }
+    input.onchange = () => resolve(input.files ?? new DataTransfer().files);
+    input.oncancel = () => resolve(new DataTransfer().files);
     input.onerror = () => reject("Error selecting files");
     input.click();
   });

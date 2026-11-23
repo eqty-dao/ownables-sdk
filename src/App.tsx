@@ -57,6 +57,7 @@ export default function App() {
     trackedPublicEventsByOwnableId,
     setOwnables,
     forge,
+    addImportedOwnable,
     importAvailableOwnable,
     archiveOwnable,
     restoreArchivedOwnable,
@@ -192,6 +193,7 @@ export default function App() {
           }}
           onImportAvailable={importAvailableOwnable}
           onArchiveAvailable={archiveOwnable}
+          onImportOwnable={addImportedOwnable}
           onError={showError}
           onForge={forge}
           onCreate={() => setShowCreateOwnable(true)}
