@@ -198,16 +198,6 @@ export default function Ownable(props: OwnableProps) {
         eventAttachments
       );
 
-      try {
-        await Promise.all(
-          eventAttachments.map(({ name, file }) => packages.storeAttachment(name, file))
-        );
-      } catch (error) {
-        props.onError(
-          "Failed to cache attachments",
-          error instanceof Error ? error.message : String(error)
-        );
-      }
     } catch (error) {
       setPendingAttachments(pendingAttachments);
       setAttachmentError(error instanceof Error ? error.message : String(error));
@@ -237,6 +227,22 @@ export default function Ownable(props: OwnableProps) {
     },
     [packages, props]
   );
+
+  const onExport = async () => {
+    if (!ownables) return;
+    try {
+      const zip = await ownables.zip(chain);
+      const file = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${chain.id}.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      props.onError("Failed to export Ownable", error instanceof Error ? error.message : String(error));
+    }
+  };
 
   useEffect(() => {
     if (!pkg || !pkg.isDynamic || pkg.hasWidgetState) return;
@@ -284,6 +290,7 @@ export default function Ownable(props: OwnableProps) {
         onDownloadAttachment={onDownloadAttachment}
         onCloseOwnable={onCloseOwnable}
         onDelete={props.onDelete}
+        onExport={onExport}
         onTransfer={transferAfterLoad}
         onLock={onLock}
         onUnlock={onUnlock}
