@@ -13,19 +13,21 @@ describe("AppToolbar network support", () => {
     render(<AppToolbar onMenuClick={vi.fn()} chainId={8453} isConnected />);
 
     expect(screen.queryByText("Testnet")).toBeNull();
-    expect(screen.queryByText(/Please switch to Base/)).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("accepts Base Sepolia and labels it as testnet", () => {
     render(<AppToolbar onMenuClick={vi.fn()} chainId={84532} isConnected />);
 
     expect(screen.getByText("Testnet")).toBeTruthy();
-    expect(screen.queryByText(/Please switch to Base/)).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("warns for unsupported connected networks", () => {
     render(<AppToolbar onMenuClick={vi.fn()} chainId={1} isConnected />);
 
-    expect(screen.getByText(/Please switch to Base or Base Sepolia/)).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Please switch to Base or Base Sepolia to use this application."
+    );
   });
 });

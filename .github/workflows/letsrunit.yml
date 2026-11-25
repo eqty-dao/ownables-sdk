@@ -44,7 +44,7 @@ jobs:
       - name: Build app
         run: yarn build
       - name: Verify Hub network routing and lifecycle
-        run: yarn vitest run src/verification/hub-route-contract.verify.test.ts src/verification/main-list-discovery.verify.test.tsx src/contexts/Services.context.test.tsx src/verification/app-toolbar-network.verify.test.tsx
+        run: yarn vitest run src/services/ServiceContainer.test.ts src/verification/hub-route-contract.verify.test.ts src/verification/main-list-discovery.verify.test.tsx src/contexts/Services.context.test.tsx src/verification/app-toolbar-network.verify.test.tsx
       # TODO: add DB setup steps if your tests need one.
       - name: Prefer IPv4 localhost
         run: |

@@ -3,7 +3,7 @@ import logo from "@/assets/logo.svg";
 import { Menu as MenuIcon, TriangleAlert as WarningIcon } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
-import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core"
+import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core";
 
 interface AppToolbarProps {
   onMenuClick: () => void;
