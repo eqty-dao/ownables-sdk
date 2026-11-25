@@ -88,8 +88,9 @@ describe("ServiceContainer lifecycle", () => {
 
     expect(hubNetworkFromChainId).toHaveBeenNthCalledWith(1, 8453);
     expect(hubNetworkFromChainId).toHaveBeenNthCalledWith(2, 84532);
-    expect(hubConstructor).toHaveBeenNthCalledWith(1, "", "base");
-    expect(hubConstructor).toHaveBeenNthCalledWith(2, "", "base-sepolia");
+    const hubOrigin = import.meta.env.VITE_HUB || "";
+    expect(hubConstructor).toHaveBeenNthCalledWith(1, hubOrigin, "base");
+    expect(hubConstructor).toHaveBeenNthCalledWith(2, hubOrigin, "base-sepolia");
   });
 
   it("constructs lazily once and evicts a failed resolution", async () => {
