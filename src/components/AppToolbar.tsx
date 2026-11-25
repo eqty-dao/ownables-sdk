@@ -3,7 +3,7 @@ import logo from "@/assets/logo.svg";
 import { Menu as MenuIcon, TriangleAlert as WarningIcon } from "lucide-react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
-import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core"
+import { BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID } from "eqty-core";
 
 interface AppToolbarProps {
   onMenuClick: () => void;
@@ -35,7 +35,9 @@ export default function AppToolbar({
   isConnected,
   isHubAvailable,
 }: AppToolbarProps) {
-  const showNetworkWarning = isConnected && chainId !== BASE_SEPOLIA_CHAIN_ID;
+  const supportsBaseNetwork =
+    chainId === BASE_CHAIN_ID || chainId === BASE_SEPOLIA_CHAIN_ID;
+  const showNetworkWarning = isConnected && !supportsBaseNetwork;
 
   return (
     <>
@@ -45,7 +47,7 @@ export default function AppToolbar({
           icon={<WarningIcon className="h-4 w-4" />}
           className={cn(warningStrip())}
         >
-          Please switch to <strong>Base Sepolia</strong> network to use this application.
+          Please switch to <strong>Base</strong> or <strong>Base Sepolia</strong> to use this application.
         </Alert>
       )}
       <header className="relative z-10 bg-linear-to-r from-sky-500 to-indigo-600 px-4 py-3 shadow-lg sm:px-6">
@@ -57,9 +59,6 @@ export default function AppToolbar({
           />
           <div className="flex items-center gap-2">
             {isConnected && chainId === BASE_SEPOLIA_CHAIN_ID && (
-              <Tag color="warning" value="Testnet" className={toolbarTagClass} />
-            )}
-            {isConnected && chainId !== BASE_CHAIN_ID && chainId !== BASE_SEPOLIA_CHAIN_ID && (
               <Tag color="warning" value="Testnet" className={toolbarTagClass} />
             )}
             {isHubAvailable === false && (

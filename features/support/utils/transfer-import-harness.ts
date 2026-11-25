@@ -70,14 +70,14 @@ function hubPath(url: string): string | null {
 function isRecipientDiscoveryPath(pathname: string): boolean {
   return (
     decodeURIComponent(pathname).toLowerCase() ===
-    `/accounts/eip155:84532:${RECIPIENT_ADDRESS}/available-ownables`
+    `/base-sepolia/inbox/${RECIPIENT_ADDRESS}`
   );
 }
 
 function isRecipientStreamPath(pathname: string): boolean {
   return (
     decodeURIComponent(pathname).toLowerCase() ===
-    `/accounts/eip155:84532:${RECIPIENT_ADDRESS}/available-ownables/events`
+    `/base-sepolia/streams/inbox/${RECIPIENT_ADDRESS}`
   );
 }
 
@@ -217,7 +217,7 @@ export async function resetTransferImportProof(world: TransferImportWorld): Prom
   };
   world.__transferImportResponseHandler = (response) => {
     const pathname = hubPath(response.url());
-    if (!pathname || pathname !== '/ownables' || response.request().method() !== 'POST') return;
+    if (!pathname || pathname !== '/base-sepolia/ownables' || response.request().method() !== 'POST') return;
     void response
       .json()
       .then((body) => world.__transferImportPendingUploads?.push({ status: response.status(), body }))

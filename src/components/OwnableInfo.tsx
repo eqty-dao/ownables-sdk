@@ -70,9 +70,11 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 function isUnknownOwnableVerificationFailure(response: Response, message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+
   return (
-    response.status === 400 &&
-    message.toLowerCase().includes("not available on this hub")
+    (response.status === 400 || response.status === 404) &&
+    normalizedMessage.includes("not available on this hub")
   );
 }
 
@@ -95,9 +97,11 @@ export default function OwnableInfo(props: OwnableInfoProps) {
     async (chain: EventChain, open: boolean) => {
       if (!open || !hub?.isConfigured) return;
 
-      const response = await fetch(
-        `${hub.origin}/ownables/${encodeURIComponent(chain.id)}/verification`
+      const verificationUrl = new URL(
+        "verification",
+        hub.getOwnableBundleUrl(chain.id)
       );
+      const response = await fetch(verificationUrl);
       if (response.ok) {
         const body =
           (await response.json()) as HubOwnableVerificationResponse;

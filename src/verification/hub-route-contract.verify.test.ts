@@ -3,7 +3,8 @@ import * as PlatformBrowser from "@ownables/platform-browser";
 
 const { HubService } = PlatformBrowser as any as {
   HubService: new (
-    url?: string,
+    url: string,
+    network: "base" | "base-sepolia",
     fetchFn?: (input: string, init?: RequestInit) => Promise<Response>,
     eventSourceFactory?: (url: string) => HubEventSourceLike
   ) => HubServiceLike;
@@ -23,9 +24,9 @@ interface HubServiceLike {
   ): Promise<{ cid: string; owner?: string }>;
   downloadOwnable(ownableId: string): Promise<File>;
   loadOwnablePublicEvents(ownableId: string): Promise<unknown>;
-  listAvailableOwnables(account: string): Promise<unknown>;
+  listAvailableOwnables(address: string): Promise<unknown>;
   watchAvailableOwnables(
-    account: string,
+    address: string,
     handlers: { onEvent: (message: unknown) => void; onError?: (error: unknown) => void }
   ): { close(): void };
   watchOwnablePublicEvents(
@@ -36,7 +37,8 @@ interface HubServiceLike {
 }
 
 const HUB_URL = "https://hub.example";
-const ACCOUNT = "eip155:84532:0xabc/with space";
+const ADDRESS = "0x1111111111111111111111111111111111111111";
+const ACCOUNT = `eip155:84532:${ADDRESS}`;
 const OWNABLE_ID = "ownable/with space";
 
 function createEventSource(url: string) {
@@ -81,14 +83,14 @@ describe("Hub route contract", () => {
           headers: { "content-type": "application/json" },
         })
       );
-    const hub = new HubService(HUB_URL, fetchFn);
+    const hub = new HubService(HUB_URL, "base-sepolia", fetchFn);
 
     await hub.uploadOwnable(new Uint8Array([1, 2, 3]), "dossier.zip");
     await hub.downloadOwnable(OWNABLE_ID);
     await hub.loadOwnablePublicEvents(OWNABLE_ID);
-    await hub.listAvailableOwnables(ACCOUNT);
+    await hub.listAvailableOwnables(ADDRESS);
 
-    expect(fetchFn.mock.calls[0]?.[0]).toBe(`${HUB_URL}/ownables`);
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(`${HUB_URL}/base-sepolia/ownables`);
     expect(fetchFn.mock.calls[0]?.[1]?.method).toBe("POST");
     expect(fetchFn.mock.calls[0]?.[1]?.body).toBeInstanceOf(FormData);
     const body = fetchFn.mock.calls[0]?.[1]?.body as FormData;
@@ -98,15 +100,15 @@ describe("Hub route contract", () => {
     expect(body.getAll("file")).toHaveLength(1);
     expect(fetchFn).toHaveBeenNthCalledWith(
       2,
-      `${HUB_URL}/ownables/${encodeURIComponent(OWNABLE_ID)}/bundle`
+      `${HUB_URL}/base-sepolia/ownables/${encodeURIComponent(OWNABLE_ID)}/bundle`
     );
     expect(fetchFn).toHaveBeenNthCalledWith(
       3,
-      `${HUB_URL}/ownables/${encodeURIComponent(OWNABLE_ID)}/public-events`
+      `${HUB_URL}/base-sepolia/ownables/${encodeURIComponent(OWNABLE_ID)}/public-events`
     );
     expect(fetchFn).toHaveBeenNthCalledWith(
       4,
-      `${HUB_URL}/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables`
+      `${HUB_URL}/base-sepolia/inbox/${encodeURIComponent(ADDRESS)}`
     );
   });
 
@@ -117,11 +119,11 @@ describe("Hub route contract", () => {
       streams.push(stream);
       return stream;
     });
-    const hub = new HubService(HUB_URL, vi.fn(), eventSourceFactory);
+    const hub = new HubService(HUB_URL, "base-sepolia", vi.fn(), eventSourceFactory);
     const onAvailable = vi.fn();
     const onPublicEvent = vi.fn();
 
-    const availableSubscription = hub.watchAvailableOwnables(ACCOUNT, { onEvent: onAvailable });
+    const availableSubscription = hub.watchAvailableOwnables(ADDRESS, { onEvent: onAvailable });
     const publicEventsSubscription = hub.watchOwnablePublicEvents(
       [OWNABLE_ID, "second?ownable"],
       { onEvent: onPublicEvent },
@@ -129,8 +131,8 @@ describe("Hub route contract", () => {
     );
 
     expect(streams.map((stream) => stream.url)).toEqual([
-      `${HUB_URL}/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables/events`,
-      `${HUB_URL}/public-events?ownableId=ownable%2Fwith+space&ownableId=second%3Fownable&fromBlock=0`,
+      `${HUB_URL}/base-sepolia/streams/inbox/${encodeURIComponent(ADDRESS)}`,
+      `${HUB_URL}/base-sepolia/streams/public-events?ownableId=ownable%2Fwith+space&ownableId=second%3Fownable&fromBlock=0`,
     ]);
     expect(streams[0]?.addEventListener).toHaveBeenCalledWith(
       "available-ownable",
@@ -158,11 +160,25 @@ describe("Hub route contract", () => {
 
   it("rejects an unfiltered public-events stream before opening EventSource", () => {
     const eventSourceFactory = vi.fn((url: string) => createEventSource(url));
-    const hub = new HubService(HUB_URL, vi.fn(), eventSourceFactory);
+    const hub = new HubService(HUB_URL, "base-sepolia", vi.fn(), eventSourceFactory);
 
     expect(() => hub.watchOwnablePublicEvents([], { onEvent: vi.fn() })).toThrow(
       "At least one ownable ID is required to watch public events"
     );
     expect(eventSourceFactory).not.toHaveBeenCalled();
+  });
+
+  it("uses the Base Mainnet prefix when its Hub client is selected", async () => {
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ owner: `eip155:8453:${ADDRESS}`, entries: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const hub = new HubService(HUB_URL, "base", fetchFn);
+
+    await hub.listAvailableOwnables(ADDRESS);
+
+    expect(fetchFn).toHaveBeenCalledWith(`${HUB_URL}/base/inbox/${ADDRESS}`);
   });
 });

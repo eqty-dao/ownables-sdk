@@ -108,10 +108,11 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
   const { address, isConnected } = useEffectiveWallet();
   const account = address ? `eip155:${chainId}:${address}` : null;
   const discoveryAccount = account?.toLowerCase() ?? null;
+  const discoveryAddress = address?.toLowerCase() ?? null;
   const archivedStorageKey = account ? `ownables:archived:${account}` : null;
   const legacyArchivedStorageKey = account ? `hub-available:dismissed:${account}` : null;
   const deletedAvailableStorageKey = account ? `hub-available:deleted:${account}` : null;
-  const discoveryEnabled = !!hub?.isConfigured && !!discoveryAccount && isConnected;
+  const discoveryEnabled = !!hub?.isConfigured && !!discoveryAddress && isConnected;
   const availableStreamRef = useRef<{ close(): void } | null>(null);
   const publicEventsStreamRef = useRef<{ close(): void } | null>(null);
   const mountedRef = useRef(true);
@@ -264,7 +265,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
     setAvailableOwnables([]);
     setAvailableOwnablesAccount(discoveryAccount);
 
-    if (!discoveryEnabled || !hub || !discoveryAccount) {
+    if (!discoveryEnabled || !hub || !discoveryAccount || !discoveryAddress) {
       setAvailableLoaded(true);
       setAvailableLoadedAccount(discoveryAccount);
       return;
@@ -274,8 +275,13 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
 
     const connect = async () => {
       try {
-        const response = await hub.listAvailableOwnables(discoveryAccount);
+        const response = await hub.listAvailableOwnables(discoveryAddress);
         if (cancelled) {
+          return;
+        }
+
+        if (response.owner !== accountRef.current) {
+          console.warn("Hub available-ownables response owner did not match the active account");
           return;
         }
 
@@ -298,7 +304,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       }
 
       try {
-        availableStreamRef.current = hub.watchAvailableOwnables(discoveryAccount, {
+        availableStreamRef.current = hub.watchAvailableOwnables(discoveryAddress, {
           onEvent: ({ owner, entry }) => {
             if (owner !== accountRef.current) {
               return;
@@ -325,7 +331,7 @@ export function useOwnables({ onSelect }: UseOwnablesOptions) {
       availableStreamRef.current?.close();
       availableStreamRef.current = null;
     };
-  }, [discoveryAccount, discoveryEnabled, hub]);
+  }, [discoveryAccount, discoveryAddress, discoveryEnabled, hub]);
 
   const visibleImportedOwnables = useMemo(() => {
     const archivedIds = new Set(archivedOwnableIds);

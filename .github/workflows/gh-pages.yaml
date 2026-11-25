@@ -45,6 +45,7 @@ jobs:
           VITE_BASE_MAINNET_RPC_URL: https://mainnet.base.org
           VITE_BASE_SEPOLIA_EXPLORER_URL: https://sepolia.basescan.org
           VITE_BASE_MAINNET_EXPLORER_URL: https://basescan.org
+          VITE_HUB: https://hub.ownables.me
         run: yarn build
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.8.0

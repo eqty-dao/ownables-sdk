@@ -21,7 +21,8 @@ const {
   AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE,
 } = PlatformBrowser as any as {
   HubService: new (
-    url?: string,
+    url: string,
+    network: "base" | "base-sepolia",
     fetchFn?: (input: string, init?: RequestInit) => Promise<Response>,
     eventSourceFactory?: (url: string) => {
       addEventListener(type: string, listener: (event: { data?: string }) => void): void;
@@ -32,9 +33,9 @@ const {
   ) => {
     parseHubDownloadUrl(url: string): URL;
     getOwnableBundleUrl(id: string): string;
-    listAvailableOwnables(ownerAccount: string): Promise<unknown>;
+    listAvailableOwnables(address: string): Promise<unknown>;
     watchAvailableOwnables(
-      ownerAccount: string,
+      address: string,
       handlers: { onEvent(message: { owner: string; entry: unknown }): void }
     ): { close(): void };
   };
@@ -45,6 +46,7 @@ const { serviceMap, accountState, e2eState, enqueueSnackbar, progressOpen, progr
   serviceMap: {} as Record<string, any>,
   accountState: {
     address: "0xabc",
+    chainId: 84532,
     isConnected: true,
     isConnecting: false,
   },
@@ -104,7 +106,7 @@ vi.mock("wagmi", () => ({
     data: undefined,
     isLoading: false,
   }),
-  useChainId: () => 84532,
+  useChainId: () => accountState.chainId,
   useDisconnect: () => ({
     disconnect: disconnectMock,
     isPending: false,
@@ -269,8 +271,10 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-const ACCOUNT = "eip155:84532:0xabc";
-const ACCOUNT_B = "eip155:84532:0xdef";
+const ADDRESS = "0xabc";
+const ADDRESS_B = "0xdef";
+const ACCOUNT = `eip155:84532:${ADDRESS}`;
+const ACCOUNT_B = `eip155:84532:${ADDRESS_B}`;
 const CHAIN_ID = "00".repeat(32);
 const AVAILABLE_ENTRY = {
   id: "0x11",
@@ -391,6 +395,7 @@ describe("main-list discovery verifier", () => {
     packageManagerState.packages = [];
     packageManagerState.isLoading = false;
     accountState.address = "0xabc";
+    accountState.chainId = 84532;
     accountState.isConnected = true;
     accountState.isConnecting = false;
     e2eState.enabled = false;
@@ -416,7 +421,7 @@ describe("main-list discovery verifier", () => {
     expect(screen.queryByText("Let's get started!")).toBeNull();
     expect(screen.queryByText("Notifications")).toBeNull();
     expect(screen.queryByText("Available from Hub")).toBeNull();
-    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ACCOUNT);
+    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ADDRESS);
   });
 
   it("treats internal keywords as hidden issuer-grid packages", () => {
@@ -600,7 +605,7 @@ describe("main-list discovery verifier", () => {
     render(<MainListHarness />);
 
     await waitFor(() => {
-      expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ACCOUNT);
+      expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ADDRESS);
     });
     expect(screen.queryByText("Potion")).toBeNull();
     expect(screen.getByRole("button", { name: /Archived/ })).toBeTruthy();
@@ -643,23 +648,23 @@ describe("main-list discovery verifier", () => {
     configureBaseServices(storage);
     serviceMap.hub.listAvailableOwnables = vi
       .fn()
-      .mockImplementation((owner: string) => {
-        if (owner === ACCOUNT) return walletA.promise;
-        if (owner === ACCOUNT_B) return walletB.promise;
-        throw new Error(`Unexpected owner ${owner}`);
+      .mockImplementation((address: string) => {
+        if (address === ADDRESS) return walletA.promise;
+        if (address === ADDRESS_B) return walletB.promise;
+        throw new Error(`Unexpected address ${address}`);
       });
     serviceMap.hub.watchAvailableOwnables = vi
       .fn()
-      .mockImplementation((owner: string, handlers: { onEvent(message: any): void }) => {
-        if (owner === ACCOUNT) {
+      .mockImplementation((address: string, handlers: { onEvent(message: any): void }) => {
+        if (address === ADDRESS) {
           streamA.attach(handlers.onEvent);
           return streamA.subscription;
         }
-        if (owner === ACCOUNT_B) {
+        if (address === ADDRESS_B) {
           streamB.attach(handlers.onEvent);
           return streamB.subscription;
         }
-        throw new Error(`Unexpected owner ${owner}`);
+        throw new Error(`Unexpected address ${address}`);
       });
 
     const view = render(<MainListHarness />);
@@ -669,12 +674,12 @@ describe("main-list discovery verifier", () => {
     expect(screen.queryByText("Potion")).toBeNull();
     expect(screen.getByRole("button", { name: /Archived/ })).toBeTruthy();
 
-    accountState.address = "0xdef";
+    accountState.address = ADDRESS_B;
 
     view.rerender(<MainListHarness />);
 
     await waitFor(() => {
-      expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ACCOUNT_B);
+      expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ADDRESS_B);
     });
     expect(screen.queryByText("Potion")).toBeNull();
     expect(screen.queryByRole("button", { name: /Archived/ })).toBeNull();
@@ -700,7 +705,7 @@ describe("main-list discovery verifier", () => {
 
     expect(await screen.findByText("Elixir")).toBeTruthy();
     expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(
-      `eip155:84532:${e2eState.address}`
+      e2eState.address.toLowerCase()
     );
   });
 
@@ -720,7 +725,7 @@ describe("main-list discovery verifier", () => {
 
     await waitFor(() => {
       expect(serviceMap.hub.watchAvailableOwnables).toHaveBeenCalledWith(
-        canonicalRecipientAccount,
+        e2eState.address.toLowerCase(),
         expect.objectContaining({
           onEvent: expect.any(Function),
         })
@@ -736,6 +741,22 @@ describe("main-list discovery verifier", () => {
     });
 
     expect(await screen.findByText("Elixir")).toBeTruthy();
+  });
+
+  it("does not accept an inbox response for another canonical account", async () => {
+    configureBaseServices();
+    serviceMap.hub.listAvailableOwnables = vi.fn().mockResolvedValue({
+      owner: ACCOUNT_B,
+      entries: [AVAILABLE_ENTRY],
+    });
+
+    render(<MainListHarness />);
+
+    await waitFor(() => {
+      expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledWith(ADDRESS);
+    });
+    expect(screen.queryByText("Potion")).toBeNull();
+    expect(serviceMap.hub.watchAvailableOwnables).not.toHaveBeenCalled();
   });
 
   it("applies live discovery updates from the wallet-scoped SSE stream", async () => {
@@ -757,7 +778,7 @@ describe("main-list discovery verifier", () => {
     expect(await screen.findByText("Elixir")).toBeTruthy();
     expect(serviceMap.hub.listAvailableOwnables).toHaveBeenCalledTimes(1);
     expect(serviceMap.hub.watchAvailableOwnables).toHaveBeenCalledWith(
-      ACCOUNT,
+      ADDRESS,
       expect.objectContaining({
         onEvent: expect.any(Function),
       })
@@ -765,6 +786,53 @@ describe("main-list discovery verifier", () => {
 
     view.unmount();
     expect(discoveryStream.subscription.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads the inbox and retires the prior stream when the wallet changes Base network", async () => {
+    const sepoliaStream = createMockStream<{
+      owner: string;
+      entry: typeof AVAILABLE_ENTRY;
+    }>();
+    const baseStream = createMockStream<{
+      owner: string;
+      entry: typeof AVAILABLE_ENTRY_B;
+    }>();
+    configureBaseServices();
+    serviceMap.hub.listAvailableOwnables = vi
+      .fn()
+      .mockResolvedValueOnce({ owner: ACCOUNT, entries: [AVAILABLE_ENTRY] })
+      .mockResolvedValueOnce({
+        owner: `eip155:8453:${ADDRESS}`,
+        entries: [AVAILABLE_ENTRY_B],
+      });
+    serviceMap.hub.watchAvailableOwnables = vi
+      .fn()
+      .mockImplementationOnce((_address: string, handlers: { onEvent(message: any): void }) => {
+        sepoliaStream.attach(handlers.onEvent);
+        return sepoliaStream.subscription;
+      })
+      .mockImplementationOnce((_address: string, handlers: { onEvent(message: any): void }) => {
+        baseStream.attach(handlers.onEvent);
+        return baseStream.subscription;
+      });
+
+    const view = render(<MainListHarness />);
+
+    expect(await screen.findByText("Potion")).toBeTruthy();
+    accountState.chainId = 8453;
+    view.rerender(<MainListHarness />);
+
+    expect(await screen.findByText("Elixir")).toBeTruthy();
+    expect(sepoliaStream.subscription.close).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      sepoliaStream.emit({ owner: ACCOUNT, entry: AVAILABLE_ENTRY });
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText("Potion")).toBeNull();
+    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenNthCalledWith(1, ADDRESS);
+    expect(serviceMap.hub.listAvailableOwnables).toHaveBeenNthCalledWith(2, ADDRESS);
   });
 
   it("closes the caller-owned public-event SSE stream exactly once on unmount", async () => {
@@ -843,28 +911,31 @@ describe("main-list discovery verifier", () => {
     });
   });
 
-  it("uses the account-scoped discovery route", async () => {
+  it("uses the selected network inbox route", async () => {
+    const hubAddress = "0x1111111111111111111111111111111111111111";
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ owner: ACCOUNT, entries: [] }), {
+      new Response(JSON.stringify({ owner: `eip155:84532:${hubAddress}`, entries: [] }), {
         status: 200,
         headers: { "content-type": "application/json" },
       })
     );
     vi.stubGlobal("fetch", fetchMock);
-    const hub = new HubService("https://hub.example");
+    const hub = new HubService("https://hub.example", "base-sepolia");
 
-    await hub.listAvailableOwnables(ACCOUNT);
+    await hub.listAvailableOwnables(hubAddress);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables`,
+      `https://hub.example/base-sepolia/inbox/${hubAddress}`,
       undefined
     );
   });
 
-  it("uses the account-scoped discovery SSE route", async () => {
+  it("uses the selected network inbox SSE route", async () => {
+    const hubAddress = "0x1111111111111111111111111111111111111111";
     const streams: string[] = [];
     const hub = new HubService(
       "https://hub.example",
+      "base-sepolia",
       vi.fn(),
       (url: string) => {
         streams.push(url);
@@ -877,17 +948,17 @@ describe("main-list discovery verifier", () => {
       }
     );
 
-    hub.watchAvailableOwnables(ACCOUNT, {
+    hub.watchAvailableOwnables(hubAddress, {
       onEvent: vi.fn(),
     });
 
     expect(streams).toEqual([
-      `https://hub.example/accounts/${encodeURIComponent(ACCOUNT)}/available-ownables/events`,
+      `https://hub.example/base-sepolia/streams/inbox/${hubAddress}`,
     ]);
   });
 
   it("guards Hub imports to the configured origin", async () => {
-    const hub = new HubService("https://hub.example");
+    const hub = new HubService("https://hub.example", "base-sepolia");
 
     expect(() => hub.parseHubDownloadUrl(hub.getOwnableBundleUrl(AVAILABLE_ENTRY.id))).not.toThrow();
     expect(() =>
@@ -903,9 +974,9 @@ describe("main-list discovery verifier", () => {
       new Response(null, { status: 404, statusText: "Not Found" })
     );
     vi.stubGlobal("fetch", fetchMock);
-    const hub = new HubService("https://hub.example");
+    const hub = new HubService("https://hub.example", "base-sepolia");
 
-    await expect(hub.listAvailableOwnables(ACCOUNT)).rejects.toThrow(
+    await expect(hub.listAvailableOwnables("0x1111111111111111111111111111111111111111")).rejects.toThrow(
       AVAILABLE_OWNABLES_UNAVAILABLE_MESSAGE
     );
   });
