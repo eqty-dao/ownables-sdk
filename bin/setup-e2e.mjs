@@ -77,16 +77,12 @@ function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
   return {
     DATABASE_URL,
     OWNABLES_STORAGE: HUB_STORAGE_URL,
-    HUB_NETWORK_PROFILE: "testnet",
+    INDEXER_NETWORKS: "base-sepolia",
     TESTNET_CHAIN_ID: "84532",
     TESTNET_RPC_URL: RPC_URL,
     TESTNET_BASE_RPC_URL: RPC_URL,
     TESTNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
     TESTNET_ANCHOR_START_BLOCK: String(anchorStartBlock),
-    MAINNET_CHAIN_ID: "84532",
-    MAINNET_RPC_URL: RPC_URL,
-    MAINNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
-    MAINNET_ANCHOR_START_BLOCK: "999999999",
   };
 }
 
@@ -664,16 +660,12 @@ async function main() {
     PORT: HUB_PORT,
     PUBLIC_BASE_URL: HUB_URL,
     SIGNER_MNEMONIC: DEFAULT_E2E_MNEMONIC,
-    HUB_NETWORK_PROFILE: "testnet",
+    INDEXER_NETWORKS: "base-sepolia",
     TESTNET_CHAIN_ID: "84532",
     TESTNET_RPC_URL: RPC_URL,
     TESTNET_BASE_RPC_URL: RPC_URL,
     TESTNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
     TESTNET_ANCHOR_START_BLOCK: String(anchorStartBlock),
-    MAINNET_CHAIN_ID: "84532",
-    MAINNET_RPC_URL: RPC_URL,
-    MAINNET_ANCHOR_CONTRACT_ADDR: anchorAddress,
-    MAINNET_ANCHOR_START_BLOCK: "999999999",
   };
 
   resources.spawn(

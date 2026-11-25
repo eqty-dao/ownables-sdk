@@ -217,7 +217,10 @@ export function installPublicEventStreamCapture(eventTypes: readonly string[]): 
     constructor(url: string | URL, configuration?: EventSourceInit) {
       super(url, configuration);
       const rawUrl = String(url);
-      if (new URL(rawUrl, window.location.href).pathname === '/public-events') {
+      if (
+        new URL(rawUrl, window.location.href).pathname ===
+        '/base-sepolia/streams/public-events'
+      ) {
         const recordStreamEvent = (event: Event) => {
           let data: unknown = (event as MessageEvent).data;
           try {
@@ -332,7 +335,9 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
         return;
       }
 
-      const publicEventsSnapshotMatch = url.pathname.match(/^\/ownables\/([^/]+)\/public-events$/);
+      const publicEventsSnapshotMatch = url.pathname.match(
+        /^\/base-sepolia\/ownables\/([^/]+)\/public-events$/
+      );
       if (publicEventsSnapshotMatch) {
         world.__hubRequests.publicEventSnapshots.push({
           ownableId: decodeURIComponent(publicEventsSnapshotMatch[1]),
@@ -340,7 +345,7 @@ function ensureHubRequestRecorder(world: PublicEventsWorld) {
         return;
       }
 
-      if (url.pathname === '/public-events') {
+      if (url.pathname === '/base-sepolia/streams/public-events') {
         world.__hubRequests.publicEventStreams.push({
           ids: url.searchParams.getAll('ownableId').sort(),
           fromBlock: url.searchParams.has('fromBlock')

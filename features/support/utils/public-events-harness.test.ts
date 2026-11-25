@@ -93,14 +93,14 @@ describe('public-event stream duplicate identity', () => {
 
     try {
       installPublicEventStreamCapture(PUBLIC_EVENT_STREAM_EVENT_TYPES);
-      const source = new testWindow.EventSource('/public-events') as FakeEventSource;
+      const source = new testWindow.EventSource('/base-sepolia/streams/public-events') as FakeEventSource;
       source.dispatch('public-event', JSON.stringify({ event }));
       source.dispatch('error', '');
 
       expect((testWindow as typeof testWindow & {
         __ownablesPublicEventStreamMessages?: Array<{ url: string; data: unknown }>;
       }).__ownablesPublicEventStreamMessages).toEqual([
-        { url: '/public-events', data: { event } },
+        { url: '/base-sepolia/streams/public-events', data: { event } },
       ]);
       expect((testWindow as typeof testWindow & {
         __ownablesPublicEventStreamDisconnectCount?: number;
@@ -127,7 +127,7 @@ describe('public-event stream duplicate identity', () => {
     const page = {
       evaluate: vi.fn(async () => {
         reads += 1;
-        return reads > 1 ? [{ url: 'http://hub/public-events', data: { event } }] : [];
+        return reads > 1 ? [{ url: 'http://hub/base-sepolia/streams/public-events', data: { event } }] : [];
       }),
     } as unknown as Page;
 
@@ -136,7 +136,7 @@ describe('public-event stream duplicate identity', () => {
 
   it('rejects when reconnect produces no repeated indexed event', async () => {
     const page = {
-      evaluate: vi.fn(async () => [{ url: 'http://hub/public-events', data: { type: 'connected' } }]),
+      evaluate: vi.fn(async () => [{ url: 'http://hub/base-sepolia/streams/public-events', data: { type: 'connected' } }]),
     } as unknown as Page;
 
     await expect(waitForRepeatedPublicEventDelivery(page, 0, event, 25, 1)).rejects.toThrow(
