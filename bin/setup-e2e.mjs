@@ -67,8 +67,11 @@ const DB_HOST = "127.0.0.1";
 const DB_PORT = process.env.HUB_DB_PORT || "54329";
 const DB_NAME = `ownables_hub_sdk_verify_${process.pid}`;
 const DATABASE_URL = `postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
-const HUB_STORAGE_DIR = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
-const HUB_STORAGE_URL = `file://${HUB_STORAGE_DIR}`;
+const HUB_STORAGE_ROOT = join(tmpdir(), `ownables-hub-sdk-proof-storage-${process.pid}`);
+const HUB_ARCHIVE_STORAGE_DIR = join(HUB_STORAGE_ROOT, "archive");
+const HUB_QUARANTINE_STORAGE_DIR = join(HUB_STORAGE_ROOT, "quarantine");
+const HUB_ARCHIVE_STORAGE_URL = `file://${HUB_ARCHIVE_STORAGE_DIR}`;
+const HUB_QUARANTINE_STORAGE_URL = `file://${HUB_QUARANTINE_STORAGE_DIR}`;
 const RUNTIME_ENV_PATH = join(ROOT, ".e2e-runtime.json");
 const EXTERNAL_WALLET = process.env.E2E_EXTERNAL_WALLET === "1";
 const VITE_E2E = EXTERNAL_WALLET ? "0" : "1";
@@ -76,7 +79,8 @@ const VITE_E2E = EXTERNAL_WALLET ? "0" : "1";
 function hubIndexerRuntimeEnv({ anchorAddress, anchorStartBlock }) {
   return {
     DATABASE_URL,
-    OWNABLES_STORAGE: HUB_STORAGE_URL,
+    OWNABLES_STORAGE: HUB_ARCHIVE_STORAGE_URL,
+    QUARANTINE_STORAGE: HUB_QUARANTINE_STORAGE_URL,
     INDEXER_NETWORKS: "base-sepolia",
     TESTNET_CHAIN_ID: "84532",
     TESTNET_RPC_URL: RPC_URL,
@@ -351,7 +355,7 @@ function childExit(child) {
 class SetupResources {
   constructor({
     runtimePath = RUNTIME_ENV_PATH,
-    storageDir = HUB_STORAGE_DIR,
+    storageDir = HUB_STORAGE_ROOT,
     dropDatabase = dropVerificationDatabase,
     remove = rmSync,
     exists = existsSync,
@@ -595,7 +599,8 @@ async function main() {
   return withSetupResources(resources, async () => {
     ensureExampleZips();
     syncOwnableZips();
-    mkdirSync(HUB_STORAGE_DIR, { recursive: true });
+    mkdirSync(HUB_ARCHIVE_STORAGE_DIR, { recursive: true });
+    mkdirSync(HUB_QUARANTINE_STORAGE_DIR, { recursive: true });
     resources.storageCreated = true;
     runSync("yarn", ["db:start"], { cwd: HUB_ROOT });
     ensureVerificationDatabase(() => {
@@ -616,7 +621,8 @@ async function main() {
   const hubRuntimeEnv = {
     ...indexerRuntimeEnv,
     NODE_ENV: process.env.NODE_ENV || "development",
-    OWNABLES_STORAGE: HUB_STORAGE_URL,
+    OWNABLES_STORAGE: HUB_ARCHIVE_STORAGE_URL,
+    QUARANTINE_STORAGE: HUB_QUARANTINE_STORAGE_URL,
     CORS_ORIGINS: APP_URL,
     PORT: HUB_PORT,
     PUBLIC_BASE_URL: HUB_URL,
@@ -727,8 +733,10 @@ if (process.argv.includes("--verify-cleanup")) {
     CONTRACTS_ROOT,
     DB_CONTAINER,
     databaseStrategy: "docker-exec",
-    indexerStorage: indexerRuntimeEnv.OWNABLES_STORAGE,
-    hubStorage: HUB_STORAGE_URL,
+    indexerArchiveStorage: indexerRuntimeEnv.OWNABLES_STORAGE,
+    hubArchiveStorage: HUB_ARCHIVE_STORAGE_URL,
+    indexerQuarantineStorage: indexerRuntimeEnv.QUARANTINE_STORAGE,
+    hubQuarantineStorage: HUB_QUARANTINE_STORAGE_URL,
   }));
 } else {
   try {
