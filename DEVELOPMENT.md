@@ -14,10 +14,10 @@ VITE_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
 When `VITE_HUB` is configured, the SDK fetches available items from:
 
 ```text
-GET /accounts/<caip10-account>/available-ownables
+GET /<network>/inbox/<address>
 ```
 
-Hub download URLs returned from that route must still match `new URL(VITE_HUB).origin` or the SDK will reject the import.
+`VITE_HUB` is an origin only. The SDK derives `base` or `base-sepolia` from the connected wallet chain. Hub download URLs returned from that route must still match `new URL(VITE_HUB).origin` or the SDK will reject the import.
 
 ## Accepted Localhost A-to-B Smoke
 
@@ -35,7 +35,7 @@ The approved manual smoke for this repo is wallet A sending an ownable to wallet
 2. Issue or select an ownable and transfer it to wallet B.
 3. Confirm the transfer progress stops after Hub upload plus any anchoring work. The SDK must not show an `Update Hub owner state` step.
 4. Switch the connected wallet to wallet B.
-5. Confirm the SDK requests `GET /accounts/<wallet-b-caip10-account>/available-ownables`.
+5. Confirm the SDK requests `GET /<network>/inbox/<wallet-b-address>`. The Hub response owner remains wallet B's canonical CAIP-10 account.
 6. Confirm the transferred ownable appears in the main list with the normal ownable-card layout and a trailing `Import` icon.
 7. Open the ownable detail and click `Archive`, then confirm the row disappears immediately from the main list.
 8. Reload while still connected as wallet B and confirm the row stays archived.
@@ -45,8 +45,8 @@ The approved manual smoke for this repo is wallet A sending an ownable to wallet
 ### Evidence To Capture
 
 - Hub origin used for the run.
-- Wallet B CAIP-10 account queried by the SDK.
-- The `GET /accounts/<wallet-b-caip10-account>/available-ownables` response entry that rendered the available row.
+- Wallet B address and selected Hub network queried by the SDK.
+- The `GET /<network>/inbox/<wallet-b-address>` response entry, including Wallet B's CAIP-10 owner, that rendered the available row.
 - A screenshot or note showing the available row before import.
 - A screenshot or note showing the imported ownable after `Import`.
 

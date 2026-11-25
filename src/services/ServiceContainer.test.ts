@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const { clearWalletAuth } = vi.hoisted(() => ({
+const { clearWalletAuth, hubConstructor, hubNetworkFromChainId } = vi.hoisted(() => ({
   clearWalletAuth: vi.fn(),
+  hubConstructor: vi.fn(),
+  hubNetworkFromChainId: vi.fn((chainId: number) =>
+    chainId === 8453 ? "base" : "base-sepolia"
+  ),
 }));
 vi.mock("@ownables/adapter-viem", () => ({ EQTYService: class {} }));
 vi.mock("@ownables/builder", () => ({ BuilderService: class {} }));
@@ -15,7 +19,12 @@ vi.mock("@ownables/core", () => ({
 vi.mock("@ownables/platform-browser", () => ({
   BrowserRuntimeRpcProvider: class {},
   BrowserRuntimeSourceProvider: class {},
-  HubService: class {},
+  HubService: class {
+    constructor(...args: unknown[]) {
+      hubConstructor(...args);
+    }
+  },
+  hubNetworkFromChainId,
   IDBService: class {
     static async packages() {
       return { close() {} };
@@ -53,6 +62,8 @@ describe("ServiceContainer lifecycle", () => {
   beforeEach(() => {
     localStorage.clear();
     clearWalletAuth.mockClear();
+    hubConstructor.mockClear();
+    hubNetworkFromChainId.mockClear();
   });
 
   afterEach(() => {
@@ -66,6 +77,19 @@ describe("ServiceContainer lifecycle", () => {
     await expect(container.get("packages")).resolves.toBeInstanceOf(
       PackageService
     );
+  });
+
+  it("binds each Hub service to its container Base network", async () => {
+    const mainnetContainer = new ServiceContainer("0xabc", 8453);
+    const testnetContainer = new ServiceContainer("0xdef", 84532);
+
+    await mainnetContainer.get("hub");
+    await testnetContainer.get("hub");
+
+    expect(hubNetworkFromChainId).toHaveBeenNthCalledWith(1, 8453);
+    expect(hubNetworkFromChainId).toHaveBeenNthCalledWith(2, 84532);
+    expect(hubConstructor).toHaveBeenNthCalledWith(1, "", "base");
+    expect(hubConstructor).toHaveBeenNthCalledWith(2, "", "base-sepolia");
   });
 
   it("constructs lazily once and evicts a failed resolution", async () => {

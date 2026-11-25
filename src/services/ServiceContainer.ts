@@ -3,6 +3,7 @@ import {
   BrowserRuntimeRpcProvider,
   BrowserRuntimeSourceProvider,
   HubService,
+  hubNetworkFromChainId,
   IDBService,
   LocalStorageService,
   PackageService,
@@ -97,7 +98,10 @@ export default class ServiceContainer {
       async (c) => new RelayService(await c.get("eqty"), { relayUrl })
     );
 
-    this.register("hub", () => new HubService(hubUrl));
+    this.register(
+      "hub",
+      (c) => new HubService(hubUrl, hubNetworkFromChainId(c.chainId))
+    );
 
     this.register(
       "eventChains",

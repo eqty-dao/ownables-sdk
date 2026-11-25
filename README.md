@@ -190,8 +190,8 @@ VITE_WALLETCONNECT_PROJECT_ID=your-project-id-here
 
 Notes:
 - This project uses Vite. Environment variables must be prefixed with VITE_ to be available in the browser.
-- `VITE_HUB` is required for active Hub upload, download, delivery-status, available-ownables discovery, and Hub import flows. Hub download URLs are rejected unless their origin matches `new URL(VITE_HUB).origin`.
+- `VITE_HUB` is required for active Hub upload, download, delivery-status, inbox discovery, and Hub import flows. It is one Hub origin, such as `https://hub.ownables.me`, without a network path. Hub download URLs are rejected unless their origin matches `new URL(VITE_HUB).origin`.
 - `VITE_RELAY` and `VITE_LOCAL` remain legacy-only compatibility knobs and are no longer part of the active Hub receive path.
-- On localhost, when `VITE_HUB` is configured, the SDK looks for available ownables at `GET /accounts/<caip10-account>/available-ownables` and renders them directly in the main list with import and dismiss actions. The companion live-update stream is `GET /accounts/<caip10-account>/available-ownables/events`.
+- On localhost, when `VITE_HUB` is configured, the SDK looks for available ownables at `GET /<network>/inbox/<address>` and renders them directly in the main list with import and dismiss actions. The companion live-update stream is `GET /<network>/streams/inbox/<address>`. The SDK selects `base` or `base-sepolia` from the connected wallet chain; Hub responses retain the canonical CAIP-10 owner for account-scoped state.
 - The accepted manual localhost wallet-A-to-wallet-B smoke for this receive path is documented in `DEVELOPMENT.md`.
 - If you change .env while the dev server is running, you may need to restart yarn start to pick up the changes.
