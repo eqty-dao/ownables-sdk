@@ -64,7 +64,7 @@ Then('recipient discovery has its initial snapshot and availability stream', asy
   await expectRecipientDiscoveryReady(this as TransferImportWorld);
 });
 
-When('the Hub indexes the pending transfer upload', function () {
+When(/^the Hub indexes the (?:pending transfer upload|local anchor)$/, function () {
   runHubIndexer();
 });
 

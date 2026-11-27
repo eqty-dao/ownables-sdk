@@ -12,6 +12,8 @@ import { cn } from "@/utils/cn";
 interface EventCardProps {
   event: Event;
   anchorTx: string | undefined;
+  anchorBlock?: number;
+  anchorLookupComplete?: boolean;
   verified: boolean;
   isFirst: boolean;
 }
@@ -73,13 +75,18 @@ export default function EventCard(props: EventCardProps) {
                   {shortId(anchorTx, 10)}
                 </Link>
                 {verified ? (
-                  <CheckCircle className="ml-1 inline-block h-4 w-4 align-middle text-emerald-600" />
+                  <CheckCircle aria-label="Anchor matches" className="ml-1 inline-block h-4 w-4 align-middle text-emerald-600" />
                 ) : (
-                  <Cancel className="ml-1 inline-block h-4 w-4 align-middle text-red-600" />
+                  <Cancel aria-label="Anchor value mismatch" className="ml-1 inline-block h-4 w-4 align-middle text-red-600" />
+                )}
+                {props.anchorBlock !== undefined && (
+                  <span className="ml-2">Block {props.anchorBlock}</span>
                 )}
               </>
             ) : (
-              <span className="text-slate-500 dark:text-slate-400">Not anchored</span>
+              <span className="text-slate-500 dark:text-slate-400">
+                {props.anchorLookupComplete ? "No indexed anchor" : "Not anchored"}
+              </span>
             )}
           </div>
           <div className="mt-2">
