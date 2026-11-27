@@ -5,13 +5,14 @@ import {
   IconButton,
   Button,
 } from "@/components/ui";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { Fingerprint, Info as InfoOutlined } from "lucide-react";
 import { TypedMetadata } from "@/interfaces/TypedOwnableInfo";
 import { Dialog } from "@/components/ui";
 import { EventChain } from "eqty-core";
-import type { AnchorValidationResult } from "@ownables/core";
+import type { HubService } from "@ownables/platform-browser";
+import { useChainId } from "wagmi";
 import EventCard from "./EventCard";
 import shortId from "@/utils/shortId";
 import { cn } from "@/utils/cn";
@@ -32,133 +33,90 @@ interface OwnableInfoProps {
   children?: React.ReactNode;
 }
 
-interface HubOwnableVerificationResponse {
-  anchorVerification: {
-    verified: boolean;
-    anchors: Record<string, string | undefined>;
-    map: Record<string, string | undefined>;
-    details?: AnchorValidationResult["details"];
-  };
+interface AnchorRow {
+  tx?: string;
+  verified: boolean;
+  blockNumber?: number;
 }
 
-type AnchorVerificationMap = Record<string, string | undefined>;
-
-function deriveAnchorRows(
-  chain: EventChain,
-  anchorVerification: Pick<AnchorValidationResult, "anchors" | "details"> & {
-    map: AnchorVerificationMap;
-  }
-) {
-  return chain.anchorMap.map(({ key, value }) => {
-    const detail = anchorVerification.details[key.hex];
-    return {
-      tx: detail?.transactionHash ?? anchorVerification.anchors[key.hex],
-      verified:
-        detail?.verified ??
-        anchorVerification.map[key.hex]?.toLowerCase() === value.hex.toLowerCase(),
-    };
-  });
-}
-
-async function readErrorMessage(response: Response): Promise<string> {
-  try {
-    const text = await response.text();
-    return text.trim() || `status ${response.status}`;
-  } catch {
-    return `status ${response.status}`;
-  }
-}
-
-function isUnknownOwnableVerificationFailure(response: Response, message: string): boolean {
-  const normalizedMessage = message.toLowerCase();
-
-  return (
-    (response.status === 400 || response.status === 404) &&
-    normalizedMessage.includes("not available on this hub")
-  );
+interface Verification {
+  chain: EventChain;
+  chainId: number;
+  hub: HubService;
+  rows?: AnchorRow[];
+  verified?: boolean;
+  error?: string;
+  contract?: string;
 }
 
 export default function OwnableInfo(props: OwnableInfoProps) {
   const { chain, metadata, trackedPublicEvents } = props;
   const [open, setOpen] = useState(false);
-  const [verified, setVerified] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
-  const [anchors, setAnchors] = useState<
-    Array<{ tx: string | undefined; verified: boolean } | null>
-  >([]);
+  const [verification, setVerification] = useState<Verification>();
   const hub = useService("hub");
-  const eventChains = useService("eventChains");
+  const anchorValidation = useService("anchorValidation");
+  const chainId = useChainId();
+  const current =
+    verification?.chain === chain &&
+    verification.chainId === chainId &&
+    verification.hub === hub
+      ? verification
+      : undefined;
   const timeline = useMemo(
     () => buildPublicEventTimeline(chain.events, trackedPublicEvents),
     [chain.events, trackedPublicEvents]
   );
 
-  const verify = useCallback(
-    async (chain: EventChain, open: boolean) => {
-      if (!open || !hub?.isConfigured) return;
-
-      const verificationUrl = new URL(
-        "verification",
-        hub.getOwnableBundleUrl(chain.id)
-      );
-      const response = await fetch(verificationUrl);
-      if (response.ok) {
-        const body =
-          (await response.json()) as HubOwnableVerificationResponse;
-        const anchorVerification = {
-          verified: body.anchorVerification.verified,
-          anchors: body.anchorVerification.anchors,
-          map: body.anchorVerification.map,
-          details: body.anchorVerification.details ?? {},
-        };
-        setVerificationError(null);
-        setVerified(anchorVerification.verified);
-        setAnchors(deriveAnchorRows(chain, anchorVerification));
-        return;
-      }
-
-      const message = await readErrorMessage(response);
-      if (!isUnknownOwnableVerificationFailure(response, message)) {
-        throw new Error(`Hub verification failed with status ${response.status}`);
-      }
-
-      if (!eventChains) {
-        throw new Error("Local verification is unavailable.");
-      }
-
-      const anchorVerification = await eventChains.verify(chain);
-      setVerificationError(null);
-      setVerified(anchorVerification.verified);
-      setAnchors(deriveAnchorRows(chain, anchorVerification));
-    },
-    [eventChains, hub]
-  );
-
   useEffect(() => {
-    if (!open) {
-      setVerified(false);
-      setVerificationError(null);
-      setAnchors([]);
-      return;
+    if (!open || !hub?.isConfigured || !anchorValidation || chain.events.length === 0) return;
+    const request = new AbortController();
+
+    async function verify(
+      configuredHub: HubService,
+      validator: NonNullable<typeof anchorValidation>
+    ) {
+      const genesisNetwork = chain.events[0]?.parsedData?.network_id;
+      if (String(genesisNetwork).replace(/^eip155:/, "") !== String(chainId)) {
+        throw new Error("The Ownable does not belong to the connected network.");
+      }
+      const expected = chain.anchorMap;
+      const evidence = await configuredHub.loadAnchorEvidence(
+        expected.map(({ key, signer }) => ({ key: key.hex, signer })),
+        request.signal
+      );
+      if (request.signal.aborted) return;
+
+      const result = validator.validateAgainstIndexedRecords(expected, evidence.records);
+      const rows = expected.map(({ key }) => {
+        const detail = result.details[key.hex];
+        return {
+          tx: detail?.transactionHash,
+          verified: detail?.source === "indexed" && detail.verified,
+          blockNumber: detail?.blockNumber,
+        };
+      });
+      setVerification({
+        chain,
+        chainId,
+        hub: configuredHub,
+        rows,
+        verified: result.verified,
+        contract: evidence.anchorContractAddress,
+      });
     }
 
-    let cancelled = false;
-
-    void verify(chain, open).catch((error) => {
-      if (cancelled) {
-        return;
+    void verify(hub, anchorValidation).catch((error: unknown) => {
+      if (!request.signal.aborted) {
+        setVerification({
+          chain,
+          chainId,
+          hub,
+          error: error instanceof Error ? error.message : "Unable to load Hub anchor evidence.",
+        });
       }
-      setVerified(false);
-      setAnchors([]);
-      setVerificationError(
-        error instanceof Error ? error.message : "Unable to load Hub verification."
-      );
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chain, open, verify]);
+    return () => request.abort();
+  }, [anchorValidation, chain, chainId, hub, open]);
 
   return (
     <>
@@ -172,7 +130,10 @@ export default function OwnableInfo(props: OwnableInfoProps) {
         </IconButton>
       )}
       <Dialog
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setVerification(undefined);
+        }}
         open={open}
         className="sm:w-[min(900px,calc(100vw-32px))]"
       >
@@ -183,7 +144,12 @@ export default function OwnableInfo(props: OwnableInfoProps) {
               <Tooltip title={chain.id}>
                 <Tag value={shortId(chain.id)} icon={<Fingerprint className="h-3.5 w-3.5" />} color="info" />
               </Tooltip>
-              {verified && <Tag value="Anchors verified" color="success" />}
+              {current?.verified && <Tag value="Anchors verified" color="success" />}
+              {current?.contract && (
+                <Tooltip title={current.contract}>
+                  <Tag value="Hub anchor evidence" color="info" />
+                </Tooltip>
+              )}
             </div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{metadata?.name}</h2>
             {metadata?.description && (
@@ -198,11 +164,12 @@ export default function OwnableInfo(props: OwnableInfoProps) {
 
         {/* Events */}
         <DialogContent>
-          {verificationError ? (
+          {current?.error && (
             <Alert severity="error" className={cn("rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200")}>
-              Failed to load verification details: {verificationError}
+              Anchor verification unavailable: {current.error}
             </Alert>
-          ) : timeline.length === 0 ? (
+          )}
+          {timeline.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               This is a static ownable. It does not contain any events.
             </p>
@@ -214,8 +181,10 @@ export default function OwnableInfo(props: OwnableInfoProps) {
                 <EventCard
                   key={item.key}
                   event={item.event}
-                  anchorTx={anchors[item.chainIndex]?.tx}
-                  verified={!!anchors[item.chainIndex]?.verified}
+                  anchorTx={current?.rows?.[item.chainIndex]?.tx}
+                  anchorBlock={current?.rows?.[item.chainIndex]?.blockNumber}
+                  anchorLookupComplete={!!current?.rows}
+                  verified={!!current?.rows?.[item.chainIndex]?.verified}
                   isFirst={timelineIndex === 0}
                 />
               )
